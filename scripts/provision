@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [[ ! -f operator.env ]]; then
+  cp operator.env.example operator.env
+fi
+exec npx tsx src/delivery/cli/main.ts provision "$@"

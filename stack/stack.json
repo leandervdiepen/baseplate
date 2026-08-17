@@ -1,0 +1,20 @@
+{
+  "name": "baseplate",
+  "hostname": "localhost",
+  "callerRole": "app_user",
+  "database": {
+    "name": "app",
+    "tables": [
+      {
+        "name": "items",
+        "ownerColumn": "owner_id"
+      }
+    ]
+  },
+  "accessPolicies": [
+    {
+      "table": "items",
+      "ownerColumn": "owner_id"
+    }
+  ]
+}
