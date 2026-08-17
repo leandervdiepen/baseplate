@@ -1,0 +1,85 @@
+@import "./tokens.css";
+@import "tailwindcss";
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover:not([aria-current="page"]) {
+    background: var(--color-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .empty-enter > * {
+    animation: empty-enter var(--duration-enter) var(--ease-out) both;
+  }
+
+  .empty-enter > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .empty-enter > *:nth-child(2) {
+    animation-delay: 80ms;
+  }
+
+  .empty-enter > *:nth-child(3) {
+    animation-delay: 160ms;
+  }
+
+  .empty-enter > *:nth-child(4) {
+    animation-delay: 240ms;
+  }
+}
+
+.schema-canvas {
+  background-color: var(--color-bg-subtle);
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: var(--space-md) var(--space-md);
+}
+
+@keyframes empty-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}

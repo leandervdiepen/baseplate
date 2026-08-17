@@ -84,7 +84,13 @@ export function createOperator(config: OperatorConfig): Operator {
     sshUser: "root",
   });
   return {
-    provision: new ProvisionStack({ cloud, runtime, store, clock }),
+    provision: new ProvisionStack({
+      cloud,
+      runtime,
+      store,
+      clock,
+      healthTimeoutMs: 300_000,
+    }),
     teardown: new TeardownStack({ cloud, runtime, store }),
     mintToken,
   };

@@ -6,9 +6,15 @@ Not a managed-platform competitor. Feature parity is a non-goal.
 
 ## Scope
 
-Phase A (active): one command provisions an HTTP API over Postgres with per-user row access.
-Hetzner (`TARGET=hetzner`, your token) adds TLS. Full phase list: `docs/PRD.md`.
-If a task belongs to a later phase, stop and ask.
+Phase B (active): a local operator dashboard with one-command DX.
+Phase A local is proven (`npm run test:acceptance` after `./scripts/provision`).
+Hetzner BYOK (`TARGET=hetzner`) still needs the operator's own domain in Hetzner DNS.
+That work is parked on DPN-146 until they have a zone.
+Do not build Phase C.
+If a task feels like a hosted control plane, stop and ask.
+
+Linear: project Baseplate, team diepen (`DPN`).
+Use the **linear-personal** MCP (workspace diepenio), never the employer Linear.
 
 ## Commands
 
@@ -21,12 +27,11 @@ npm run lint:arch
 ./scripts/provision
 ./scripts/teardown
 ./scripts/mint-token --sub UUID
+./scripts/dashboard
 ```
 
-## Linear
-
-Project: https://linear.app/diepenio/project/baseplate-8380d9ef118c
-Team: diepen (`DPN`). Every piece of work is an issue on this project.
+Dashboard (Phase B): `./scripts/dashboard` binds to 127.0.0.1 only.
+Secrets stay on this machine.
 
 ## Architecture
 
@@ -39,10 +44,17 @@ Details: `docs/ARCHITECTURE.md`.
 - Operator action: `src/application/usecases/` plus a port in `src/application/ports/`
 - Vendor or OS: `src/infrastructure/<system>/`
 - CLI: `src/delivery/cli/`
-- Schema, Compose, API surface: `stack/` (never `src/`)
+- Dashboard UI: `src/delivery/dashboard/` (primitives / patterns / features)
+- Local operator HTTP (localhost, calls use cases): `src/delivery/operator-http/`
+- Typed app client: `sdk/` (file dependency, not an npm cloud)
+- Schema, Compose, API surface, user auth: `stack/` (never `src/`)
 - Server: `infra/`
 - Tests: `tests/unit/`, `tests/integration/`, `tests/acceptance/`
 - No business meaning: `src/shared/`
+
+Visual source: Paper file [Baseplate operator dashboard](https://app.paper.design/file/01M07TKASYE9J372976D943J30).
+Tokens land in `src/delivery/dashboard/styles/tokens.css`.
+UI rules: `docs/COMPONENTS.md`.
 
 ## Docs
 

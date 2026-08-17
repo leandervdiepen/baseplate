@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0
+
+Email and password login on the stack.
+`POST /auth/signup` and `POST /auth/login` issue the same JWTs PostgREST already trusts.
+No public key. `JWT_SECRET` stays on the server.
+Typed client lives in `sdk/` in this repo (file path, not an npm cloud).
+
+## 0.2.0
+
+Local operator dashboard.
+`./scripts/dashboard` serves a React studio on 127.0.0.1:8788.
+First-run can write `operator.env` and provision locally.
+The browser talks to operator HTTP, not Hetzner.
+Caller JWTs are minted in the UI for the table browser.
+
 ## 0.1.0
 
 Phase A substrate.
@@ -39,5 +54,5 @@ Linear project: https://linear.app/diepenio/project/baseplate-8380d9ef118c
 
 ### Not in this version
 
-Authentication flows, object storage, the dashboard, backups, realtime, multi-node, and any hosted control plane.
-Those are Phase B or C.
+Object storage, backups, realtime, multi-node, and any hosted control plane.
+Those are remaining Phase B or C.

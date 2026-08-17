@@ -18,6 +18,7 @@ Branded strings over raw strings for ids and hostnames.
 Throw `DomainError` from domain and application, with a stable `code` (`stack.hostname_required`) and a human message.
 Adapters wrap vendor failures as `InfraError` with a `code` and the cause.
 The CLI prints `code: message` and exits non-zero.
+Operator HTTP returns that same `code` as JSON to the dashboard.
 Do not swallow errors.
 Do not return `null` for a failure that the operator must see.
 
@@ -28,9 +29,10 @@ Secrets and operator choices live in `operator.env`, which is gitignored.
 `operator.env.example` lists every key with empty or dummy values.
 
 Hetzner is BYOK.
-`HCLOUD_TOKEN`, `HETZNER_DNS_TOKEN`, and `SSH_KEY_NAME` are the operator's credentials for their own Hetzner account.
+`HCLOUD_TOKEN`, `HETZNER_DNS_TOKEN`, `HETZNER_DNS_ZONE`, and `SSH_KEY_NAME` are the operator's credentials for their own Hetzner account.
 They live only in `operator.env` on the operator's machine.
 They are never committed, never sent to a Baseplate service, and never replaced by a Baseplate-owned token.
+For `TARGET=hetzner`, `stack/stack.json` hostname must be an FQDN under `HETZNER_DNS_ZONE`, and `SITE_ADDRESS` must equal that hostname.
 
 Never read `process.env` inside domain or application.
 Delivery loads env.
@@ -57,14 +59,15 @@ Named by behaviour, not as a mirror of `src/`.
 A handful of tests.
 
 **Acceptance** (`tests/acceptance/`, `npm run test:acceptance`).
-Runs `tests/acceptance/two-token.sh`.
-That script is the definition of done.
+Runs `tests/acceptance/two-token.sh` and `tests/acceptance/signup-login.sh`.
+Those scripts are the definition of done.
 Plain HTTP.
 Needs a running stack (`./scripts/provision` first).
 Few.
 
-There is no browser suite in Phase A.
-The acceptance script is the end-to-end proof.
+The acceptance script is the end-to-end proof of row access.
+Dashboard work does not replace it.
+There is no requirement for a browser suite until a dashboard screen exists.
 
 Name tests by the behaviour: `rejects a stack with a policy on a missing table`.
 Arrange, act, assert.
@@ -100,4 +103,6 @@ A layer folder's `index.ts` re-exports the public surface and does nothing else.
 ## Linear
 
 Every piece of work is an issue on [Baseplate](https://linear.app/diepenio/project/baseplate-8380d9ef118c).
+Agents use Linear MCP **linear-personal** (workspace diepenio / team DPN).
+Do not file Baseplate work on the employer Linear.
 Put the issue id in the commit subject when one exists (`DPN-140: ...`).

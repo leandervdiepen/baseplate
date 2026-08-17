@@ -53,16 +53,24 @@ If filtering happens in an application server, the policy is in the wrong place.
 
 The subject of a signed token.
 Identified by a `CallerId` (UUID, claim `sub`).
-Phase A does not create callers.
-The operator mints tokens for tests and for themselves.
+Signup creates a row in `auth.users` and uses that id as `sub`.
+The operator can still mint a token for any UUID (tests and impersonation).
+
+## User
+
+An email + password account stored in schema `auth`, not in `public`.
+PostgREST does not expose `auth.users`.
+Passwords are hashed (scrypt).
+Login is HTTP on the stack (`POST /auth/signup`, `POST /auth/login`).
+There is no public key and no anon JWT for apps.
+`JWT_SECRET` stays on the server.
+The browser or SDK receives a user JWT after login.
 
 ## Token
 
 A signed JWT.
 Claims that matter: `sub` (caller id) and `role` (the database role PostgREST switches to).
-Phase A trusts tokens.
-Phase A does not issue them through a login flow.
-The operator command `mint-token` exists so the acceptance test and the operator can obtain a token.
+The stack auth service and `mint-token` both produce tokens the API already trusts.
 
 A missing token is not a caller.
 A token with a broken signature is not a caller.
@@ -70,12 +78,17 @@ Both get nothing from the API.
 
 ## Operator
 
-The person running the CLI.
-They own the Hetzner account and the API token.
-They provision, tear down, and mint tokens.
+The person running the CLI or the local dashboard.
+They own the Hetzner account and the API token when they use Hetzner.
+They provision, tear down, mint tokens, and edit `operator.env` on this machine.
 They are not a caller unless they mint a token and use it.
+
+The dashboard is delivery, not a domain type.
+Operator HTTP is delivery.
+Neither is a hosted control plane.
 
 ## What does not exist yet
 
-Backup, bucket, object, session, and dashboard entities are Phase B or C.
+Backup and restore-drill entities are Phase C.
 Do not add them to `src/domain/` now.
+Object storage belongs in Phase B when that ticket is in progress, not before.
