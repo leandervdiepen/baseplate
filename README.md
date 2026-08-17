@@ -18,38 +18,74 @@ npm run test:acceptance
 ./scripts/dashboard
 ```
 
-`./scripts/dashboard` opens the local operator studio at http://127.0.0.1:8788.
+`./scripts/provision` copies `operator.env.example` if needed and starts Postgres, PostgREST, auth, and Caddy.
+Default `TARGET=local` is Docker on this machine.
+The API URL it prints is what your app talks to (locally `http://127.0.0.1:8080`).
+
+`./scripts/dashboard` opens the operator studio at http://127.0.0.1:8788.
 It never binds off loopback.
 Secrets stay in `operator.env` on this machine.
 
-`./scripts/provision` copies `operator.env.example` if needed and starts the stack.
-Default `TARGET=local` is Docker on this machine.
-Set `TARGET=hetzner` and paste your Hetzner API token, DNS token, zone, and SSH key name into `operator.env` to create one server in your account.
-
-When it finishes it prints the API URL.
-Apps connect with URL + email/password (no public key):
-
-```ts
-import { createClient, type Database } from "@baseplate/client";
-const client = createClient<Database>("http://127.0.0.1:8080");
-await client.auth.signUp({ email: "you@example.com", password: "a-long-password" });
-```
-
-Depend on the client from this repo (`file:../baseplate/sdk`). It is not published to npm.
-The acceptance scripts are the definition of done: two tokens and two signups, one endpoint, disjoint rows.
+`npm run test:acceptance` is the definition of done: two minted tokens and two signed-up users, one endpoint, disjoint rows.
 No token and a tampered token get nothing.
 The database does the filtering.
 
-## What you get (Phase A, local)
+Set `TARGET=hetzner` and paste your Hetzner API token, DNS token, zone, and SSH key name into `operator.env` to create one server in your account.
+That path needs a domain you already own as a Hetzner DNS zone.
 
-- Postgres with row-level access driven by a signed token
-- Email + password login on `/auth/signup` and `/auth/login`
-- An HTTP API on localhost (PostgREST and auth behind Caddy)
+## Connect an app
+
+There is no public key and no anon key.
+`JWT_SECRET` stays on the server.
+Signup and login are public HTTP on the stack.
+After login the client holds a user JWT (`sub` is the user id, `role` is `app_user`).
+
+The typed client lives in this repo at `sdk/`.
+It is not published to npm.
+
+```json
+{
+  "dependencies": {
+    "@baseplate/client": "file:../baseplate/sdk"
+  }
+}
+```
+
+```ts
+import { createClient, type Database } from "@baseplate/client";
+
+const client = createClient<Database>("http://127.0.0.1:8080");
+await client.auth.signUp({
+  email: "you@example.com",
+  password: "a-long-password",
+});
+const { data, error } = await client.from("items").select();
+await client.from("items").insert({ body: "hello" });
+```
+
+`POST /auth/login` is the same shape as signup.
+Row-level security keeps each caller on their own `items` rows.
+
+Refresh table types from a running API (anon cannot see tables, so this needs a caller JWT):
+
+```bash
+BASEPLATE_TOKEN=$(./scripts/mint-token --sub 11111111-1111-4111-8111-111111111111) npm run sdk:types
+```
+
+`./scripts/mint-token --sub UUID` is for operators and tests.
+Apps should sign up with email and password.
+
+## What you get
+
+- Postgres with row-level access driven by the JWT `sub`
+- Email + password login on `POST /auth/signup` and `POST /auth/login`
+- HTTP API on localhost (PostgREST and auth behind Caddy)
+- A typed in-repo client (`sdk/`)
+- A local operator studio (`./scripts/dashboard`) for tables, schema, auth, logs, and settings
 - `./scripts/provision` / `teardown` / `mint-token`
 
 Hetzner (`TARGET=hetzner`) adds a VM, firewall, DNS A record, and TLS in **your** account.
-That path needs a domain you own as a Hetzner DNS zone.
-It is not required to prove Phase A locally.
+It is not required to work locally.
 
 ## Docs
 
@@ -60,10 +96,12 @@ It is not required to prove Phase A locally.
 | `docs/DOMAINS.md` | Ubiquitous language and per-concept rules |
 | `docs/CONVENTIONS.md` | Naming, errors, secrets, tests, commits |
 | `docs/COMPONENTS.md` | Dashboard UI rules and Paper source |
+| `sdk/README.md` | App client: install path, auth, typed queries |
 | `AGENTS.md` | Short rules for the next agent |
 
 ## Status
 
-Phase B is the active scope: a local operator dashboard with one-command DX.
+Phase B is the active scope: local operator studio, email/password login, in-repo client.
 Phase A local is proven.
+Object storage (DPN-154) and a policy editor (DPN-152) are still open.
 Hetzner live provision waits on the operator having a DNS zone (DPN-146).
