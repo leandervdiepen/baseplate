@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+operator.env
+.baseplate/
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+*.tfvars
+.DS_Store

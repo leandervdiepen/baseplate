@@ -1,0 +1,37 @@
+{
+  "name": "baseplate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "imports": {
+    "#domain": "./src/domain/index.ts",
+    "#application": "./src/application/index.ts",
+    "#infrastructure": "./src/infrastructure/index.ts",
+    "#shared": "./src/shared/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run tests/unit",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:acceptance": "bash tests/acceptance/two-token.sh",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests",
+    "lint:arch": "depcruise src --config dependency-cruiser.cjs",
+    "cli": "tsx src/delivery/cli/main.ts"
+  },
+  "dependencies": {
+    "jose": "^6.2.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^26.2.0",
+    "dependency-cruiser": "^18.2.0",
+    "eslint": "^9.39.5",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.10"
+  }
+}
