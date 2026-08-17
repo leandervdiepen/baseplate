@@ -7,7 +7,7 @@ import type {
   StackStateStore,
 } from "../ports/stack-state-store.ts";
 
-const HEALTH_TIMEOUT_MS = 60_000;
+const DEFAULT_HEALTH_TIMEOUT_MS = 180_000;
 const HEALTH_INTERVAL_MS = 500;
 
 export type ProvisionStackDeps = {
@@ -15,6 +15,7 @@ export type ProvisionStackDeps = {
   runtime: StackRuntime;
   store: StackStateStore;
   clock: Clock;
+  healthTimeoutMs?: number;
 };
 
 export class ProvisionStack {
@@ -33,7 +34,8 @@ export class ProvisionStack {
   }
 
   private async waitUntilHealthy(baseUrl: string): Promise<void> {
-    const deadline = this.deps.clock.now() + HEALTH_TIMEOUT_MS;
+    const timeoutMs = this.deps.healthTimeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS;
+    const deadline = this.deps.clock.now() + timeoutMs;
     while (this.deps.clock.now() < deadline) {
       if (await this.deps.runtime.isHealthy(baseUrl)) {
         return;

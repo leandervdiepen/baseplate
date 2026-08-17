@@ -3,6 +3,17 @@ import type { StackRuntime } from "#application";
 import type { Server } from "#domain";
 import { InfraError } from "#shared";
 
+const SSH_OPTS = [
+  "-o",
+  "StrictHostKeyChecking=accept-new",
+  "-o",
+  "BatchMode=yes",
+  "-o",
+  "ConnectTimeout=10",
+];
+const READY_TIMEOUT_MS = 180_000;
+const READY_INTERVAL_MS = 2_000;
+
 export type RemoteComposeConfig = {
   stackDir: string;
   envFile: string;
@@ -14,24 +25,26 @@ export class RemoteComposeRuntime implements StackRuntime {
   constructor(private readonly config: RemoteComposeConfig) {}
 
   async up(server: Server): Promise<void> {
-    const dest = `${this.config.sshUser}@${server.ipv4}:${this.config.remoteDir}`;
-    await run("ssh", [
-      `${this.config.sshUser}@${server.ipv4}`,
-      `mkdir -p ${this.config.remoteDir}`,
-    ]);
+    const host = `${this.config.sshUser}@${server.ipv4}`;
+    await this.waitUntilReady(host);
+    await run("ssh", [...SSH_OPTS, host, `mkdir -p ${this.config.remoteDir}`]);
     await run("rsync", [
       "-az",
       "--delete",
+      "-e",
+      `ssh ${SSH_OPTS.join(" ")}`,
       `${this.config.stackDir}/`,
-      dest,
+      `${host}:${this.config.remoteDir}`,
     ]);
     await run("scp", [
+      ...SSH_OPTS,
       this.config.envFile,
-      `${this.config.sshUser}@${server.ipv4}:${this.config.remoteDir}/operator.env`,
+      `${host}:${this.config.remoteDir}/operator.env`,
     ]);
     await run("ssh", [
-      `${this.config.sshUser}@${server.ipv4}`,
-      `cd ${this.config.remoteDir} && docker compose --env-file operator.env --project-name baseplate -f compose.yaml -f compose.cloud.yaml up -d --wait`,
+      ...SSH_OPTS,
+      host,
+      `cd ${this.config.remoteDir} && docker compose --env-file operator.env --project-name baseplate -f compose.yaml -f compose.cloud.yaml up -d --build --force-recreate --wait --wait-timeout 180`,
     ]);
   }
 
@@ -39,8 +52,10 @@ export class RemoteComposeRuntime implements StackRuntime {
     if (!server) {
       return;
     }
+    const host = `${this.config.sshUser}@${server.ipv4}`;
     await run("ssh", [
-      `${this.config.sshUser}@${server.ipv4}`,
+      ...SSH_OPTS,
+      host,
       `cd ${this.config.remoteDir} && docker compose --project-name baseplate down -v`,
     ]);
   }
@@ -53,6 +68,28 @@ export class RemoteComposeRuntime implements StackRuntime {
       return false;
     }
   }
+
+  private async waitUntilReady(host: string): Promise<void> {
+    const deadline = Date.now() + READY_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      try {
+        await run("ssh", [...SSH_OPTS, host, "docker compose version"]);
+        return;
+      } catch {
+        await sleep(READY_INTERVAL_MS);
+      }
+    }
+    throw new InfraError(
+      "ssh.not_ready",
+      `SSH or Docker on ${host} was not ready within ${READY_TIMEOUT_MS / 1000}s.`,
+    );
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function run(command: string, args: string[]): Promise<void> {

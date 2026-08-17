@@ -13,7 +13,15 @@ export class DockerComposeRuntime implements StackRuntime {
   constructor(private readonly config: DockerComposeRuntimeConfig) {}
 
   async up(_server: Server): Promise<void> {
-    await runDocker(this.config, ["up", "-d", "--wait"]);
+    await runDocker(this.config, [
+      "up",
+      "-d",
+      "--build",
+      "--force-recreate",
+      "--wait",
+      "--wait-timeout",
+      "180",
+    ]);
   }
 
   async down(_server: Server | undefined): Promise<void> {
