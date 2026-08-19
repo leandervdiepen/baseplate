@@ -1,6 +1,6 @@
 # Components
 
-Phase B UI lives under `src/delivery/dashboard/`.
+The studio lives under `src/delivery/dashboard/`.
 Visual source: [Baseplate operator dashboard](https://app.paper.design/file/01M07TKASYE9J372976D943J30) (alpine: snow × evergreen, IBM Plex Sans / Mono).
 
 Stack: Vite + React + Tailwind + shadcn.
@@ -66,4 +66,4 @@ A component is not a use case.
 A component is not an API client that talks to Hetzner.
 A component is not a place to put access-policy logic.
 Those belong in `src/application/` and `src/domain/`.
-Secrets belong in `operator.env`, written by operator HTTP, not in the browser.
+Secrets belong in the project's `baseplate.env`, written by operator HTTP, not in the browser.

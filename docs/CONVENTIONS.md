@@ -24,22 +24,28 @@ Do not return `null` for a failure that the operator must see.
 
 ## Configuration and secrets
 
-Public shape lives in `stack/` and `infra/` and is committed.
-Secrets and operator choices live in `operator.env`, which is gitignored.
-`operator.env.example` lists every key with empty or dummy values.
+What Baseplate ships lives in `stack/` and `infra/` and is committed.
+An operator's secrets and choices live in `baseplate.env` in **their** directory, written by `baseplate init` with secrets generated per project.
+Nothing in this repo is an operator's config, and no committed file carries a working secret.
+
+`.baseplate/stack.env` is derived from `baseplate.env` and holds only what the running stack needs.
+It is the only env file that crosses the wire to a server.
+Cloud credentials are never in it.
 
 Hetzner is BYOK.
 `HCLOUD_TOKEN`, `HETZNER_DNS_TOKEN`, `HETZNER_DNS_ZONE`, and `SSH_KEY_NAME` are the operator's credentials for their own Hetzner account.
-They live only in `operator.env` on the operator's machine.
+They live only in the project's `baseplate.env` on the operator's machine.
 They are never committed, never sent to a Baseplate service, and never replaced by a Baseplate-owned token.
-For `TARGET=hetzner`, `stack/stack.json` hostname must be an FQDN under `HETZNER_DNS_ZONE`, and `SITE_ADDRESS` must equal that hostname.
+For `TARGET=hetzner`, `BASEPLATE_HOSTNAME` must be an FQDN under `HETZNER_DNS_ZONE`.
+`SITE_ADDRESS` is what Caddy listens on: the hostname on a cloud target, `:8080` locally.
+`HTTP_PORT` is only the host port mapping; do not move one with the other.
 
 Never read `process.env` inside domain or application.
 Delivery loads env.
 Infrastructure adapters receive values through constructors.
 
 JWT secret is at least 32 characters.
-Database passwords are generated once per environment and stored only in `operator.env`.
+Database passwords are generated once per project and stored only in that project's `baseplate.env`.
 
 ## Testing
 
@@ -62,14 +68,15 @@ A handful of tests.
 Runs `tests/acceptance/two-token.sh` and `tests/acceptance/signup-login.sh`.
 Those scripts are the definition of done.
 Plain HTTP.
-Needs a running stack (`./scripts/provision` first).
+Needs a running stack (`./scripts/dev init` then `./scripts/dev up`).
+They make the table they need, the way an operator would, because nothing in this repo declares it.
 Few.
 
 The acceptance script is the end-to-end proof of row access.
 Dashboard work does not replace it.
 There is no requirement for a browser suite until a dashboard screen exists.
 
-Name tests by the behaviour: `rejects a stack with a policy on a missing table`.
+Name tests by the behaviour: `rejects a change to a table that does not exist`.
 Arrange, act, assert.
 
 ## Commits
