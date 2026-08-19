@@ -5,7 +5,7 @@ export const SCHEMA_USAGE = `Usage: baseplate schema <command>
   add-table <name> [--column name:type[:null]]...
   drop-table <name>
   rename-table <name> --to <new-name>
-  add-column <table> --column name:type[:null]
+  add-column <table> --column name:type   (always optional)
   drop-column <table> --column name`;
 
 export type SchemaArgs = {

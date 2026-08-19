@@ -63,7 +63,11 @@ export function createSchemaChange(input: SchemaChangeInput): SchemaChange {
     return {
       kind: "add-column",
       table,
-      column: createColumn(column.name ?? "", column.type ?? "text", column.nullable ?? true),
+      // Always optional. The rows already in the table have no value for it, so
+      // NOT NULL without a default is rejected by Postgres the moment a table
+      // is anything but empty. Making that depend on the row count would mean
+      // the same command works today and fails tomorrow.
+      column: createColumn(column.name ?? "", column.type ?? "text", true),
     };
   }
   if (input.kind === "drop-column") {

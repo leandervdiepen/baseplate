@@ -96,3 +96,29 @@ test("rejects an identifier that is not a plain lowercase name", () => {
     codeOf(() => createSchemaChange({ kind: "create-table", table: "DROP TABLE items" })),
   ).toBe("schema.invalid_table");
 });
+
+test("a column added to an existing table is optional, whatever the caller asked for", () => {
+  const change = createSchemaChange({
+    kind: "add-column",
+    table: "items",
+    column: { name: "notes", type: "text", nullable: false },
+  });
+
+  expect(change).toEqual({
+    kind: "add-column",
+    table: "items",
+    column: { name: "notes", type: "text", nullable: true },
+  });
+});
+
+test("a column created with the table can be required", () => {
+  const change = createSchemaChange({
+    kind: "create-table",
+    table: "notes",
+    columns: [{ name: "title", type: "text", nullable: false }],
+  });
+
+  expect(change).toMatchObject({
+    columns: [{ name: "title", type: "text", nullable: false }],
+  });
+});

@@ -67,7 +67,6 @@ export function TableActions({
                 changeSchema({
                   kind: "add-column",
                   table,
-                  // Optional, because rows already in the table have no value for it.
                   column: { name: columnName.trim(), type: columnType, nullable: true },
                 }),
               )
