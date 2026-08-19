@@ -8,22 +8,13 @@ export type AuthDb = {
   close(): Promise<void>;
 };
 
-export async function connectAuthDb(config: {
-  postgresPassword: string;
-  authPassword: string;
-}): Promise<AuthDb> {
-  const admin = postgres({
-    host: "postgres",
-    database: "app",
-    username: "postgres",
-    password: config.postgresPassword,
-    max: 1,
-  });
-  await migrate(admin, config.authPassword);
-  await admin.end();
+/**
+ * The migrate service owns schema and roles. Auth only reads and writes rows.
+ */
+export function connectAuthDb(config: { authPassword: string }): AuthDb {
   const sql = postgres({
-    host: "postgres",
-    database: "app",
+    host: process.env.POSTGRES_HOST ?? "postgres",
+    database: process.env.POSTGRES_DB ?? "app",
     username: "auth_service",
     password: config.authPassword,
     max: 4,
@@ -61,30 +52,4 @@ export async function connectAuthDb(config: {
       await sql.end();
     },
   };
-}
-
-async function migrate(sql: postgres.Sql, authPassword: string): Promise<void> {
-  await sql`create schema if not exists auth`;
-  await sql`create table if not exists auth.users (
-    id uuid primary key default gen_random_uuid(),
-    email text not null unique,
-    password_hash text not null,
-    created_at timestamptz not null default now()
-  )`;
-  await sql.unsafe(
-    `do $role$ begin
-      if not exists (select 1 from pg_roles where rolname = 'auth_service') then
-        create role auth_service login password '${escapeLiteral(authPassword)}';
-      else
-        alter role auth_service with login password '${escapeLiteral(authPassword)}';
-      end if;
-    end $role$`,
-  );
-  await sql`revoke all on schema auth from public`;
-  await sql`grant usage on schema auth to auth_service`;
-  await sql`grant select, insert on auth.users to auth_service`;
-}
-
-function escapeLiteral(value: string): string {
-  return value.replaceAll("'", "''");
 }

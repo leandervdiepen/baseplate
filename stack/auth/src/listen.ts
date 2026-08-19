@@ -4,12 +4,11 @@ import { handleAuthRequest } from "./handle.ts";
 import { tokenSecret } from "./token.ts";
 
 const port = Number(process.env.PORT ?? "3001");
-const postgresPassword = required("POSTGRES_PASSWORD");
 const authPassword = required("AUTH_SERVICE_PASSWORD");
 const secret = tokenSecret(required("JWT_SECRET"));
 const role = process.env.CALLER_ROLE || "app_user";
 
-const db = await connectAuthDb({ postgresPassword, authPassword });
+const db = connectAuthDb({ authPassword });
 const server = createServer((req, res) => {
   void handleAuthRequest({ db, secret, role }, req, res).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : "Unknown error.";

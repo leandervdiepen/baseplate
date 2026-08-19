@@ -4,11 +4,8 @@ services:
     environment:
       POSTGRES_DB: app
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD}
-      AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
       interval: 2s
@@ -16,11 +13,27 @@ services:
       retries: 30
       start_period: 5s
 
+  migrate:
+    build: ./migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD}
+      AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD}
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./stack.json:/stack/stack.json:ro
+
   postgrest:
     image: postgrest/postgrest:v12.2.3
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD}@postgres:5432/app
       PGRST_DB_SCHEMAS: public
@@ -35,8 +48,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       CALLER_ROLE: app_user
