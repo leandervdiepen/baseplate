@@ -1,0 +1,188 @@
+:root {
+  --bg: #f6f8f7;
+  --surface: #ffffff;
+  --text: #0b1f16;
+  --muted: #566a60;
+  --border: #dbe4de;
+  --accent: #1f6b4a;
+  --accent-strong: #17573c;
+  --accent-subtle: #e4eee9;
+  --danger: #b42318;
+  --radius: 10px;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-font-smoothing: antialiased; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { text-wrap: pretty; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+button, input {
+  font: inherit;
+  color: inherit;
+}
+
+.button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  transition: scale 150ms var(--ease), background-color 150ms var(--ease);
+}
+.button:hover { background: var(--accent-strong); }
+.button:active:enabled { scale: 0.96; }
+.button:disabled { opacity: 0.5; cursor: default; }
+
+.button.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.button.secondary:hover { background: var(--bg); }
+
+.button.ghost {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  padding: 0 8px;
+}
+.button.ghost:hover { background: var(--accent-subtle); color: var(--accent-strong); }
+
+.input {
+  min-height: 40px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  transition: border-color 120ms var(--ease);
+}
+.input:focus { border-color: var(--accent); }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 500; }
+.hint { color: var(--muted); font-size: 12px; margin: 0; }
+.error { color: var(--danger); font-size: 13px; margin: 0; }
+
+/* Sign in */
+.centre {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.04), 0 2px 4px rgb(0 0 0 / 0.04);
+}
+.signin { width: 100%; max-width: 380px; padding: 24px; display: grid; gap: 16px; }
+
+/* Shell */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.spacer { margin-left: auto; }
+.who { color: var(--muted); font-size: 13px; }
+
+main { padding: 20px; }
+
+/* Boards */
+.boards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); max-width: 1100px; }
+.board-tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: start;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: scale 150ms var(--ease), border-color 150ms var(--ease);
+}
+.board-tile:hover { border-color: var(--accent); }
+.board-tile:active { scale: 0.98; }
+
+/* Board */
+.lists { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
+.list {
+  width: 272px;
+  flex: 0 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+.list-head { display: flex; align-items: center; gap: 6px; }
+.list-head h3 { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
+.count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.cards { display: grid; gap: 6px; min-height: 8px; }
+.cards.over { outline: 2px dashed var(--accent); outline-offset: 3px; border-radius: 8px; }
+
+.kcard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: grab;
+  transition: box-shadow 120ms var(--ease), opacity 120ms var(--ease);
+}
+.kcard:hover { box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+.kcard.dragging { opacity: 0.4; }
+.kcard span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+/* A card is one line of text, not a toolbar. Its delete keeps a 24px target
+   without forcing the whole card to the height of a full button. */
+.kcard .button.ghost { min-height: 24px; padding: 0 6px; font-size: 16px; line-height: 1; }
+
+.add { display: flex; gap: 6px; }
+.add .input { min-height: 36px; }
+
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; scale: none !important; }
+}

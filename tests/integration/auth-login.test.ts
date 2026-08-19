@@ -249,3 +249,31 @@ function run(command: string, args: string[], cwd: string): Promise<void> {
     });
   });
 }
+
+test("a browser app on another origin gets one allow-origin value, not two", async () => {
+  // PostgREST sets its own CORS header and Caddy sets one too. Sent twice, a
+  // browser rejects the response and every cross-origin app is dead in the
+  // water, which no same-origin test would have noticed.
+  const response = await fetch(`${BASE_URL}/items`, {
+    headers: { Origin: "http://127.0.0.1:5273" },
+  });
+
+  // fetch folds repeated headers into one comma-separated value, so a second
+  // copy shows up here as "*, *" rather than as a second entry.
+  expect(response.headers.get("access-control-allow-origin")).toBe("*");
+});
+
+test("a preflight is answered without a token", async () => {
+  const response = await fetch(`${BASE_URL}/items`, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "http://127.0.0.1:5273",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "authorization,content-type",
+    },
+  });
+
+  expect(response.status).toBe(204);
+  expect(response.headers.get("access-control-allow-headers")).toContain("Authorization");
+  expect(response.headers.get("access-control-allow-methods")).toContain("POST");
+});

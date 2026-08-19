@@ -105,7 +105,17 @@ Full client reference: [`sdk/README.md`](sdk/README.md).
 
 Point drizzle-kit at the database like you would at any Postgres.
 `drizzle-kit pull` reads what is there; `drizzle-kit push` applies changes.
-Declare row access for anything you make that way by adding it to `baseplate.tables`.
+
+A table Baseplate did not create is locked down until you hand it over, so nothing appears on the API by accident:
+
+```bash
+npx @diepen/baseplate schema adopt-table boards
+```
+
+That records the table, writes its access policy, adds the trigger that stamps `owner_id` from the caller's token, and grants the app role, in one transaction.
+Give every table an `owner_id uuid not null` column and adopt it after each push.
+
+[`examples/kanban`](examples/kanban) is a working board built this way: drizzle for the schema, Baseplate for login and row access.
 
 ## Go to a server
 

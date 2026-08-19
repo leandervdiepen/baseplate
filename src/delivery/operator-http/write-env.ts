@@ -19,6 +19,10 @@ POSTGRES_PORT=5432
 # Where the studio is served, on 127.0.0.1 only.
 DASHBOARD_PORT=8788
 
+# Which origins a browser app may call this API from. * suits local work;
+# name your app's origin once it has one.
+CORS_ORIGIN=*
+
 # How long a signed-in user's tokens last. 900, 15m, 12h, and 30d all parse.
 ACCESS_TOKEN_TTL=1h
 REFRESH_TOKEN_TTL=30d

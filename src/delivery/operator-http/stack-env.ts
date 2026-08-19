@@ -15,6 +15,7 @@ export const STACK_ENV_KEYS = [
   "HTTP_PORT",
   "POSTGRES_PORT",
   "SITE_ADDRESS",
+  "CORS_ORIGIN",
   "ACCESS_TOKEN_TTL",
   "REFRESH_TOKEN_TTL",
 ] as const;
