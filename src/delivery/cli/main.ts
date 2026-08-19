@@ -6,20 +6,14 @@ import { InfraError } from "#shared";
 import { createOperatorFor, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
 import { initProject } from "./init-command.ts";
-import { schemaChangeFromArgs } from "./schema-command.ts";
+import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
 import { renderTypes } from "./types-command.ts";
+import { USAGE, version } from "./usage.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
-const USAGE = `Usage: baseplate <command>
 
-  init                     Start a project here: config, secrets, state
-  up                       Bring the stack up and print the API URL
-  down                     Stop the stack and destroy its volumes
-  dashboard                Open the studio on 127.0.0.1
-  tables                   List your tables and their columns
-  types                    Print TypeScript types for your tables
-  schema <change>          Add, rename, or drop a table or column
-  mint-token --sub UUID    Sign a caller JWT, for scripts and tests`;
+/** Commands that need a project and a reachable database. */
+const STACK_COMMANDS = new Set(["up", "down", "tables", "types", "schema", "mint-token"]);
 
 async function main(): Promise<void> {
   const { positionals, values } = parseArgs({
@@ -28,14 +22,31 @@ async function main(): Promise<void> {
       sub: { type: "string" },
       to: { type: "string" },
       column: { type: "string", multiple: true },
+      help: { type: "boolean", short: "h" },
+      version: { type: "boolean", short: "v" },
     },
   });
   const command = positionals[0];
   const project = projectRoot();
 
+  // Help, the version, and a wrong command are all answered before a project
+  // is opened. Asking someone to run `init` before they can read `--help` is
+  // no way to meet them.
+  if (values.version) {
+    console.log(version(PACKAGE_ROOT));
+    return;
+  }
+  if (values.help || command === "help") {
+    console.log(USAGE);
+    return;
+  }
   if (!command) {
     console.error(USAGE);
     process.exit(1);
+  }
+  if (command === "schema" && positionals[1] === undefined) {
+    console.log(SCHEMA_USAGE);
+    return;
   }
   if (command === "init") {
     console.log(`Wrote ${await initProject(project)}. Run \`baseplate up\` next.`);
@@ -44,6 +55,11 @@ async function main(): Promise<void> {
   if (command === "dashboard") {
     await runDashboard(project);
     return;
+  }
+
+  if (!STACK_COMMANDS.has(command)) {
+    console.error(`Unknown command '${command}'.\n\n${USAGE}`);
+    process.exit(1);
   }
 
   const operator = createOperatorFor({ packageRoot: PACKAGE_ROOT, projectRoot: project });
@@ -87,8 +103,6 @@ async function main(): Promise<void> {
       console.log(await operator.mintToken.execute(values.sub));
       return;
     }
-    console.error(USAGE);
-    process.exit(1);
   } finally {
     await operator.admin.close();
   }
