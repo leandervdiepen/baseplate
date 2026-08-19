@@ -11,6 +11,7 @@ export function AppShell({
   apiUp,
   target,
   baseUrl,
+  project,
   leaf,
   children,
 }: {
@@ -19,6 +20,7 @@ export function AppShell({
   apiUp: boolean;
   target: string;
   baseUrl: string | null;
+  project: { name: string; path: string };
   leaf?: string | null | undefined;
   children: ReactNode;
 }) {
@@ -33,6 +35,7 @@ export function AppShell({
         apiUp={apiUp}
         target={target}
         baseUrl={baseUrl}
+        project={project}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar current={current} leaf={leaf} />

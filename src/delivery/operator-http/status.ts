@@ -2,11 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FileStackStateStore } from "#infrastructure";
 import { parseEnvMap } from "./env-file.ts";
+import { basename } from "node:path";
 import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
-import { migrationFiles, readReadiness, type ReadinessCheck } from "./readiness.ts";
+import { readReadiness, type ReadinessCheck } from "./readiness.ts";
 
 export type OperatorStatus = {
   configured: boolean;
+  /** Which project this studio is serving. One studio, one project. */
+  project: { name: string; path: string };
   target: string | null;
   hostname: string;
   siteAddress: string | null;
@@ -15,7 +18,6 @@ export type OperatorStatus = {
   serverLocation: string | null;
   accessTokenTtl: string;
   refreshTokenTtl: string;
-  migrations: string[];
   readiness: ReadinessCheck[];
   baseUrl: string | null;
   apiUp: boolean;
@@ -33,6 +35,7 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
   if (!existsSync(envPath)) {
     return {
       configured: false,
+      project: projectLabel(root),
       target: null,
       hostname: "localhost",
       siteAddress: null,
@@ -41,7 +44,6 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
       serverLocation: null,
       accessTokenTtl: "1h",
       refreshTokenTtl: "30d",
-      migrations: migrationFiles(root),
       readiness: [],
       baseUrl: null,
       apiUp: false,
@@ -78,6 +80,7 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
   };
   return {
     configured: Boolean(env.JWT_SECRET),
+    project: projectLabel(root),
     target,
     hostname,
     siteAddress: env.SITE_ADDRESS ?? null,
@@ -86,7 +89,6 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
     serverLocation: env.SERVER_LOCATION ?? "nbg1",
     accessTokenTtl: env.ACCESS_TOKEN_TTL || "1h",
     refreshTokenTtl: env.REFRESH_TOKEN_TTL || "30d",
-    migrations: migrationFiles(root),
     readiness: readReadiness({
       target,
       hostname,
@@ -98,4 +100,9 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
     apiUp,
     secrets,
   };
+}
+
+/** The directory is the project's name. Two studios are told apart by it. */
+function projectLabel(root: string): { name: string; path: string } {
+  return { name: basename(root) || root, path: root };
 }

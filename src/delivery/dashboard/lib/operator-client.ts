@@ -1,5 +1,6 @@
 export type OperatorStatus = {
   configured: boolean;
+  project: { name: string; path: string };
   target: string | null;
   hostname: string;
   siteAddress: string | null;

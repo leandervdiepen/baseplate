@@ -35,6 +35,11 @@ export function App() {
 
   useEffect(refresh, [refresh]);
 
+  // Two studios are two tabs. The tab has to say which project it is.
+  useEffect(() => {
+    document.title = status ? `${status.project.name} · Baseplate` : "Baseplate";
+  }, [status]);
+
   if (error && !status) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-[var(--space-md)] p-[var(--space-xl)] text-center">
@@ -72,6 +77,7 @@ export function App() {
       apiUp={status.apiUp}
       target={status.target ?? "local"}
       baseUrl={status.baseUrl}
+      project={status.project}
       leaf={nav === "tables" ? table : undefined}
     >
       {nav === "tables" ? (

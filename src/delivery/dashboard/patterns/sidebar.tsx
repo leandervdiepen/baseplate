@@ -31,12 +31,14 @@ export function Sidebar({
   apiUp,
   target,
   baseUrl,
+  project,
 }: {
   current: NavId;
   onNavigate: (id: NavId) => void;
   apiUp: boolean;
   target: string;
   baseUrl: string | null;
+  project: { name: string; path: string };
 }) {
   return (
     <div className="sticky top-0 flex h-screen w-[var(--size-rail)] shrink-0 flex-col justify-between overflow-y-auto border-e border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2 pb-[var(--space-md)] pt-5 lg:w-[var(--size-sidebar)] lg:px-3">
@@ -50,6 +52,14 @@ export function Sidebar({
             studio
           </div>
         </div>
+        {/* A studio serves one project. With two open, this is what tells
+            them apart. */}
+        <p
+          title={project.path}
+          className="sr-only max-w-full self-start truncate rounded-[var(--radius-sm)] bg-[var(--color-accent-subtle)] px-2 py-1 font-mono text-[length:var(--text-xs)] leading-[var(--leading-chip)] text-[var(--color-accent-strong)] lg:not-sr-only"
+        >
+          {project.name}
+        </p>
         <nav aria-label="Studio sections" className="flex flex-col gap-0.5">
           <div className="sr-only mb-1.5 px-2.5 text-[length:var(--text-xs)] font-medium uppercase tracking-[var(--tracking-caps)] leading-[var(--leading-chip)] text-[var(--color-text-muted)] lg:not-sr-only">
             Workspace
