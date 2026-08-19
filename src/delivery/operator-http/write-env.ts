@@ -16,6 +16,8 @@ HTTP_PORT=8080
 SITE_ADDRESS=:8080
 # Loopback only. The operator tool applies schema changes over this.
 POSTGRES_PORT=5432
+# Where the studio is served, on 127.0.0.1 only.
+DASHBOARD_PORT=8788
 
 # How long a signed-in user's tokens last. 900, 15m, 12h, and 30d all parse.
 ACCESS_TOKEN_TTL=1h
@@ -49,6 +51,7 @@ export function writeLocalFirstRun(root: string): void {
     AUTH_SERVICE_PASSWORD: current.AUTH_SERVICE_PASSWORD || secretValue(),
     HTTP_PORT: current.HTTP_PORT || "8080",
     POSTGRES_PORT: current.POSTGRES_PORT || "5432",
+    DASHBOARD_PORT: current.DASHBOARD_PORT || "8788",
     BASEPLATE_HOSTNAME: current.BASEPLATE_HOSTNAME || "localhost",
     SITE_ADDRESS: current.SITE_ADDRESS || ":8080",
   });

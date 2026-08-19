@@ -1,18 +1,30 @@
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
-import { OPERATOR_HTTP_PORT } from "../operator-setup.ts";
+import { dashboardPortFor } from "../operator-setup.ts";
 import { packageRootFrom, projectRoot } from "../paths.ts";
 import { handleOperatorRequest } from "./handle-request.ts";
 import { isLocalhostHost, isLoopbackAddress } from "./localhost.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
 const PROJECT_ROOT = projectRoot();
+const PORT = dashboardPortFor(PROJECT_ROOT);
+
+/**
+ * Vite's hot-reload socket needs a port of its own, and it too would be shared
+ * by every project. Ten thousand above the studio keeps it in a band the studio
+ * itself never reaches.
+ */
+const HMR_PORT = PORT + 10_000;
 
 async function main(): Promise<void> {
   const vite = await createViteServer({
     configFile: resolve(PACKAGE_ROOT, "src/delivery/dashboard/vite.config.ts"),
-    server: { middlewareMode: true, host: "127.0.0.1" },
+    server: {
+      middlewareMode: true,
+      host: "127.0.0.1",
+      hmr: { host: "127.0.0.1", port: HMR_PORT },
+    },
     appType: "spa",
   });
 
@@ -39,8 +51,22 @@ async function main(): Promise<void> {
     });
   });
 
-  server.listen(OPERATOR_HTTP_PORT, "127.0.0.1", () => {
-    console.log(`http://127.0.0.1:${OPERATOR_HTTP_PORT}`);
+  // A port already taken is an ordinary thing that happens when a studio is
+  // open twice, and it deserves a sentence rather than a stack trace.
+  server.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EADDRINUSE") {
+      console.error(
+        `operator.port_in_use: Port ${PORT} is already serving something. ` +
+          `If it is this project's studio, it is already open. ` +
+          `Otherwise change DASHBOARD_PORT in baseplate.env.`,
+      );
+      process.exit(1);
+    }
+    throw error;
+  });
+
+  server.listen(PORT, "127.0.0.1", () => {
+    console.log(`http://127.0.0.1:${PORT}`);
   });
 }
 

@@ -11,7 +11,24 @@ import { writeStackEnv } from "./operator-http/stack-env.ts";
 import { CONFIG_FILE, STATE_DIR } from "./paths.ts";
 import { composeProjectName } from "./project-name.ts";
 
+/** Where the studio listens when a project has not chosen for itself. */
 export const OPERATOR_HTTP_PORT = 8788;
+
+/**
+ * The studio is per project, so its port is too. Two projects both serving the
+ * studio on one port meant the second one died on EADDRINUSE.
+ */
+export function dashboardPortFor(root: string): number {
+  try {
+    const text = readFileSync(resolve(root, CONFIG_FILE), "utf8");
+    const match = text.match(/^\s*DASHBOARD_PORT\s*=\s*(\d+)\s*$/m);
+    const port = match?.[1] ? Number(match[1]) : Number.NaN;
+    return Number.isInteger(port) && port > 0 && port < 65536 ? port : OPERATOR_HTTP_PORT;
+  } catch {
+    // No project here yet. The studio still comes up and offers first run.
+    return OPERATOR_HTTP_PORT;
+  }
+}
 
 export function loadEnvFile(path: string, override: boolean): void {
   let text: string;

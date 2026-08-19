@@ -1,5 +1,5 @@
 import { createServer } from "node:net";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
@@ -7,6 +7,7 @@ import { freePortFrom, initProject } from "../../../src/delivery/cli/init-comman
 import { parseEnvMap } from "../../../src/delivery/operator-http/env-file.ts";
 import { stackEnvText } from "../../../src/delivery/operator-http/stack-env.ts";
 import { composeProjectName } from "../../../src/delivery/project-name.ts";
+import { dashboardPortFor, OPERATOR_HTTP_PORT } from "../../../src/delivery/operator-setup.ts";
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), "baseplate-project-"));
@@ -115,4 +116,24 @@ test("a free port is taken as it is", async () => {
   });
 
   expect(await freePortFrom(port)).toBe(port);
+});
+
+test("a project records its own studio port and reads it back", async () => {
+  const dir = project();
+
+  await initProject(dir);
+
+  const written = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8")).DASHBOARD_PORT;
+  expect(dashboardPortFor(dir)).toBe(Number(written));
+});
+
+test("a directory with no project still gets a studio port to offer first run on", () => {
+  expect(dashboardPortFor(project())).toBe(OPERATOR_HTTP_PORT);
+});
+
+test("a config written before studio ports existed keeps working", () => {
+  const dir = project();
+  writeFileSync(join(dir, "baseplate.env"), "TARGET=local\nHTTP_PORT=8080\n", "utf8");
+
+  expect(dashboardPortFor(dir)).toBe(OPERATOR_HTTP_PORT);
 });

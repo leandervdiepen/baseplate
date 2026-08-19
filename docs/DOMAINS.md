@@ -118,6 +118,7 @@ An operator's directory: `baseplate.env` and `.baseplate/`.
 Created by `baseplate init`, with secrets generated for it alone.
 
 Two projects on one machine share nothing: not ports, not Docker volumes, not secrets.
+That includes the studio's own port, so an operator can have both projects open at once.
 
 The studio is delivery, not a domain type.
 Operator HTTP is delivery.

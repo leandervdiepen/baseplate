@@ -26,6 +26,7 @@ That directory holds your config, your secrets, and your state.
 It is yours, and Baseplate never writes anything else into it.
 
 Two projects on one machine share nothing: not ports, not volumes, not secrets.
+`init` picks free ports for the API, Postgres, and the studio, so a second project comes up beside the first and both studios can be open at once.
 
 ## Make a table
 
@@ -51,7 +52,7 @@ Renaming, dropping, and adding columns work the same way.
 So does the studio, if you would rather click:
 
 ```bash
-npx @diepen/baseplate dashboard         # http://127.0.0.1:8788, loopback only
+npx @diepen/baseplate dashboard         # 127.0.0.1 only; prints its URL
 ```
 
 ## Connect an app

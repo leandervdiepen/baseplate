@@ -9,10 +9,6 @@ import { TEMPLATE } from "../operator-http/write-env.ts";
 import { secretValue } from "../operator-http/write-env.ts";
 
 /**
- * Creates the operator's project: a config file with freshly generated secrets
- * and a place to keep state. Nothing else, and nothing they have to maintain.
- */
-/**
  * A project keeps its database in a Docker volume named after its path. New
  * secrets against an old volume fail as "password authentication failed", which
  * says nothing useful, so catch it here where the fix is obvious.
@@ -103,10 +99,12 @@ export async function initProject(project: string): Promise<string> {
   mkdirSync(resolve(project, STATE_DIR), { recursive: true });
   const httpPort = await freePortFrom(8080);
   const postgresPort = await freePortFrom(5432);
+  const dashboardPort = await freePortFrom(8788);
   // SITE_ADDRESS is what Caddy listens on inside the container and stays 8080.
   // HTTP_PORT is only the host mapping, which is what has to dodge a collision.
   const config = TEMPLATE.replace("HTTP_PORT=8080", `HTTP_PORT=${httpPort}`)
     .replace("POSTGRES_PORT=5432", `POSTGRES_PORT=${postgresPort}`)
+    .replace("DASHBOARD_PORT=8788", `DASHBOARD_PORT=${dashboardPort}`)
     .replace(
     "TARGET=local",
     [
