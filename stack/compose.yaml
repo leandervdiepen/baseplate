@@ -24,6 +24,7 @@ services:
       AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD}
       AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD}
     volumes:
+      - ./platform:/platform:ro
       - ./migrations:/migrations:ro
       - ./stack.json:/stack/stack.json:ro
 

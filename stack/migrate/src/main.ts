@@ -5,6 +5,7 @@ import { ensureLedger } from "./ledger.ts";
 import { syncPolicies, type DeclaredPolicy } from "./policies.ts";
 import { ensureRoles } from "./roles.ts";
 
+const PLATFORM_DIR = process.env.PLATFORM_DIR ?? "/platform";
 const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? "/migrations";
 const STACK_FILE = process.env.STACK_FILE ?? "/stack/stack.json";
 
@@ -42,7 +43,14 @@ async function main(): Promise<void> {
       authService: required("AUTH_SERVICE_PASSWORD"),
     });
     await ensureLedger(sql);
-    const count = await applyMigrations(sql, MIGRATIONS_DIR, log);
+    const count = await applyMigrations(
+      sql,
+      [
+        { label: "platform", dir: PLATFORM_DIR },
+        { label: "app", dir: MIGRATIONS_DIR },
+      ],
+      log,
+    );
     log(count === 0 ? "no pending migrations" : `${count} migration(s) applied`);
     await syncPolicies(sql, declaredPolicies(), log);
     log("ready");
