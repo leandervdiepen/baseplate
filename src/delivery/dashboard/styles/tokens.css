@@ -8,6 +8,7 @@
   --color-accent-strong: #17573c;
   --color-accent-subtle: #e4eee9;
   --color-danger: #b42318;
+  --color-danger-strong: #8f1c13;
   --color-danger-subtle: #fbeae8;
   --color-on-accent: #ffffff;
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
@@ -34,6 +35,7 @@
   --leading-token: 19px;
   --breakpoint-desktop: 1440px;
   --container-form: 640px;
+  --container-content: 820px;
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
@@ -45,6 +47,7 @@
   --radius-lg: 12px;
   --radius-pill: 999px;
   --size-sidebar: 240px;
+  --size-rail: 60px;
   --size-topbar: 57px;
   --size-control: 40px;
   --size-nav: 40px;
@@ -60,4 +63,14 @@
   --duration-enter: 220ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --press-scale: 0.96;
+
+  /* Depth. Layered and transparent so a surface reads the same on any ground. */
+  --shadow-raised: 0 1px 1px oklch(0 0 0 / 0.04), 0 2px 4px oklch(0 0 0 / 0.04);
+  --shadow-control: 0 1px 2px oklch(0 0 0 / 0.06);
+
+  /* The focus ring is drawn outside the control with a gap, so it stays
+     visible on a filled accent button as well as on a white field. */
+  --color-focus: #1f6b4a;
+  --focus-width: 2px;
+  --focus-offset: 2px;
 }

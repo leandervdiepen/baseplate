@@ -1,119 +1,127 @@
 import { useState } from "react";
-import { loadCaller, loadIssued, saveCaller } from "../lib/caller.ts";
+import { saveCaller, useCaller, useIssued } from "../lib/caller.ts";
 import { shortId } from "../lib/format.ts";
 import { peekJwt } from "../lib/jwt.ts";
 import { mintToken } from "../lib/operator-client.ts";
 import { DataCell, DataRow, DataTable } from "../patterns/data-table.tsx";
+import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
-import { CapsLabel, MonoChip, StatusPill } from "../primitives/chip.tsx";
-import { IconCopy } from "../primitives/icon.tsx";
+import { Card, CardTitle } from "../primitives/card.tsx";
+import { MonoChip, StatusPill } from "../primitives/chip.tsx";
+import { CopyButton } from "../primitives/copy-button.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
 
 const SAMPLE = "11111111-1111-4111-8111-111111111111";
 
-export function MintPanel({ onIssued }: { onIssued: () => void }) {
-  const existing = loadCaller();
-  const [sub, setSub] = useState(existing?.sub ?? SAMPLE);
-  const [token, setToken] = useState(existing?.token ?? "");
+export function MintPanel() {
+  const caller = useCaller();
+  const recents = useIssued();
+  const [sub, setSub] = useState(caller?.sub ?? SAMPLE);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const recents = loadIssued();
-  const peek = token ? peekJwt(token) : {};
-  const role = peek.role ?? existing?.role ?? "app_user";
 
-  async function issue() {
+  const token = caller?.token ?? "";
+  const peek = token ? peekJwt(token) : {};
+  const role = peek.role ?? caller?.role ?? "app_user";
+
+  async function issue(): Promise<void> {
     setBusy(true);
     setError(null);
     try {
       const result = await mintToken(sub);
-      const claims = peekJwt(result.token);
-      setToken(result.token);
-      saveCaller({ sub: result.sub, token: result.token, role: claims.role });
-      onIssued();
+      saveCaller({ sub: result.sub, token: result.token, role: peekJwt(result.token).role });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to issue token.");
+      setError(cause instanceof Error ? cause.message : "Unable to issue a token for that subject.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <>
-    <div className="grid gap-[var(--space-lg)] md:grid-cols-2">
-      <section className="flex flex-col gap-[var(--space-md)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5">
-        <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)] leading-[var(--leading-snug)]">
-          Impersonate a caller
-        </h2>
-        <Field label="Subject (user UUID)" hint="Operator mint for tests. Apps should sign up with email.">
-          <Input
-            value={sub}
-            onChange={(event) => setSub(event.target.value)}
-            className="font-mono tabular-nums"
-          />
-        </Field>
-        {error ? (
-          <p className="text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
-        ) : null}
-        <Button onClick={() => void issue()} disabled={busy}>
-          {busy ? "Signing…" : "Mint token"}
-        </Button>
-        <Hint>Same from a terminal: baseplate mint-token --sub UUID</Hint>
-      </section>
-      <section className="flex flex-col gap-3.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5">
-        <CapsLabel>Latest token</CapsLabel>
-        {token ? (
-          <>
-            <div className="break-all rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-[var(--space-md)] py-3.5 font-mono text-[length:var(--text-xs)] leading-[var(--leading-token)]">
-              {token}
-            </div>
-            <div className="flex gap-[var(--space-sm)]">
-              <MonoChip>sub {shortId(peek.sub ?? sub)}</MonoChip>
-              <MonoChip>role {role}</MonoChip>
-            </div>
-            <Button variant="secondary" onClick={() => void navigator.clipboard.writeText(token)}>
-              <IconCopy />
-              Copy token
+    <div className="flex flex-col gap-[var(--space-lg)]">
+      <div className="grid items-start gap-[var(--space-lg)] lg:grid-cols-2">
+        <Card className="p-5">
+          <form
+            className="flex flex-col gap-[var(--space-md)]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void issue();
+            }}
+          >
+            <CardTitle>Impersonate a caller</CardTitle>
+            <Field
+              label="Subject"
+              hint="The user id the token speaks for. For tests and scripts; apps sign up with an email."
+            >
+              <Input
+                value={sub}
+                onChange={(event) => setSub(event.target.value)}
+                className="font-mono tabular-nums"
+              />
+            </Field>
+            <StatusMessage message={error} tone="error" />
+            <Button type="submit" className="self-start" busy={busy}>
+              Mint token
             </Button>
-          </>
-        ) : (
-          <p className="text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-            Sign up or mint a token to see the JWT here.
-          </p>
-        )}
-      </section>
+            <Hint>
+              The same from a terminal:{" "}
+              <code className="font-mono">baseplate mint-token --sub UUID</code>
+            </Hint>
+          </form>
+        </Card>
+
+        <Card className="flex flex-col gap-3.5 p-5">
+          <CardTitle>Latest token</CardTitle>
+          {token ? (
+            <>
+              <p className="break-all rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-[var(--space-md)] py-3.5 font-mono text-[length:var(--text-xs)] leading-[var(--leading-token)]">
+                {token}
+              </p>
+              <div className="flex flex-wrap gap-[var(--space-sm)]">
+                <MonoChip>sub {shortId(peek.sub ?? sub)}</MonoChip>
+                <MonoChip>role {role}</MonoChip>
+              </div>
+              <CopyButton value={token} label="Copy token" />
+            </>
+          ) : (
+            <p className="text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+              Sign up or mint a token and the JWT appears here.
+            </p>
+          )}
+        </Card>
       </div>
+
       {recents.length > 0 ? (
-        <>
-          <h2 className="mb-3 text-[length:var(--text-sm)] font-medium">Recently issued</h2>
+        <section>
+          <h2 className="mb-3 text-[length:var(--text-sm)] font-medium">Issued this session</h2>
           <DataTable
+            caption="Tokens issued in this browser session"
             columns={[
-              { key: "token", label: "token", grow: true },
+              { key: "token", label: "token" },
               { key: "sub", label: "subject", width: "var(--size-col-id)" },
               { key: "role", label: "role", width: "120px" },
-              { key: "status", label: "status", width: "88px" },
+              { key: "status", label: "status", width: "96px" },
             ]}
           >
             {recents.map((item, index) => (
-              <DataRow key={item.token} last={index === recents.length - 1}>
-                <DataCell grow mono>
-                  {shortId(item.token)}
-                </DataCell>
+              <DataRow key={item.token}>
+                <DataCell mono>{shortId(item.token)}</DataCell>
                 <DataCell width="var(--size-col-id)" mono muted>
                   {shortId(item.sub)}
                 </DataCell>
                 <DataCell width="120px" mono>
                   {item.role ?? peekJwt(item.token).role ?? "app_user"}
                 </DataCell>
-                <DataCell width="88px">
+                <DataCell width="96px">
                   <StatusPill tone={index === 0 ? "accent" : "muted"}>
-                    {index === 0 ? "active" : "session"}
+                    {index === 0 ? "in use" : "replaced"}
                   </StatusPill>
                 </DataCell>
               </DataRow>
             ))}
           </DataTable>
-        </>
+        </section>
       ) : null}
-    </>
+    </div>
   );
 }

@@ -27,18 +27,54 @@ li {
   text-wrap: pretty;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .nav-item:hover:not([aria-current="page"]) {
-    background: var(--color-bg);
-  }
+/**
+ * One focus ring for the whole studio, drawn outside the control. Individual
+ * components must not remove it: a border colour change alone is invisible to
+ * anyone who cannot see the difference between two greys.
+ */
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-sm);
+  top: var(--space-sm);
+  z-index: 10;
+  transform: translateY(-200%);
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Colour and opacity still carry meaning, so they keep their transition.
+     Anything that moves or scales is dropped. */
   *,
   *::before,
   *::after {
     animation: none !important;
-    transition-duration: 0.01ms !important;
+    transition-property: color, background-color, border-color, outline-color, opacity !important;
+    scale: none !important;
+  }
+
+  .skip-link {
+    transition: none;
+  }
+
+  /* A loading indicator is the only feedback a busy control gives, so it keeps
+     turning. Slowly, because the point of the preference is gentler motion. */
+  .spinner {
+    animation: spin 1400ms linear infinite !important;
   }
 }
 
@@ -52,15 +88,15 @@ li {
   }
 
   .empty-enter > *:nth-child(2) {
-    animation-delay: 80ms;
+    animation-delay: 60ms;
   }
 
   .empty-enter > *:nth-child(3) {
-    animation-delay: 160ms;
+    animation-delay: 120ms;
   }
 
   .empty-enter > *:nth-child(4) {
-    animation-delay: 240ms;
+    animation-delay: 180ms;
   }
 }
 
@@ -68,6 +104,16 @@ li {
   background-color: var(--color-bg-subtle);
   background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
   background-size: var(--space-md) var(--space-md);
+}
+
+.spinner {
+  animation: spin 640ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
 }
 
 @keyframes empty-enter {

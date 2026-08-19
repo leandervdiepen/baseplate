@@ -1,47 +1,41 @@
-import { StatusPill } from "../primitives/chip.tsx";
-import { Button } from "../primitives/button.tsx";
-import type { SchemaColumn, SchemaSnapshot } from "../lib/operator-client.ts";
+import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
+import { Card } from "../primitives/card.tsx";
+import { StatusPill } from "../primitives/chip.tsx";
+import type { SchemaColumn, SchemaSnapshot } from "../lib/operator-client.ts";
 
+/**
+ * One card, one border. The actions live in this card's footer rather than in a
+ * second bordered box wrapped around it.
+ */
 export function SchemaCard({
   name,
   columns,
-  onOpenRows,
+  footer,
 }: {
   name: string;
   columns: SchemaColumn[];
-  onOpenRows: () => void;
+  footer?: ReactNode;
 }) {
   return (
-    <article className="w-[300px] shrink-0 overflow-clip rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg)]">
-      <header className="flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5">
-        <span className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)] font-medium">
+    <Card className="w-[360px] max-w-full shrink-0 overflow-clip">
+      <header className="flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-2.5">
+        <h3 className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)] font-medium">
           public.{name}
-        </span>
+        </h3>
         <StatusPill tone="accent">rls</StatusPill>
       </header>
       <ul>
         {columns.map((column, index) => (
-          <ColumnRow
-            key={column.name}
-            column={column}
-            last={index === columns.length - 1}
-          />
+          <ColumnRow key={column.name} column={column} last={index === columns.length - 1} />
         ))}
       </ul>
-      <footer className="border-t border-[var(--color-border)] px-3 py-2">
-        <Button variant="ghost" className="h-10 min-h-10 px-0" onClick={onOpenRows}>
-          Open rows
-        </Button>
-      </footer>
-    </article>
+      {footer ? <div className="border-t border-[var(--color-border)]">{footer}</div> : null}
+    </Card>
   );
 }
 
 function ColumnRow({ column, last }: { column: SchemaColumn; last: boolean }) {
-  const ref = column.references
-    ? `${column.references.table}.${column.references.column}`
-    : null;
   return (
     <li
       className={cn(
@@ -49,15 +43,15 @@ function ColumnRow({ column, last }: { column: SchemaColumn; last: boolean }) {
         !last && "border-b border-[var(--color-border)]",
       )}
     >
-      <span className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)] tabular-nums">
+      <span className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)]">
         {column.name}
       </span>
-      <span className="w-14 shrink-0 font-mono text-[length:var(--text-xs)] text-[var(--color-text-muted)]">
+      <span className="w-16 shrink-0 font-mono text-[length:var(--text-xs)] text-[var(--color-text-muted)]">
         {column.type}
       </span>
       <span className="flex w-16 shrink-0 justify-end gap-1">
         {column.primaryKey ? <StatusPill>pk</StatusPill> : null}
-        {ref ? <StatusPill>fk</StatusPill> : null}
+        {column.references ? <StatusPill>fk</StatusPill> : null}
         {column.owner ? <StatusPill tone="accent">owner</StatusPill> : null}
       </span>
     </li>
@@ -77,12 +71,15 @@ export function SchemaRelations({ tables }: { tables: SchemaSnapshot["tables"] }
     return null;
   }
   return (
-    <ul className="mt-[var(--space-lg)] space-y-1 font-mono text-[length:var(--text-xs)] text-[var(--color-text-muted)]">
-      {links.map((link) => (
-        <li key={`${link.from}->${link.to}`}>
-          {link.from} → {link.to}
-        </li>
-      ))}
-    </ul>
+    <section className="mt-[var(--space-lg)]">
+      <h2 className="mb-2 text-[length:var(--text-sm)] font-medium">References</h2>
+      <ul className="space-y-1 font-mono text-[length:var(--text-xs)] text-[var(--color-text-muted)]">
+        {links.map((link) => (
+          <li key={`${link.from}->${link.to}`}>
+            {link.from} → {link.to}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

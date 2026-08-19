@@ -3,7 +3,7 @@ import type { SchemaColumn } from "../lib/operator-client.ts";
 import { coerce, editableColumns } from "../lib/row-values.ts";
 import { Button } from "../primitives/button.tsx";
 import { IconPlus } from "../primitives/icon.tsx";
-import { Input } from "../primitives/input.tsx";
+import { Field, Input } from "../primitives/input.tsx";
 
 export function RowForm({
   columns,
@@ -30,32 +30,34 @@ export function RowForm({
     setValues({});
   }
 
-  if (fields.length === 0) {
-    return (
-      <Button onClick={submit} disabled={busy}>
-        <IconPlus />
-        Insert row
-      </Button>
-    );
-  }
-
   return (
-    <div className="flex min-h-[var(--size-control)] flex-wrap items-center gap-[var(--space-sm)]">
+    <form
+      className="flex flex-wrap items-end gap-[var(--space-md)]"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+    >
       {fields.map((field) => (
-        <Input
-          key={field.name}
-          placeholder={`${field.name} (${field.type})`}
-          value={values[field.name] ?? ""}
-          onChange={(event) =>
-            setValues((current) => ({ ...current, [field.name]: event.target.value }))
-          }
-          className="max-w-56"
-        />
+        <div key={field.name} className="w-full max-w-56">
+          {/* The column name is the label. The type is the format hint, which is
+              all a placeholder should ever be asked to carry. */}
+          <Field label={field.name}>
+            <Input
+              placeholder={field.type}
+              className="font-mono"
+              value={values[field.name] ?? ""}
+              onChange={(event) =>
+                setValues((current) => ({ ...current, [field.name]: event.target.value }))
+              }
+            />
+          </Field>
+        </div>
       ))}
-      <Button onClick={submit} disabled={busy}>
+      <Button type="submit" busy={busy}>
         <IconPlus />
         Insert row
       </Button>
-    </div>
+    </form>
   );
 }

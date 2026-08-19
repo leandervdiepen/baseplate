@@ -1,74 +1,97 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { saveCaller } from "../lib/caller.ts";
 import { peekJwt } from "../lib/jwt.ts";
 import { signIn, signUp } from "../lib/operator-client.ts";
+import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
+import { Card, CardTitle } from "../primitives/card.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
 
-export function UserLogin({ onIssued }: { onIssued: () => void }) {
+type Kind = "signup" | "login";
+
+export function UserLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<Kind | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
-  async function submit(kind: "signup" | "login") {
-    setBusy(true);
+  /** Checked on submit, never before: a form that argues while you type is rude. */
+  function invalid(): boolean {
+    const noEmail = email.trim().length === 0;
+    const noPassword = password.length === 0;
+    setEmailError(noEmail ? "Enter the email address for this account." : null);
+    setPasswordError(noPassword ? "Enter the password for this account." : null);
+    if (noEmail) {
+      emailRef.current?.focus();
+    } else if (noPassword) {
+      passwordRef.current?.focus();
+    }
+    return noEmail || noPassword;
+  }
+
+  async function submit(kind: Kind): Promise<void> {
     setError(null);
+    if (invalid()) {
+      return;
+    }
+    setBusy(kind);
     try {
-      const session = kind === "signup"
-        ? await signUp(email, password)
-        : await signIn(email, password);
-      const claims = peekJwt(session.token);
-      saveCaller({
-        sub: session.user.id,
-        token: session.token,
-        role: claims.role,
-      });
-      onIssued();
+      const session = kind === "signup" ? await signUp(email, password) : await signIn(email, password);
+      saveCaller({ sub: session.user.id, token: session.token, role: peekJwt(session.token).role });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to sign in.");
+      setError(cause instanceof Error ? cause.message : "Unable to sign in. Check the email and password.");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   return (
-    <section className="flex flex-col gap-[var(--space-md)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5">
-      <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)] leading-[var(--leading-snug)]">
-        Sign up or log in
-      </h2>
-      <Field label="Email">
-        <Input
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-      </Field>
-      <Field label="Password" hint="At least 8 characters. JWT_SECRET never leaves the server.">
-        <Input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </Field>
-      {error ? (
-        <p className="text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
-      ) : null}
-      <div className="flex flex-wrap gap-[var(--space-sm)]">
-        <Button onClick={() => void submit("signup")} disabled={busy || !email || !password}>
-          {busy ? "Signing…" : "Create account"}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => void submit("login")}
-          disabled={busy || !email || !password}
-        >
-          Log in
-        </Button>
-      </div>
-      <Hint>This hits the stack at /auth, not operator mint. The JWT sub is the user id.</Hint>
-    </section>
+    <Card className="p-5">
+      <form
+        className="flex flex-col gap-[var(--space-md)]"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit("login");
+        }}
+      >
+        <CardTitle>Sign up or log in</CardTitle>
+        <Field label="Email" error={emailError}>
+          <Input
+            ref={emailRef}
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </Field>
+        <Field label="Password" hint="At least 8 characters." error={passwordError}>
+          <Input
+            ref={passwordRef}
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </Field>
+        <StatusMessage message={error} tone="error" />
+        <div className="flex flex-wrap gap-[var(--space-sm)]">
+          <Button onClick={() => void submit("signup")} busy={busy === "signup"}>
+            Create account
+          </Button>
+          <Button type="submit" variant="secondary" busy={busy === "login"}>
+            Log in
+          </Button>
+        </div>
+        <Hint>
+          This signs in against the stack at <code className="font-mono">/auth</code>, not against
+          operator mint. The JWT <code className="font-mono">sub</code> is the user id.
+        </Hint>
+      </form>
+    </Card>
   );
 }

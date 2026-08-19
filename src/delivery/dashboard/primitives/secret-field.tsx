@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { IconEye } from "./icon.tsx";
+import { IconEye, IconEyeOff } from "./icon.tsx";
+import { IconSwap } from "./icon-swap.tsx";
 import { Field, Input } from "./input.tsx";
 
 export function SecretField({
@@ -22,17 +23,18 @@ export function SecretField({
         <Input
           type={visible ? "text" : "password"}
           value={value}
-          placeholder={stored ? "stored on this machine" : undefined}
+          placeholder={stored ? "Stored on this machine" : undefined}
           onChange={(event) => onChange(event.target.value)}
-          className="pe-10 font-mono tracking-[0.1em]"
+          className="pe-11 font-mono tracking-[0.1em]"
         />
         <button
           type="button"
-          className="absolute end-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center text-[var(--color-text-muted)]"
+          className="absolute end-0.5 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-muted)] transition-[color] duration-[var(--duration-hover)] hover:text-[var(--color-text)]"
           onClick={() => setVisible((current) => !current)}
-          aria-label={visible ? "Hide secret" : "Show secret"}
+          aria-label={visible ? `Hide ${label}` : `Show ${label}`}
+          aria-pressed={visible}
         >
-          <IconEye />
+          <IconSwap showSecond={visible} first={<IconEye />} second={<IconEyeOff />} />
         </button>
       </div>
     </Field>

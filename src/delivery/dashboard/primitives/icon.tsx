@@ -2,22 +2,24 @@ import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
+/**
+ * Every icon is drawn on the same 16 grid at the same stroke weight. Mixing
+ * grids makes two icons of equal nominal size read as different weights.
+ */
 function Svg({ size = 16, children, ...props }: IconProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      {...props}
-    >
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
       {children}
     </svg>
   );
 }
 
-const stroke = { stroke: "currentColor", strokeWidth: 1.5 } as const;
+const stroke = {
+  stroke: "currentColor",
+  strokeWidth: 1.5,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+} as const;
 
 export function IconTables(props: IconProps) {
   return (
@@ -79,18 +81,26 @@ export function IconSettings(props: IconProps) {
 
 export function IconPlus(props: IconProps) {
   return (
-    <svg width={14} height={14} viewBox="0 0 14 14" fill="none" aria-hidden="true" {...props}>
-      <path d="M7 1.5V12.5M1.5 7H12.5" stroke="currentColor" strokeWidth="1.8" />
-    </svg>
+    <Svg {...props}>
+      <path d="M8 3V13M3 8H13" {...stroke} />
+    </Svg>
   );
 }
 
 export function IconCopy(props: IconProps) {
   return (
-    <svg width={14} height={14} viewBox="0 0 14 14" fill="none" aria-hidden="true" {...props}>
-      <rect x="4.5" y="4.5" width="8" height="8" rx="1.5" {...stroke} />
-      <path d="M9.5 4.5V3C9.5 2.2 8.8 1.5 8 1.5H3C2.2 1.5 1.5 2.2 1.5 3V8C1.5 8.8 2.2 9.5 3 9.5H4.5" {...stroke} />
-    </svg>
+    <Svg {...props}>
+      <rect x="5" y="5" width="9" height="9" rx="1.5" {...stroke} />
+      <path d="M10.5 5V3.5C10.5 2.67 9.83 2 9 2H3.5C2.67 2 2 2.67 2 3.5V9C2 9.83 2.67 10.5 3.5 10.5H5" {...stroke} />
+    </Svg>
+  );
+}
+
+export function IconCheck(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 8.5L6.5 11.5L12.5 4.5" {...stroke} />
+    </Svg>
   );
 }
 
@@ -103,9 +113,19 @@ export function IconEye(props: IconProps) {
   );
 }
 
+export function IconEyeOff(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6.4 4C6.9 3.83 7.44 3.75 8 3.75C10.7 3.75 13 5.4 14.5 8C13.94 9.05 13.27 9.93 12.5 10.62" {...stroke} />
+      <path d="M10.1 10.9C9.44 11.2 8.74 11.35 8 11.35C5.3 11.35 3 9.7 1.5 8C2.28 6.65 3.22 5.6 4.3 4.9" {...stroke} />
+      <path d="M2.5 2.5L13.5 13.5" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconLock(props: IconProps) {
   return (
-    <Svg size={14} {...props}>
+    <Svg {...props}>
       <rect x="3.5" y="7" width="9" height="7" rx="1.5" {...stroke} />
       <path d="M5.5 7V5.2C5.5 3.8 6.6 2.7 8 2.7C9.4 2.7 10.5 3.8 10.5 5.2V7" {...stroke} />
     </Svg>
@@ -117,6 +137,15 @@ export function IconSearch(props: IconProps) {
     <Svg {...props}>
       <circle cx="7" cy="7" r="4.2" {...stroke} />
       <path d="M10.4 10.4L13.5 13.5" {...stroke} />
+    </Svg>
+  );
+}
+
+export function Spinner({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size} className="spinner">
+      <circle cx="8" cy="8" r="6.25" {...stroke} opacity="0.3" />
+      <path d="M14.25 8A6.25 6.25 0 0 0 8 1.75" {...stroke} />
     </Svg>
   );
 }

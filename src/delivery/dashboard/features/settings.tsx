@@ -1,18 +1,14 @@
 import { useState } from "react";
-import {
-  provision,
-  saveConfig,
-  teardown,
-  type OperatorStatus,
-} from "../lib/operator-client.ts";
+import { provision, saveConfig, teardown, type OperatorStatus } from "../lib/operator-client.ts";
+import { HetznerSettings, type HetznerDraft } from "./hetzner-settings.tsx";
 import { ReadinessList } from "./readiness-list.tsx";
-import { TokenSettings } from "./token-settings.tsx";
+import { SessionSettings } from "./session-settings.tsx";
 import { Callout } from "../patterns/callout.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
+import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
 import { IconLock } from "../primitives/icon.tsx";
-import { SecretField } from "../primitives/secret-field.tsx";
 import { Segmented } from "../primitives/segmented.tsx";
 
 export function SettingsPage({
@@ -23,15 +19,17 @@ export function SettingsPage({
   onChanged: () => void;
 }) {
   const [target, setTarget] = useState(status.target ?? "local");
-  const [zone, setZone] = useState(status.dnsZone ?? "");
-  const [hcloud, setHcloud] = useState("");
-  const [dnsToken, setDnsToken] = useState("");
-  const [ssh, setSsh] = useState(status.sshKeyName ?? "");
-  const [location, setLocation] = useState(status.serverLocation ?? "nbg1");
-  const [hostname, setHostname] = useState(
-    status.hostname === "localhost" ? "" : status.hostname,
-  );
-  const [busy, setBusy] = useState(false);
+  const [access, setAccess] = useState(status.accessTokenTtl);
+  const [refreshTtl, setRefreshTtl] = useState(status.refreshTokenTtl);
+  const [hetzner, setHetzner] = useState<HetznerDraft>({
+    hostname: status.hostname === "localhost" ? "" : status.hostname,
+    zone: status.dnsZone ?? "",
+    hcloud: "",
+    dnsToken: "",
+    ssh: status.sshKeyName ?? "",
+    location: status.serverLocation ?? "nbg1",
+  });
+  const [busy, setBusy] = useState<"save" | "provision" | "teardown" | null>(null);
   const [confirmDown, setConfirmDown] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,192 +37,154 @@ export function SettingsPage({
   const cloud = target === "hetzner";
   const blocking = status.readiness.filter((check) => !check.ok).length;
 
-  async function save() {
-    setBusy(true);
+  async function act(kind: "save" | "provision" | "teardown", run: () => Promise<void>) {
+    setBusy(kind);
     setError(null);
+    setMessage(null);
     try {
+      await run();
+      onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "That did not work.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const save = () =>
+    act("save", async () => {
       await saveConfig({
         TARGET: target,
-        HETZNER_DNS_ZONE: zone,
-        HCLOUD_TOKEN: hcloud,
-        HETZNER_DNS_TOKEN: dnsToken,
-        SSH_KEY_NAME: ssh,
-        SERVER_LOCATION: location,
+        HETZNER_DNS_ZONE: hetzner.zone,
+        HCLOUD_TOKEN: hetzner.hcloud,
+        HETZNER_DNS_TOKEN: hetzner.dnsToken,
+        SSH_KEY_NAME: hetzner.ssh,
+        SERVER_LOCATION: hetzner.location,
+        ACCESS_TOKEN_TTL: access.trim(),
+        REFRESH_TOKEN_TTL: refreshTtl.trim(),
         // Caddy asks Let's Encrypt for exactly the stack hostname, so the two
         // are one field here rather than two that must be kept equal by hand.
-        SITE_ADDRESS: cloud ? hostname.trim() : ":8080",
-        hostname: cloud ? hostname.trim() : "localhost",
+        SITE_ADDRESS: cloud ? hetzner.hostname.trim() : ":8080",
+        hostname: cloud ? hetzner.hostname.trim() : "localhost",
       });
-      setMessage("Saved locally in operator.env on this computer.");
-      onChanged();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function runProvision() {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await provision();
-      setMessage(`Stack up at ${result.baseUrl}`);
-      onChanged();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Provision failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function runTeardown() {
-    setBusy(true);
-    setError(null);
-    try {
-      await teardown();
-      setConfirmDown(false);
-      setMessage("Stack stopped.");
-      onChanged();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Teardown failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
+      setMessage("Saved to baseplate.env in this project. Start the stack to apply it.");
+    });
 
   return (
     <>
-      <PageHeader title="Settings" description="Provisioning target and operator credentials." />
+      <PageHeader title="Settings" description="Where the stack runs, and the keys it needs." />
       <Callout icon={<IconLock />} className="mb-[var(--space-lg)] max-w-[var(--container-form)]">
-        These keys stay on this machine. Only database and JWT secrets are sent to a server;
+        These keys stay on this machine. Only the database and JWT secrets are sent to a server;
         your Hetzner tokens never leave here.
       </Callout>
-      <div className="flex max-w-[var(--container-form)] flex-col">
+      <form
+        className="flex max-w-[var(--container-form)] flex-col"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save();
+        }}
+      >
         <section className="flex flex-col gap-[var(--space-md)] border-b border-[var(--color-border)] pb-[var(--space-lg)]">
           <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
             Target
           </h2>
-          <Field label="TARGET" hint="Where the stack runs. Local needs no cloud keys.">
+          <Field label="Where the stack runs" hint="Local needs no cloud account and no domain.">
             <Segmented
+              label="Where the stack runs"
               value={target}
               onChange={setTarget}
               options={[
-                { id: "local", label: "local" },
-                { id: "hetzner", label: "hetzner" },
+                { id: "local", label: "This machine" },
+                { id: "hetzner", label: "Hetzner" },
               ]}
             />
           </Field>
           {cloud ? (
             <Field
               label="Hostname"
-              hint="A name under your Hetzner DNS zone. Caddy gets a certificate for it."
+              hint="A name under your DNS zone. Caddy gets a certificate for exactly this name."
             >
               <Input
-                value={hostname}
-                onChange={(event) => setHostname(event.target.value)}
+                value={hetzner.hostname}
+                onChange={(event) =>
+                  setHetzner((current) => ({ ...current, hostname: event.target.value }))
+                }
                 placeholder="api.example.com"
                 className="font-mono"
               />
             </Field>
           ) : (
-            <Hint>
-              Local serves plain HTTP on 127.0.0.1 with no domain and no certificate.
-            </Hint>
+            <Hint>Local serves plain HTTP on 127.0.0.1, with no domain and no certificate.</Hint>
           )}
         </section>
 
         {cloud ? (
-          <>
-            <section className="flex flex-col gap-[var(--space-md)] border-b border-[var(--color-border)] py-[var(--space-lg)]">
-              <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-                Hetzner API
-              </h2>
-              <SecretField
-                label="HCLOUD_TOKEN"
-                value={hcloud}
-                onChange={setHcloud}
-                stored={status.secrets.hcloud}
-                hint="Read-write token from your Hetzner Cloud console. Stored only in this project, on this computer."
-              />
-              <Field label="SERVER_LOCATION" hint="Hetzner region for the server.">
-                <Input
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  className="max-w-40 font-mono"
-                />
-              </Field>
-            </section>
-            <section className="flex flex-col gap-[var(--space-md)] border-b border-[var(--color-border)] py-[var(--space-lg)]">
-              <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-                DNS and SSH
-              </h2>
-              <SecretField
-                label="DNS_TOKEN"
-                value={dnsToken}
-                onChange={setDnsToken}
-                stored={status.secrets.dnsToken}
-                hint="For the A record pointing at your server. Stored only in this project, on this computer."
-              />
-              <div className="flex gap-[var(--space-md)]">
-                <Field label="DNS_ZONE" hint="The zone in Hetzner DNS that owns the hostname.">
-                  <Input
-                    value={zone}
-                    onChange={(event) => setZone(event.target.value)}
-                    placeholder="example.com"
-                    className="font-mono"
-                  />
-                </Field>
-                <Field label="SSH_KEY_NAME" hint="A key already in your Hetzner project.">
-                  <Input
-                    value={ssh}
-                    onChange={(event) => setSsh(event.target.value)}
-                    className="font-mono"
-                  />
-                </Field>
-              </div>
-            </section>
-          </>
+          <HetznerSettings
+            draft={hetzner}
+            secrets={status.secrets}
+            onChange={(patch) => setHetzner((current) => ({ ...current, ...patch }))}
+          />
         ) : null}
 
-        <TokenSettings status={status} onChanged={onChanged} />
+        <SessionSettings
+          access={access}
+          refresh={refreshTtl}
+          onAccess={setAccess}
+          onRefresh={setRefreshTtl}
+        />
         <ReadinessList checks={status.readiness} />
 
-        {message ? (
-          <p className="pt-[var(--space-md)] text-[length:var(--text-sm)] text-[var(--color-accent-strong)]">
-            {message}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="pt-[var(--space-md)] text-[length:var(--text-sm)] text-[var(--color-danger)]">
-            {error}
-          </p>
-        ) : null}
-        <div className="flex items-center gap-2.5 border-t border-[var(--color-border)] pt-[var(--space-lg)]">
+        <div className="pt-[var(--space-md)]">
+          <StatusMessage message={message} />
+          <StatusMessage message={error} tone="error" />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-[var(--space-md)] border-t border-[var(--color-border)] pt-[var(--space-lg)]">
           <p className="max-w-xs text-[length:var(--text-xs)] leading-[var(--leading-tight)] text-[var(--color-text-muted)]">
             {blocking > 0
-              ? "Provision will fail until the checks above pass."
-              : "Provision creates or updates the server from these settings."}
+              ? "Starting the stack will fail until the checks above pass."
+              : "Save first, then start the stack to apply these settings."}
           </p>
           <div className="ms-auto flex items-center gap-2.5">
             <Button
               variant="secondary"
-              onClick={() => void runProvision()}
-              disabled={busy || blocking > 0}
+              busy={busy === "provision"}
+              disabled={blocking > 0}
+              onClick={() =>
+                void act("provision", async () => {
+                  const result = await provision();
+                  setMessage(`Stack up at ${result.baseUrl}`);
+                })
+              }
             >
-              Provision
+              Start the stack
             </Button>
-            <Button onClick={() => void save()} disabled={busy}>
-              Save locally
+            <Button type="submit" busy={busy === "save"}>
+              Save settings
             </Button>
           </div>
         </div>
+      </form>
+
+      <div className="mt-[var(--space-lg)] max-w-[var(--container-form)]">
         {confirmDown ? (
-          <div className="mt-[var(--space-lg)] rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-4">
-            <p className="mb-3 text-[length:var(--text-sm)]">Stop the stack and destroy its volumes?</p>
+          <div className="rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-4">
+            <p className="mb-3 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
+              Stop the stack and destroy its volumes? Every row in this database goes with them.
+            </p>
             <div className="flex gap-2">
-              <Button variant="danger" onClick={() => void runTeardown()} disabled={busy}>
-                Teardown stack
+              <Button
+                variant="danger"
+                busy={busy === "teardown"}
+                onClick={() =>
+                  void act("teardown", async () => {
+                    await teardown();
+                    setConfirmDown(false);
+                    setMessage("Stack stopped and its volumes destroyed.");
+                  })
+                }
+              >
+                Stop and destroy
               </Button>
               <Button variant="secondary" onClick={() => setConfirmDown(false)}>
                 Cancel
@@ -232,8 +192,8 @@ export function SettingsPage({
             </div>
           </div>
         ) : (
-          <Button variant="ghost" className="mt-[var(--space-md)] self-start" onClick={() => setConfirmDown(true)}>
-            Teardown
+          <Button variant="ghost" className="px-2" onClick={() => setConfirmDown(true)}>
+            Stop the stack and destroy its data
           </Button>
         )}
       </div>

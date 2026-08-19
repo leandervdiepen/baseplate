@@ -1,31 +1,29 @@
+import { CodeBlock } from "../patterns/code-block.tsx";
+import { Card, CardTitle } from "../primitives/card.tsx";
 import { Hint } from "../primitives/input.tsx";
 
-const SNIPPET = `import { createClient } from "@diepen/baseplate/client";
+function snippetFor(baseUrl: string, table: string): string {
+  return `import { createClient } from "@diepen/baseplate/client";
 
-const client = createClient("${"${API_URL}"}");
+const client = createClient("${baseUrl}");
 await client.auth.signUp({ email, password });
 
 const { data } = await client
-  .from("notes")
+  .from("${table}")
   .select()
-  .eq("pinned", true)
-  .order("title")
+  .order("id")
   .limit(20);`;
+}
 
-export function ConnectSnippet({ baseUrl }: { baseUrl: string | null }) {
-  const snippet = SNIPPET.replace("${API_URL}", baseUrl ?? "http://127.0.0.1:8080");
+export function ConnectSnippet({ baseUrl, table }: { baseUrl: string | null; table: string }) {
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5">
-      <h2 className="mb-2 text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)] leading-[var(--leading-snug)]">
-        Connect from code
-      </h2>
+    <Card className="flex flex-col gap-[var(--space-md)] p-5">
+      <CardTitle>Connect from code</CardTitle>
       <Hint>
-        No public key. Your app installs @diepen/baseplate and points the client at this URL.
-        The session persists and refreshes itself.
+        There is no public key. Your app installs <code className="font-mono">@diepen/baseplate</code>{" "}
+        and points the client at this URL. The session persists and refreshes itself.
       </Hint>
-      <pre className="mt-3 overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-[var(--space-md)] py-3.5 font-mono text-[length:var(--text-xs)] leading-[var(--leading-token)]">
-        {snippet}
-      </pre>
-    </section>
+      <CodeBlock>{snippetFor(baseUrl ?? "http://127.0.0.1:8080", table)}</CodeBlock>
+    </Card>
   );
 }

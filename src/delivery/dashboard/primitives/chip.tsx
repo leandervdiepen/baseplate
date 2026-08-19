@@ -29,11 +29,3 @@ export function StatusPill({
     </span>
   );
 }
-
-export function CapsLabel({ children }: { children: ReactNode }) {
-  return (
-    <span className="text-[length:var(--text-xs)] font-medium uppercase tracking-[var(--tracking-caps)] leading-[var(--leading-chip)] text-[var(--color-text-muted)]">
-      {children}
-    </span>
-  );
-}

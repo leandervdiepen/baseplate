@@ -1,22 +1,32 @@
 import { useState } from "react";
-import {
-  changeSchema,
-  COLUMN_TYPES,
-  type ColumnType,
-  type SchemaSnapshot,
-} from "../lib/operator-client.ts";
+import { changeSchema, COLUMN_TYPES, type ColumnType } from "../lib/operator-client.ts";
+import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
+import { Card, CardTitle } from "../primitives/card.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
+import { Select } from "../primitives/select.tsx";
 
 type Draft = { name: string; type: ColumnType; nullable: boolean };
 
 const EMPTY: Draft = { name: "", type: "text", nullable: false };
 
+export function TypeOptions() {
+  return (
+    <>
+      {COLUMN_TYPES.map((type) => (
+        <option key={type} value={type}>
+          {type}
+        </option>
+      ))}
+    </>
+  );
+}
+
 export function NewTableForm({
   onDone,
   onCancel,
 }: {
-  onDone: (migration: string) => void;
+  onDone: (statement: string) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
@@ -24,7 +34,7 @@ export function NewTableForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit() {
+  async function submit(): Promise<void> {
     setBusy(true);
     setError(null);
     try {
@@ -35,23 +45,31 @@ export function NewTableForm({
       });
       onDone(result.statement);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not create the table.");
+      setError(cause instanceof Error ? cause.message : "Could not create that table.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5">
-      <h2 className="mb-1 text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-        New table
-      </h2>
-      <Hint>
-        Every table gets an <code className="font-mono">id</code> and an{" "}
-        <code className="font-mono">owner_id</code>. The owner column is what row access
-        matches against, so a caller only ever sees their own rows.
-      </Hint>
-      <div className="mt-4 flex max-w-[var(--container-form)] flex-col gap-[var(--space-md)]">
+    <Card className="p-5">
+      <form
+        className="flex max-w-[var(--container-form)] flex-col gap-[var(--space-md)]"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <div>
+          <CardTitle>New table</CardTitle>
+          <div className="mt-1">
+            <Hint>
+              Every table gets an <code className="font-mono">id</code> and an{" "}
+              <code className="font-mono">owner_id</code>. The owner column is what row access
+              matches against, so a caller only ever sees their own rows.
+            </Hint>
+          </div>
+        </div>
         <Field label="Table name" hint="Lowercase letters, digits, and underscores.">
           <Input
             value={name}
@@ -61,22 +79,24 @@ export function NewTableForm({
           />
         </Field>
         <ColumnRows columns={columns} onChange={setColumns} />
-        {error ? (
-          <p className="text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
-        ) : null}
+        <StatusMessage message={error} tone="error" />
         <div className="flex items-center gap-2.5">
-          <Button onClick={() => void submit()} disabled={busy || name.trim().length === 0}>
-            {busy ? "Creating…" : "Create table"}
+          <Button type="submit" busy={busy} disabled={name.trim().length === 0}>
+            Create table
           </Button>
           <Button variant="secondary" onClick={onCancel} disabled={busy}>
             Cancel
           </Button>
         </div>
-      </div>
-    </section>
+      </form>
+    </Card>
   );
 }
 
+/**
+ * A repeating row of controls. One visible header labels the whole column, and
+ * each control carries the row number in its accessible name.
+ */
 function ColumnRows({
   columns,
   onChange,
@@ -89,31 +109,45 @@ function ColumnRows({
   }
 
   return (
-    <div className="flex flex-col gap-[var(--space-sm)]">
-      <span className="text-[length:var(--text-sm)] font-medium">Columns</span>
+    <fieldset className="flex flex-col gap-[var(--space-sm)] border-0 p-0">
+      <legend className="mb-[var(--space-sm)] text-[length:var(--text-sm)] font-medium">
+        Columns
+      </legend>
+      <div className="flex items-center gap-[var(--space-sm)] text-[length:var(--text-xs)] font-medium uppercase tracking-[var(--tracking-caps)] text-[var(--color-text-muted)]">
+        <span className="min-w-0 flex-1">Name</span>
+        <span className="w-32 shrink-0">Type</span>
+        <span className="w-20 shrink-0">Optional</span>
+        <span className="w-20 shrink-0" />
+      </div>
       {columns.map((column, index) => (
         <div key={index} className="flex items-center gap-[var(--space-sm)]">
           <Input
+            aria-label={`Column ${index + 1} name`}
             value={column.name}
             onChange={(event) => update(index, { name: event.target.value })}
             placeholder="title"
-            className="font-mono"
+            className="min-w-0 flex-1 font-mono"
           />
-          <TypeSelect
+          <Select
+            aria-label={`Column ${index + 1} type`}
+            className="w-32 shrink-0"
             value={column.type}
-            onChange={(type) => update(index, { type })}
-          />
-          <label className="flex shrink-0 items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+            onChange={(event) => update(index, { type: event.target.value as ColumnType })}
+          >
+            <TypeOptions />
+          </Select>
+          <label className="flex min-h-10 w-20 shrink-0 cursor-pointer items-center justify-center">
+            <span className="sr-only">Column {index + 1} is optional</span>
             <input
               type="checkbox"
+              className="size-4 accent-[var(--color-accent)]"
               checked={column.nullable}
               onChange={(event) => update(index, { nullable: event.target.checked })}
             />
-            optional
           </label>
           <Button
             variant="ghost"
-            className="shrink-0 px-2"
+            className="w-20 shrink-0 px-2"
             onClick={() => onChange(columns.filter((_, at) => at !== index))}
             disabled={columns.length === 1}
             aria-label={`Remove column ${index + 1}`}
@@ -127,34 +161,8 @@ function ColumnRows({
         className="self-start"
         onClick={() => onChange([...columns, { ...EMPTY }])}
       >
-        Add column
+        Add another column
       </Button>
-    </div>
+    </fieldset>
   );
-}
-
-export function TypeSelect({
-  value,
-  onChange,
-}: {
-  value: ColumnType;
-  onChange: (type: ColumnType) => void;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value as ColumnType)}
-      className="min-h-[var(--size-control)] shrink-0 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 font-mono text-[length:var(--text-sm)]"
-    >
-      {COLUMN_TYPES.map((type) => (
-        <option key={type} value={type}>
-          {type}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-export function tableNames(schema: SchemaSnapshot | null): string[] {
-  return (schema?.tables ?? []).map((table) => table.name);
 }

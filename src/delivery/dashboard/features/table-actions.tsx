@@ -1,23 +1,26 @@
 import { useState } from "react";
 import { changeSchema, type ColumnType, type SchemaColumn } from "../lib/operator-client.ts";
-import { TypeSelect } from "./table-editor.tsx";
+import { TypeOptions } from "./table-editor.tsx";
+import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
-import { Input } from "../primitives/input.tsx";
+import { Field, Input } from "../primitives/input.tsx";
+import { Select } from "../primitives/select.tsx";
 
 type Pending = "add-column" | "rename" | "drop" | null;
 
 export function TableActions({
   table,
-  columns,
+  onOpenRows,
   onChanged,
 }: {
   table: string;
-  columns: SchemaColumn[];
+  onOpenRows: () => void;
   onChanged: (message: string) => void;
 }) {
   const [open, setOpen] = useState<Pending>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState<string | null>(null);
   const [columnName, setColumnName] = useState("");
   const [columnType, setColumnType] = useState<ColumnType>("text");
   const [newName, setNewName] = useState(table);
@@ -27,19 +30,31 @@ export function TableActions({
     setError(null);
     try {
       const result = await action();
-      setOpen(null);
-      setColumnName("");
+      close();
       onChanged(result.statement);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That change was refused.");
+      setError(cause instanceof Error ? cause.message : "The database refused that change.");
     } finally {
       setBusy(false);
     }
   }
 
-  return (
-    <div className="border-t border-[var(--color-border)] px-5 py-3">
-      <div className="flex flex-wrap items-center gap-2">
+  function close(): void {
+    setOpen(null);
+    setColumnName("");
+    setNewName(table);
+    setError(null);
+    setInvalid(null);
+  }
+
+  /* While a form is open the triggers are hidden, so no button is ever shown
+     twice and the card stays one action deep. */
+  if (open === null) {
+    return (
+      <div className="flex flex-wrap items-center gap-1 px-3 py-2">
+        <Button variant="ghost" className="px-2" onClick={onOpenRows}>
+          Open rows
+        </Button>
         <Button variant="ghost" className="px-2" onClick={() => setOpen("add-column")}>
           Add column
         </Button>
@@ -50,88 +65,127 @@ export function TableActions({
           Drop
         </Button>
       </div>
+    );
+  }
 
+  return (
+    <div className="px-3 py-3">
       {open === "add-column" ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Input
-            value={columnName}
-            onChange={(event) => setColumnName(event.target.value)}
-            placeholder="column name"
-            className="max-w-56 font-mono"
-          />
-          <TypeSelect value={columnType} onChange={setColumnType} />
-          <Button
-            disabled={busy || columnName.trim().length === 0}
-            onClick={() =>
-              void run(() =>
-                changeSchema({
-                  kind: "add-column",
-                  table,
-                  column: { name: columnName.trim(), type: columnType, nullable: true },
-                }),
-              )
+        <form
+          className="flex flex-col gap-[var(--space-md)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (columnName.trim().length === 0) {
+              setInvalid("Give the column a name.");
+              return;
             }
+            setInvalid(null);
+            void run(() =>
+              changeSchema({
+                kind: "add-column",
+                table,
+                column: { name: columnName.trim(), type: columnType, nullable: true },
+              }),
+            );
+          }}
+        >
+          <Field
+            label="Column name"
+            hint="Added columns are always optional, so the rows already here stay valid."
+            error={invalid}
           >
-            Add
-          </Button>
-          <Button variant="secondary" onClick={() => setOpen(null)}>
-            Cancel
-          </Button>
-        </div>
+            <Input
+              autoFocus
+              value={columnName}
+              onChange={(event) => setColumnName(event.target.value)}
+              placeholder="notes"
+              className="font-mono"
+            />
+          </Field>
+          <Field label="Column type">
+            <Select
+              value={columnType}
+              onChange={(event) => setColumnType(event.target.value as ColumnType)}
+            >
+              <TypeOptions />
+            </Select>
+          </Field>
+          <Actions confirm="Add column" busy={busy} onCancel={close} />
+        </form>
       ) : null}
 
       {open === "rename" ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Input
-            value={newName}
-            onChange={(event) => setNewName(event.target.value)}
-            className="max-w-56 font-mono"
-          />
-          <Button
-            disabled={busy || newName.trim() === table}
-            onClick={() =>
-              void run(() =>
-                changeSchema({ kind: "rename-table", table, to: newName.trim() }),
-              )
+        <form
+          className="flex flex-col gap-[var(--space-md)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (newName.trim().length === 0 || newName.trim() === table) {
+              setInvalid("Give the table a different name.");
+              return;
             }
+            setInvalid(null);
+            void run(() => changeSchema({ kind: "rename-table", table, to: newName.trim() }));
+          }}
+        >
+          <Field
+            label="New table name"
+            hint="Regenerate your app's types afterwards."
+            error={invalid}
           >
-            Rename
-          </Button>
-          <Button variant="secondary" onClick={() => setOpen(null)}>
-            Cancel
-          </Button>
-        </div>
+            <Input
+              autoFocus
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              className="font-mono"
+            />
+          </Field>
+          <Actions confirm="Rename table" busy={busy} onCancel={close} />
+        </form>
       ) : null}
 
       {open === "drop" ? (
-        <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-3">
-          <p className="mb-2 text-[length:var(--text-sm)]">
-            Drop <span className="font-mono">{table}</span> and every row in it? This writes
-            a migration, so it happens on every stack built from this repo.
+        <div className="rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-3">
+          <p className="mb-3 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
+            Drop <span className="font-mono">{table}</span> and every row in it? This runs against
+            your database now and cannot be undone.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="danger"
-              disabled={busy}
+              busy={busy}
               onClick={() => void run(() => changeSchema({ kind: "drop-table", table }))}
             >
               Drop table
             </Button>
-            <Button variant="secondary" onClick={() => setOpen(null)}>
+            <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
           </div>
         </div>
       ) : null}
 
-      {open !== null && columns.length > 0 ? (
-        <p className="mt-2 text-[length:var(--text-xs)] text-[var(--color-text-muted)]">
-          {columns.length} column{columns.length === 1 ? "" : "s"} today.
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-2 text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
-      ) : null}
+      <StatusMessage message={error} tone="error" className="mt-2 block" />
+    </div>
+  );
+}
+
+function Actions({
+  confirm,
+  busy,
+  onCancel,
+}: {
+  confirm: string;
+  busy: boolean;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button type="submit" busy={busy}>
+        {confirm}
+      </Button>
+      <Button variant="secondary" onClick={onCancel} disabled={busy}>
+        Cancel
+      </Button>
     </div>
   );
 }

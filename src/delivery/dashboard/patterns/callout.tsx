@@ -15,13 +15,17 @@ export function Callout({
   return (
     <div
       className={cn(
-        "flex items-center gap-[var(--space-sm)] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3.5 py-2.5",
+        "flex flex-wrap items-center gap-[var(--space-sm)] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] py-1.5 ps-3.5 pe-1.5",
         className,
       )}
     >
-      <span className="shrink-0 text-[var(--color-accent)]">{icon}</span>
-      <div className="min-w-0 text-[length:var(--text-sm)] leading-[var(--leading-chip)]">{children}</div>
-      {action ? <div className="ms-auto shrink-0">{action}</div> : null}
+      <span aria-hidden="true" className="shrink-0 text-[var(--color-accent)]">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1 py-1 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
+        {children}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export function AppShell({
   apiUp,
   target,
   baseUrl,
-  sessionAt,
+  leaf,
   children,
 }: {
   current: NavId;
@@ -19,11 +19,14 @@ export function AppShell({
   apiUp: boolean;
   target: string;
   baseUrl: string | null;
-  sessionAt: number;
+  leaf?: string | null | undefined;
   children: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
       <Sidebar
         current={current}
         onNavigate={onNavigate}
@@ -32,8 +35,12 @@ export function AppShell({
         baseUrl={baseUrl}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar key={sessionAt} current={current} />
-        <main className="min-h-0 flex-1 overflow-auto px-[var(--space-xl)] py-[var(--space-lg)]">
+        <TopBar current={current} leaf={leaf} />
+        <main
+          id="main"
+          tabIndex={-1}
+          className="min-h-0 flex-1 overflow-auto px-[var(--space-md)] py-[var(--space-lg)] focus:outline-none lg:px-[var(--space-xl)]"
+        >
           {children}
         </main>
       </div>

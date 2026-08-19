@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { loadCaller } from "../lib/caller.ts";
+import { useCaller } from "../lib/caller.ts";
 import { shortId } from "../lib/format.ts";
-import { dbFetch, getSchema, type SchemaSnapshot } from "../lib/operator-client.ts";
+import { dbFetch, getSchema, type SchemaColumn, type SchemaSnapshot } from "../lib/operator-client.ts";
 import { RowForm } from "./row-form.tsx";
 import { Callout } from "../patterns/callout.tsx";
 import { DataCell, DataRow, DataTable } from "../patterns/data-table.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
+import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { MonoChip } from "../primitives/chip.tsx";
 import { IconPolicies } from "../primitives/icon.tsx";
@@ -15,21 +16,24 @@ import { Segmented } from "../primitives/segmented.tsx";
 type Row = Record<string, unknown>;
 
 export function TablesPage({
+  selected,
+  onSelect,
   onNeedToken,
   onEditPolicy,
   onCreateTable,
   apiUp,
   onProvision,
 }: {
+  selected: string | null;
+  onSelect: (name: string | null) => void;
   onNeedToken: () => void;
   onEditPolicy: () => void;
   onCreateTable: () => void;
   apiUp: boolean;
   onProvision: () => Promise<void>;
 }) {
-  const caller = loadCaller();
+  const caller = useCaller();
   const [schema, setSchema] = useState<SchemaSnapshot | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,10 +42,12 @@ export function TablesPage({
     void getSchema()
       .then((next) => {
         setSchema(next);
-        setSelected((current) => current ?? next.tables[0]?.name ?? null);
+        if (!selected) {
+          onSelect(next.tables[0]?.name ?? null);
+        }
       })
       .catch(() => setSchema({ live: false, tables: [] }));
-  }, []);
+  }, [selected, onSelect]);
 
   const token = caller?.token;
   const refresh = useCallback(async () => {
@@ -50,11 +56,11 @@ export function TablesPage({
     }
     const response = await dbFetch(token, `/${selected}`);
     if (response.status === 401) {
-      setError("Token rejected. Issue a new one on Auth.");
+      setError("This token was rejected. Issue a new one on Auth.");
       return;
     }
     if (!response.ok) {
-      setError(`Unable to load rows (${response.status}).`);
+      setError(`Unable to load rows from ${selected}. The API answered ${response.status}.`);
       return;
     }
     setError(null);
@@ -66,38 +72,6 @@ export function TablesPage({
       void refresh();
     }
   }, [refresh, apiUp]);
-
-  if (!apiUp) {
-    return (
-      <EmptyState
-        title="Stack is not running"
-        description="Start it to browse rows through the API."
-        action={<Button onClick={() => void onProvision()}>Provision</Button>}
-      />
-    );
-  }
-  if (schema && schema.tables.length === 0) {
-    return (
-      <EmptyState
-        title="No tables yet"
-        description="Make one first. It comes up with row access already on."
-        action={<Button onClick={onCreateTable}>New table</Button>}
-      />
-    );
-  }
-  if (!caller) {
-    return (
-      <EmptyState
-        title="No caller yet"
-        description="Issue a token first, so row-level security has someone to be."
-        action={<Button onClick={onNeedToken}>Issue token</Button>}
-      />
-    );
-  }
-
-  const table = schema?.tables.find((entry) => entry.name === selected);
-  const columns = table?.columns ?? [];
-  const count = rows.length;
 
   async function insert(values: Row): Promise<void> {
     if (!token || !selected) {
@@ -112,7 +86,7 @@ export function TablesPage({
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { message?: string };
-        setError(body.message ?? `Insert failed (${response.status}).`);
+        setError(body.message ?? `That row was refused. The API answered ${response.status}.`);
         return;
       }
       await refresh();
@@ -121,77 +95,110 @@ export function TablesPage({
     }
   }
 
+  const table = schema?.tables.find((entry) => entry.name === selected);
+  const columns = table?.columns ?? [];
+  const tables = schema?.tables ?? [];
+
+  if (!apiUp) {
+    return (
+      <>
+        <PageHeader title="Tables" />
+        <EmptyState
+          title="The stack is not running"
+          description="Rows come through the API, and the API is down. Start the stack to browse them."
+          action={<Button onClick={() => void onProvision()}>Start the stack</Button>}
+        />
+      </>
+    );
+  }
+  if (schema && tables.length === 0) {
+    return (
+      <>
+        <PageHeader title="Tables" />
+        <EmptyState
+          title="No tables yet"
+          description="A table holds your app's rows. Every one you make comes up with row access already on."
+          action={<Button onClick={onCreateTable}>Create a table</Button>}
+        />
+      </>
+    );
+  }
+  if (!caller) {
+    return (
+      <>
+        <PageHeader title="Tables" />
+        <EmptyState
+          title="No caller yet"
+          description="Rows are filtered by who is asking, so the studio needs a token before it can show you any."
+          action={<Button onClick={onNeedToken}>Issue a token</Button>}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader
         title={selected ?? "Tables"}
-        description={`public schema · ${count} ${count === 1 ? "row" : "rows"} visible to this caller`}
+        description={`public schema · ${rows.length} ${rows.length === 1 ? "row" : "rows"} visible to this caller`}
       />
-      {(schema?.tables.length ?? 0) > 1 ? (
+      {tables.length > 1 ? (
         <div className="mb-[var(--space-md)]">
           <Segmented
+            label="Table"
             value={selected ?? ""}
             onChange={(name) => {
-              setSelected(name);
+              onSelect(name);
               setRows([]);
             }}
-            options={(schema?.tables ?? []).map((entry) => ({
-              id: entry.name,
-              label: entry.name,
-            }))}
+            options={tables.map((entry) => ({ id: entry.name, label: entry.name }))}
           />
         </div>
       ) : null}
-      <div className="mb-[var(--space-md)]">
-        <RowForm columns={columns} busy={busy} onInsert={(values) => void insert(values)} />
-      </div>
       <Callout
-        className="mb-[var(--space-md)]"
+        className="mb-[var(--space-lg)]"
         icon={<IconPolicies width={14} height={14} />}
         action={
-          <button
-            type="button"
-            onClick={onEditPolicy}
-            className="inline-flex min-h-10 items-center text-[length:var(--text-sm)] font-medium text-[var(--color-accent)]"
-          >
+          <Button variant="ghost" className="px-2" onClick={onEditPolicy}>
             See policy
-          </button>
+          </Button>
         }
       >
-        <span>Row security on. This caller sees rows where </span>
+        <span>Row security is on. This caller sees rows where </span>
         <MonoChip>{table?.ownerColumn ?? "owner_id"}</MonoChip>
         <span> matches their token.</span>
       </Callout>
-      {error ? (
-        <p className="mb-4 text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
-      ) : null}
+      <div className="mb-[var(--space-lg)]">
+        <RowForm columns={columns} busy={busy} onInsert={(values) => void insert(values)} />
+      </div>
+      <StatusMessage message={error} tone="error" className="mb-[var(--space-md)] block" />
       {rows.length === 0 ? (
         <EmptyState
           title="No rows yet"
-          description={`Insert the first row into public.${selected ?? ""}. Each row is visible only to its owner.`}
+          description={`Insert the first row into public.${selected ?? ""}. Each row stays visible only to the caller who owns it.`}
         />
       ) : (
         <DataTable
+          caption={`Rows in public.${selected ?? ""} visible to this caller`}
           columns={columns.map((column) => ({
             key: column.name,
             label: column.name,
-            ...(isId(column.name, columns) ? { width: "var(--size-col-id)" } : { grow: true }),
+            ...(isId(column) ? { width: "var(--size-col-id)" } : {}),
           }))}
         >
           {rows.map((row, index) => (
-            <DataRow key={String(row.id ?? index)} last={index === rows.length - 1}>
-              {columns.map((column) => {
-                const value = row[column.name];
-                return isId(column.name, columns) ? (
+            <DataRow key={String(row.id ?? index)}>
+              {columns.map((column) =>
+                isId(column) ? (
                   <DataCell key={column.name} width="var(--size-col-id)" mono muted={column.owner}>
-                    {shortId(String(value ?? ""))}
+                    {shortId(String(row[column.name] ?? ""))}
                   </DataCell>
                 ) : (
-                  <DataCell key={column.name} grow>
-                    {display(value)}
+                  <DataCell key={column.name}>
+                    {display(row[column.name])}
                   </DataCell>
-                );
-              })}
+                ),
+              )}
             </DataRow>
           ))}
         </DataTable>
@@ -200,17 +207,14 @@ export function TablesPage({
   );
 }
 
-function isId(name: string, columns: { name: string; primaryKey: boolean; owner: boolean }[]): boolean {
-  const column = columns.find((entry) => entry.name === name);
-  return Boolean(column?.primaryKey || column?.owner);
+/** Identifier columns get a fixed, narrow column: they are shortened anyway. */
+function isId(column: SchemaColumn): boolean {
+  return column.primaryKey || column.owner;
 }
 
 function display(value: unknown): string {
   if (value === null || value === undefined) {
     return "";
   }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
