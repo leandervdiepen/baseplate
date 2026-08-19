@@ -15,6 +15,8 @@ export type ProvisionStackDeps = {
   runtime: StackRuntime;
   store: StackStateStore;
   clock: Clock;
+  /** The port Compose publishes locally. Ignored once a hostname has TLS. */
+  httpPort: number;
   healthTimeoutMs?: number;
 };
 
@@ -26,7 +28,7 @@ export class ProvisionStack {
     await this.deps.cloud.ensureFirewall(server);
     await this.deps.cloud.ensureDns(stack, server);
     await this.deps.runtime.up(server);
-    const baseUrl = apiBaseUrl(stack.hostname, server.ipv4);
+    const baseUrl = apiBaseUrl(stack.hostname, server.ipv4, this.deps.httpPort);
     await this.waitUntilHealthy(baseUrl);
     const record = { server, baseUrl };
     await this.deps.store.save(record);

@@ -4,17 +4,24 @@ import { resolve } from "node:path";
 import { createStack, DomainError } from "#domain";
 import { InfraError } from "#shared";
 import { createOperatorFromRoot, repoRootFromDelivery } from "../operator-setup.ts";
+import { schemaChangeFromArgs } from "./schema-command.ts";
 
 const ROOT = repoRootFromDelivery(import.meta.dirname);
+const USAGE =
+  "Usage: baseplate <provision|teardown|migrate|schema|mint-token --sub UUID>";
 
 async function main(): Promise<void> {
   const { positionals, values } = parseArgs({
     allowPositionals: true,
-    options: { sub: { type: "string" } },
+    options: {
+      sub: { type: "string" },
+      to: { type: "string" },
+      column: { type: "string", multiple: true },
+    },
   });
   const command = positionals[0];
   if (!command) {
-    console.error("Usage: baseplate <provision|teardown|mint-token --sub UUID>");
+    console.error(USAGE);
     process.exit(1);
   }
 
@@ -32,6 +39,23 @@ async function main(): Promise<void> {
     await operator.teardown.execute();
     return;
   }
+  if (command === "migrate") {
+    await operator.applyMigrations.execute();
+    return;
+  }
+  if (command === "schema") {
+    const change = schemaChangeFromArgs(positionals[1], positionals[2], {
+      columns: values.column ?? [],
+      to: values.to,
+    });
+    const result = await operator.changeSchema.execute(change);
+    console.log(
+      result.applied
+        ? `${result.migration} applied`
+        : `${result.migration} written. Provision the stack to apply it.`,
+    );
+    return;
+  }
   if (command === "mint-token") {
     if (!values.sub) {
       throw new DomainError("cli.sub_required", "mint-token requires --sub <uuid>.");
@@ -40,7 +64,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.error("Usage: baseplate <provision|teardown|mint-token --sub UUID>");
+  console.error(USAGE);
   process.exit(1);
 }
 

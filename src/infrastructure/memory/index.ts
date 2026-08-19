@@ -1,13 +1,16 @@
 import type {
   Clock,
   CloudProvider,
+  MigrationWriter,
   ProvisionedStack,
+  SchemaStore,
   StackRuntime,
   StackStateStore,
   TokenSigner,
+  WrittenMigration,
 } from "#application";
-import type { TokenClaims } from "#domain";
-import { createServer, type Server, type Stack } from "#domain";
+import type { SchemaChange, TokenClaims } from "#domain";
+import { changeSlug, createServer, type Server, type Stack } from "#domain";
 
 export class MemoryCloudProvider implements CloudProvider {
   readonly servers = new Map<string, Server>();
@@ -38,7 +41,9 @@ export class MemoryCloudProvider implements CloudProvider {
 export class MemoryStackRuntime implements StackRuntime {
   upCalls = 0;
   downCalls = 0;
+  migrateCalls = 0;
   healthy = true;
+  migrateError: Error | undefined;
 
   async up(_server: Server): Promise<void> {
     this.upCalls += 1;
@@ -48,8 +53,48 @@ export class MemoryStackRuntime implements StackRuntime {
     this.downCalls += 1;
   }
 
+  async migrate(_server: Server | undefined): Promise<void> {
+    this.migrateCalls += 1;
+    if (this.migrateError) {
+      throw this.migrateError;
+    }
+  }
+
   async isHealthy(_baseUrl: string): Promise<boolean> {
     return this.healthy;
+  }
+}
+
+export class MemorySchemaStore implements SchemaStore {
+  constructor(public stack: Stack) {}
+
+  async read(): Promise<Stack> {
+    return this.stack;
+  }
+
+  async write(stack: Stack): Promise<void> {
+    this.stack = stack;
+  }
+}
+
+export class MemoryMigrationWriter implements MigrationWriter {
+  readonly written: string[] = [];
+  writeError: Error | undefined;
+
+  async write(change: SchemaChange): Promise<WrittenMigration> {
+    if (this.writeError) {
+      throw this.writeError;
+    }
+    const name = `0001_${changeSlug(change)}.sql`;
+    this.written.push(name);
+    return { name, sql: `-- ${change.kind}` };
+  }
+
+  async remove(name: string): Promise<void> {
+    const index = this.written.indexOf(name);
+    if (index !== -1) {
+      this.written.splice(index, 1);
+    }
   }
 }
 

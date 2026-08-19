@@ -28,6 +28,10 @@ export class DockerComposeRuntime implements StackRuntime {
     await runDocker(this.config, ["down", "-v"]);
   }
 
+  async migrate(_server: Server | undefined): Promise<void> {
+    await runDocker(this.config, ["run", "--rm", "--build", "migrate"]);
+  }
+
   async isHealthy(baseUrl: string): Promise<boolean> {
     try {
       const response = await fetch(baseUrl);

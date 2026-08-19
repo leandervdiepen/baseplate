@@ -12,3 +12,12 @@ Row access comes from `accessPolicies` in `stack/stack.json` and is re-applied a
 A table with no declared policy gets no grants, so PostgREST cannot read it.
 
 Baseplate's own tables are in `stack/platform/` and are applied first.
+
+## Two authors, one directory
+
+`npm run db:generate` diffs `stack/schema.ts` against the snapshot in `meta/`.
+`./scripts/schema` and the dashboard write SQL straight into this directory and do not touch that snapshot.
+Mixing them leaves drizzle's snapshot behind the database, and its next generate would try to recreate what already exists.
+
+If you use both, run `npm run db:pull` after a dashboard change.
+It reads the live database and rewrites `stack/schema.ts` and the snapshot to match.

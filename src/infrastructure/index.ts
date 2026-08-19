@@ -1,20 +1,36 @@
-import { MintToken, ProvisionStack, TeardownStack } from "#application";
+import {
+  ApplyMigrations,
+  ChangeSchema,
+  MintToken,
+  ProvisionStack,
+  TeardownStack,
+} from "#application";
 import type { Stack } from "#domain";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
-import { FileStackStateStore } from "./fs/index.ts";
+import {
+  FileMigrationWriter,
+  FileSchemaStore,
+  FileStackStateStore,
+} from "./fs/index.ts";
 import { HetznerCloudProvider } from "./hetzner/index.ts";
 import { JwtTokenSigner } from "./jwt/index.ts";
 import { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
 export { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
-export { FileStackStateStore } from "./fs/index.ts";
+export {
+  FileMigrationWriter,
+  FileSchemaStore,
+  FileStackStateStore,
+} from "./fs/index.ts";
 export { HetznerCloudProvider } from "./hetzner/index.ts";
 export { JwtTokenSigner } from "./jwt/index.ts";
 export {
   MemoryClock,
   MemoryCloudProvider,
+  MemoryMigrationWriter,
+  MemorySchemaStore,
   MemoryStackRuntime,
   MemoryStackStateStore,
   MemoryTokenSigner,
@@ -28,8 +44,11 @@ export type OperatorConfig = {
   jwtSecret: string;
   stack: Stack;
   stackDir: string;
+  stackFile: string;
+  migrationsDir: string;
   envFile: string;
   statePath: string;
+  httpPort: number;
   infraDir: string;
   hcloudToken: string;
   hetznerDnsToken: string;
@@ -42,6 +61,8 @@ export type Operator = {
   provision: ProvisionStack;
   teardown: TeardownStack;
   mintToken: MintToken;
+  changeSchema: ChangeSchema;
+  applyMigrations: ApplyMigrations;
 };
 
 export function createOperator(config: OperatorConfig): Operator {
@@ -52,6 +73,8 @@ export function createOperator(config: OperatorConfig): Operator {
     signer,
     callerRole: config.stack.callerRole,
   });
+  const schema = new FileSchemaStore(config.stackFile);
+  const migrations = new FileMigrationWriter(config.migrationsDir);
 
   if (config.target === "local") {
     const cloud = new DockerHostCloudProvider();
@@ -61,9 +84,17 @@ export function createOperator(config: OperatorConfig): Operator {
       projectName: "baseplate",
     });
     return {
-      provision: new ProvisionStack({ cloud, runtime, store, clock }),
+      provision: new ProvisionStack({
+        cloud,
+        runtime,
+        store,
+        clock,
+        httpPort: config.httpPort,
+      }),
       teardown: new TeardownStack({ cloud, runtime, store }),
       mintToken,
+      changeSchema: new ChangeSchema({ schema, migrations, runtime, store }),
+      applyMigrations: new ApplyMigrations({ runtime, store }),
     };
   }
 
@@ -89,9 +120,12 @@ export function createOperator(config: OperatorConfig): Operator {
       runtime,
       store,
       clock,
+      httpPort: config.httpPort,
       healthTimeoutMs: 300_000,
     }),
     teardown: new TeardownStack({ cloud, runtime, store }),
     mintToken,
+    changeSchema: new ChangeSchema({ schema, migrations, runtime, store }),
+    applyMigrations: new ApplyMigrations({ runtime, store }),
   };
 }

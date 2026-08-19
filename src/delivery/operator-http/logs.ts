@@ -1,12 +1,13 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { InfraError } from "#shared";
+import { writeStackEnv } from "./stack-env.ts";
 
 export function readComposeLogs(root: string): Promise<string> {
   const args = [
     "compose",
     "--env-file",
-    resolve(root, "operator.env"),
+    writeStackEnv(root),
     "--project-name",
     "baseplate",
     "-f",

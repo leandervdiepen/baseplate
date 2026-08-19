@@ -7,6 +7,7 @@ import {
   type OperatorTarget,
 } from "#infrastructure";
 import { ensureOperatorSecrets } from "./operator-http/write-env.ts";
+import { writeStackEnv } from "./operator-http/stack-env.ts";
 
 export const OPERATOR_HTTP_PORT = 8788;
 
@@ -112,12 +113,10 @@ export function assertHetznerConfig(target: OperatorTarget, hostname: string): v
 }
 
 export function createOperatorFromRoot(root: string, overrideEnv = false): Operator {
-  const envFile = resolve(root, "operator.env");
   ensureOperatorSecrets(root);
-  loadEnvFile(envFile, overrideEnv);
-  const stack = createStack(
-    JSON.parse(readFileSync(resolve(root, "stack/stack.json"), "utf8")),
-  );
+  loadEnvFile(resolve(root, "operator.env"), overrideEnv);
+  const stackFile = resolve(root, "stack/stack.json");
+  const stack = createStack(JSON.parse(readFileSync(stackFile, "utf8")));
   const target = parseTarget(process.env.TARGET ?? "local");
   assertHetznerKeys(target);
   assertHetznerConfig(target, stack.hostname);
@@ -126,8 +125,11 @@ export function createOperatorFromRoot(root: string, overrideEnv = false): Opera
     jwtSecret: requiredEnv("JWT_SECRET"),
     stack,
     stackDir: resolve(root, "stack"),
-    envFile,
+    stackFile,
+    migrationsDir: resolve(root, "stack/migrations"),
+    envFile: writeStackEnv(root),
     statePath: resolve(root, ".baseplate/state.json"),
+    httpPort: Number(process.env.HTTP_PORT ?? "8080"),
     infraDir: resolve(root, "infra"),
     hcloudToken: process.env.HCLOUD_TOKEN ?? "",
     hetznerDnsToken: process.env.HETZNER_DNS_TOKEN ?? "",

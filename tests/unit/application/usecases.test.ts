@@ -27,7 +27,7 @@ test("provision creates a server, applies the stack, and stores the URL", async 
   const runtime = new MemoryStackRuntime();
   const store = new MemoryStackStateStore();
   const clock = new MemoryClock();
-  const useCase = new ProvisionStack({ cloud, runtime, store, clock });
+  const useCase = new ProvisionStack({ cloud, runtime, store, clock, httpPort: 8080 });
 
   const result = await useCase.execute(stack);
 
@@ -47,6 +47,7 @@ test("provision fails when the stack never becomes healthy", async () => {
     runtime,
     store: new MemoryStackStateStore(),
     clock: new MemoryClock(),
+    httpPort: 8080,
   });
 
   await expect(useCase.execute(stack)).rejects.toMatchObject({
@@ -63,6 +64,7 @@ test("teardown stops the runtime, destroys the server, and clears state", async 
     runtime,
     store,
     clock: new MemoryClock(),
+    httpPort: 8080,
   });
   const record = await provision.execute(stack);
 

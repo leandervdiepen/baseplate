@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createStack, DomainError } from "#domain";
+import { createSchemaChange, createStack, DomainError } from "#domain";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createOperatorFromRoot } from "../operator-setup.ts";
@@ -68,6 +68,19 @@ export async function handleOperatorRequest(
     }
     if (path === "/api/schema" && method === "GET") {
       sendJson(res, 200, await readSchema(root));
+      return;
+    }
+    if (path === "/api/schema" && method === "POST") {
+      const change = createSchemaChange(
+        (await readJsonBody(req)) as Parameters<typeof createSchemaChange>[0],
+      );
+      const result = await createOperatorFromRoot(root, true).changeSchema.execute(change);
+      sendJson(res, 200, { migration: result.migration, applied: result.applied });
+      return;
+    }
+    if (path === "/api/migrate" && method === "POST") {
+      await createOperatorFromRoot(root, true).applyMigrations.execute();
+      sendJson(res, 200, { ok: true });
       return;
     }
     if (path === "/api/logs" && method === "GET") {

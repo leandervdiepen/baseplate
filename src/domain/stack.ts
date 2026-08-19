@@ -44,9 +44,9 @@ export function createStack(input: StackInput): Stack {
   return { name: input.name, hostname, callerRole: input.callerRole, database, accessPolicies };
 }
 
-export function apiBaseUrl(hostname: Hostname, ipv4: string): string {
+export function apiBaseUrl(hostname: Hostname, ipv4: string, port: number): string {
   if (isLocalHostname(hostname)) {
-    return `http://${ipv4}:8080`;
+    return `http://${ipv4}:${port}`;
   }
   return `https://${hostname}`;
 }

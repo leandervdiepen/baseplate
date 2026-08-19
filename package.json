@@ -22,7 +22,8 @@
     "cli": "tsx src/delivery/cli/main.ts",
     "dashboard": "tsx src/delivery/operator-http/listen.ts",
     "sdk:types": "tsx sdk/scripts/gen-types.ts",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:pull": "drizzle-kit pull"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
