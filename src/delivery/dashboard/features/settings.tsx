@@ -97,21 +97,7 @@ export function SettingsPage({
               { id: "hetzner", label: "Hetzner" },
             ]}
           />
-          {cloud ? (
-            <Field
-              label="Hostname"
-              hint="A name under your DNS zone. Caddy gets a certificate for exactly this name."
-            >
-              <Input
-                value={hetzner.hostname}
-                onChange={(event) =>
-                  setHetzner((current) => ({ ...current, hostname: event.target.value }))
-                }
-                placeholder="api.example.com"
-                className="font-mono"
-              />
-            </Field>
-          ) : (
+          {cloud ? null : (
             <Hint>
               This machine serves plain HTTP on 127.0.0.1, with no cloud account, no domain, and no
               certificate.

@@ -4,6 +4,7 @@ import { createOperatorFor, type OperatorRoots, stackFromEnv } from "../operator
 import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
+import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
@@ -32,6 +33,10 @@ export async function handleOperatorRequest(
       }
       writeLocalFirstRun(root);
       sendJson(res, 200, { ok: true, target: "local" });
+      return;
+    }
+    if (path === "/api/hetzner/account" && method === "GET") {
+      sendJson(res, 200, await inspectAccount(root));
       return;
     }
     if (path === "/api/config" && method === "POST") {

@@ -257,3 +257,20 @@ export async function dbFetch(
   }
   return fetch(`/api/db${path}`, { ...init, headers });
 }
+
+export type CloudAccountSnapshot = {
+  cloud: { ok: boolean; message: string };
+  dns: { ok: boolean; message: string };
+  locations: { name: string; description: string }[];
+  sshKeys: { name: string }[];
+  zones: { name: string }[];
+};
+
+/** What the operator's own Hetzner account holds, read with their own tokens. */
+export async function getHetznerAccount(): Promise<CloudAccountSnapshot> {
+  const response = await fetch("/api/hetzner/account");
+  if (!response.ok) {
+    throw new Error("Unable to reach Hetzner from this machine.");
+  }
+  return (await response.json()) as CloudAccountSnapshot;
+}

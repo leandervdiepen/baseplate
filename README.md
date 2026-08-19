@@ -122,6 +122,9 @@ Give every table an `owner_id uuid not null` column and adopt it after each push
 Set the target to Hetzner in the studio's Settings and Baseplate creates a VM, a firewall, a DNS record, and a TLS certificate in **your** account, from your own API tokens.
 Those tokens stay on your machine; only the database and JWT secrets are sent to the server.
 
+Paste the two tokens, press **Check my account**, and the region, SSH key, and DNS zone become lists read from your own account rather than three names to type from memory.
+The hostname is then just the label in front of the zone you picked.
+
 This is not required to work locally, and local needs no domain and no cloud account.
 
 ## What you get

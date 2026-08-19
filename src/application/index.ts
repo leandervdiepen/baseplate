@@ -1,5 +1,7 @@
 export type {
   Clock,
+  CloudAccount,
+  CloudAccountSnapshot,
   CloudProvider,
   LiveColumn,
   LiveTable,
