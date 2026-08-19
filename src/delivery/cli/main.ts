@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   if (command === "init") {
-    console.log(`Wrote ${initProject(project)}. Run \`baseplate up\` next.`);
+    console.log(`Wrote ${await initProject(project)}. Run \`baseplate up\` next.`);
     return;
   }
   if (command === "dashboard") {

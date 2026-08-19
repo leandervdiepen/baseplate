@@ -1,8 +1,9 @@
+import { createServer } from "node:net";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { initProject } from "../../../src/delivery/cli/init-command.ts";
+import { freePortFrom, initProject } from "../../../src/delivery/cli/init-command.ts";
 import { parseEnvMap } from "../../../src/delivery/operator-http/env-file.ts";
 import { stackEnvText } from "../../../src/delivery/operator-http/stack-env.ts";
 import { composeProjectName } from "../../../src/delivery/project-name.ts";
@@ -11,10 +12,10 @@ function project(): string {
   return mkdtempSync(join(tmpdir(), "baseplate-project-"));
 }
 
-test("init writes a config with secrets generated for this project", () => {
+test("init writes a config with secrets generated for this project", async () => {
   const dir = project();
 
-  initProject(dir);
+  await initProject(dir);
 
   const env = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8"));
   for (const key of [
@@ -28,12 +29,12 @@ test("init writes a config with secrets generated for this project", () => {
   expect(env.TARGET).toBe("local");
 });
 
-test("two projects never share a secret", () => {
+test("two projects never share a secret", async () => {
   const first = project();
   const second = project();
 
-  initProject(first);
-  initProject(second);
+  await initProject(first);
+  await initProject(second);
 
   const a = parseEnvMap(readFileSync(join(first, "baseplate.env"), "utf8"));
   const b = parseEnvMap(readFileSync(join(second, "baseplate.env"), "utf8"));
@@ -41,19 +42,19 @@ test("two projects never share a secret", () => {
   expect(a.POSTGRES_PASSWORD).not.toBe(b.POSTGRES_PASSWORD);
 });
 
-test("init keeps state out of the operator's git history", () => {
+test("init keeps state out of the operator's git history", async () => {
   const dir = project();
 
-  initProject(dir);
+  await initProject(dir);
 
   expect(existsSync(join(dir, ".baseplate/.gitignore"))).toBe(true);
 });
 
-test("init refuses to overwrite a project that is already here", () => {
+test("init refuses to overwrite a project that is already here", async () => {
   const dir = project();
-  initProject(dir);
+  await initProject(dir);
 
-  expect(() => initProject(dir)).toThrow(/already here/);
+  await expect(initProject(dir)).rejects.toThrow(/already here/);
 });
 
 test("the stack never receives the operator's cloud credentials", () => {
@@ -84,4 +85,34 @@ test("two projects never share Docker volumes, even with the same folder name", 
 test("a compose project name survives an awkward directory name", () => {
   expect(composeProjectName("/tmp/My App (2)!")).toMatch(/^baseplate-my-app-2-[0-9a-f]{8}$/);
   expect(composeProjectName("/tmp/---")).toMatch(/^baseplate-project-[0-9a-f]{8}$/);
+});
+
+test("a port something is already listening on is skipped", async () => {
+  const busy = createServer();
+  const port = await new Promise<number>((done) => {
+    busy.listen(0, () => {
+      const address = busy.address();
+      done(typeof address === "object" && address ? address.port : 0);
+    });
+  });
+  try {
+    expect(await freePortFrom(port)).toBeGreaterThan(port);
+  } finally {
+    busy.close();
+  }
+});
+
+test("a free port is taken as it is", async () => {
+  const probe = createServer();
+  const port = await new Promise<number>((done) => {
+    probe.listen(0, () => {
+      const address = probe.address();
+      done(typeof address === "object" && address ? address.port : 0);
+    });
+  });
+  await new Promise<void>((done) => {
+    probe.close(() => done());
+  });
+
+  expect(await freePortFrom(port)).toBe(port);
 });

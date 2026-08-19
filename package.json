@@ -64,5 +64,9 @@
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./sdk/src/index.ts"
   }
 }
