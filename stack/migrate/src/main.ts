@@ -1,13 +1,10 @@
-import { readFileSync } from "node:fs";
 import postgres from "postgres";
 import { applyMigrations } from "./apply.ts";
 import { ensureLedger } from "./ledger.ts";
-import { syncPolicies, type DeclaredPolicy } from "./policies.ts";
+import { readDeclaredPolicies, syncPolicies } from "./policies.ts";
 import { ensureRoles } from "./roles.ts";
 
 const PLATFORM_DIR = process.env.PLATFORM_DIR ?? "/platform";
-const MIGRATIONS_DIR = process.env.MIGRATIONS_DIR ?? "/migrations";
-const STACK_FILE = process.env.STACK_FILE ?? "/stack/stack.json";
 
 function log(line: string): void {
   process.stdout.write(`migrate: ${line}\n`);
@@ -21,13 +18,11 @@ function required(name: string): string {
   return value;
 }
 
-function declaredPolicies(): DeclaredPolicy[] {
-  const stack = JSON.parse(readFileSync(STACK_FILE, "utf8")) as {
-    accessPolicies?: DeclaredPolicy[];
-  };
-  return stack.accessPolicies ?? [];
-}
-
+/**
+ * Runs on every start. Platform migrations ship with the Baseplate version;
+ * app tables are the operator's and live in the database, so all this does for
+ * them is make row access match what `baseplate.tables` declares.
+ */
 async function main(): Promise<void> {
   const sql = postgres({
     host: process.env.POSTGRES_HOST ?? "postgres",
@@ -43,16 +38,9 @@ async function main(): Promise<void> {
       authService: required("AUTH_SERVICE_PASSWORD"),
     });
     await ensureLedger(sql);
-    const count = await applyMigrations(
-      sql,
-      [
-        { label: "platform", dir: PLATFORM_DIR },
-        { label: "app", dir: MIGRATIONS_DIR },
-      ],
-      log,
-    );
-    log(count === 0 ? "no pending migrations" : `${count} migration(s) applied`);
-    await syncPolicies(sql, declaredPolicies(), log);
+    const count = await applyMigrations(sql, [{ label: "platform", dir: PLATFORM_DIR }], log);
+    log(count === 0 ? "platform up to date" : `${count} platform migration(s) applied`);
+    await syncPolicies(sql, await readDeclaredPolicies(sql), log);
     log("ready");
   } finally {
     await sql.end();
@@ -60,6 +48,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  process.stderr.write(`migrate failed: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(
+    `migrate failed: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
   process.exit(1);
 });

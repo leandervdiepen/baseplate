@@ -29,6 +29,16 @@ beforeAll(async () => {
   ], resolve(ROOT, "stack"));
 });
 
+beforeAll(async () => {
+  // App tables live in the database, not in this repo, so the suite makes the
+  // one it needs the same way an operator would.
+  await run(
+    "npx",
+    ["tsx", "src/delivery/cli/main.ts", "schema", "add-table", "items", "--column", "body:text"],
+    ROOT,
+  ).catch(() => undefined);
+});
+
 afterAll(async () => {
   if (!startedHere) {
     return;

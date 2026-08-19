@@ -11,6 +11,8 @@ PASSWORD="a-long-password"
 BODY_A="from-a-$STAMP"
 BODY_B="from-b-$STAMP"
 
+npx tsx src/delivery/cli/main.ts schema add-table items --column body:text >/dev/null 2>&1 || true
+
 signup() {
   local email="$1"
   curl -sS -o /tmp/baseplate-auth.json -w "%{http_code}" \

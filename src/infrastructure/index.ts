@@ -1,40 +1,28 @@
-import {
-  ApplyMigrations,
-  ChangeSchema,
-  MintToken,
-  ProvisionStack,
-  TeardownStack,
-} from "#application";
+import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
+import type { SchemaAdmin } from "#application";
 import type { Stack } from "#domain";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
-import {
-  FileMigrationWriter,
-  FileSchemaStore,
-  FileStackStateStore,
-} from "./fs/index.ts";
+import { FileStackStateStore } from "./fs/index.ts";
 import { HetznerCloudProvider } from "./hetzner/index.ts";
 import { JwtTokenSigner } from "./jwt/index.ts";
+import { PostgresSchemaAdmin } from "./postgres/index.ts";
 import { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
 export { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
-export {
-  FileMigrationWriter,
-  FileSchemaStore,
-  FileStackStateStore,
-} from "./fs/index.ts";
+export { FileStackStateStore } from "./fs/index.ts";
 export { HetznerCloudProvider } from "./hetzner/index.ts";
 export { JwtTokenSigner } from "./jwt/index.ts";
 export {
   MemoryClock,
   MemoryCloudProvider,
-  MemoryMigrationWriter,
-  MemorySchemaStore,
+  MemorySchemaAdmin,
   MemoryStackRuntime,
   MemoryStackStateStore,
   MemoryTokenSigner,
 } from "./memory/index.ts";
+export { PostgresSchemaAdmin } from "./postgres/index.ts";
 export { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export type OperatorTarget = "local" | "hetzner";
@@ -44,9 +32,9 @@ export type OperatorConfig = {
   jwtSecret: string;
   stack: Stack;
   stackDir: string;
-  stackFile: string;
-  migrationsDir: string;
   envFile: string;
+  postgresPassword: string;
+  postgresPort: number;
   statePath: string;
   httpPort: number;
   infraDir: string;
@@ -62,7 +50,7 @@ export type Operator = {
   teardown: TeardownStack;
   mintToken: MintToken;
   changeSchema: ChangeSchema;
-  applyMigrations: ApplyMigrations;
+  admin: SchemaAdmin;
 };
 
 export function createOperator(config: OperatorConfig): Operator {
@@ -73,8 +61,12 @@ export function createOperator(config: OperatorConfig): Operator {
     signer,
     callerRole: config.stack.callerRole,
   });
-  const schema = new FileSchemaStore(config.stackFile);
-  const migrations = new FileMigrationWriter(config.migrationsDir);
+  const admin = new PostgresSchemaAdmin({
+    host: "127.0.0.1",
+    port: config.postgresPort,
+    database: config.stack.databaseName,
+    password: config.postgresPassword,
+  });
 
   if (config.target === "local") {
     const cloud = new DockerHostCloudProvider();
@@ -93,8 +85,8 @@ export function createOperator(config: OperatorConfig): Operator {
       }),
       teardown: new TeardownStack({ cloud, runtime, store }),
       mintToken,
-      changeSchema: new ChangeSchema({ schema, migrations, runtime, store }),
-      applyMigrations: new ApplyMigrations({ runtime, store }),
+      changeSchema: new ChangeSchema({ admin }),
+      admin,
     };
   }
 
@@ -125,7 +117,7 @@ export function createOperator(config: OperatorConfig): Operator {
     }),
     teardown: new TeardownStack({ cloud, runtime, store }),
     mintToken,
-    changeSchema: new ChangeSchema({ schema, migrations, runtime, store }),
-    applyMigrations: new ApplyMigrations({ runtime, store }),
+    changeSchema: new ChangeSchema({ admin }),
+    admin,
   };
 }

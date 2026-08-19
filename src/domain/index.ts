@@ -1,4 +1,3 @@
-export { createAccessPolicy, type AccessPolicy } from "./access-policy.ts";
 export {
   assertIdentifier,
   createColumn,
@@ -7,7 +6,6 @@ export {
   type Column,
   type ColumnType,
 } from "./column.ts";
-export { createDatabase, type Database } from "./database.ts";
 export { DomainError } from "./errors.ts";
 export { isLocalHostname, parseHostname, type Hostname } from "./hostname.ts";
 export {

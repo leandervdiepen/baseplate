@@ -1,34 +1,48 @@
 import { useEffect, useState } from "react";
-import { getStack, type StackShape } from "../lib/operator-client.ts";
+import {
+  getHistory,
+  getSchema,
+  type SchemaHistoryEntry,
+  type SchemaSnapshot,
+} from "../lib/operator-client.ts";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { StatusPill } from "../primitives/chip.tsx";
 
 export function PoliciesPage() {
-  const [stack, setStack] = useState<StackShape | null>(null);
+  const [schema, setSchema] = useState<SchemaSnapshot | null>(null);
+  const [history, setHistory] = useState<SchemaHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void getStack()
-      .then(setStack)
+    void getSchema()
+      .then(setSchema)
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : "Unable to load policies.");
       });
+    void getHistory()
+      .then(setHistory)
+      .catch(() => setHistory([]));
   }, []);
 
   return (
     <>
       <PageHeader
         title="Policies"
-        description="Row-level security for the public schema. One policy per table, written in product language."
+        description="Row-level security on your tables. One policy per table, applied by the stack, not by the dashboard."
       />
       {error ? (
         <p className="text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
       ) : null}
       <div className="max-w-[760px] space-y-[var(--space-md)]">
-        {(stack?.accessPolicies ?? []).map((policy) => (
-          <PolicyCard key={policy.table} table={policy.table} ownerColumn={policy.ownerColumn} />
+        {(schema?.tables ?? []).map((table) => (
+          <PolicyCard
+            key={table.name}
+            table={table.name}
+            ownerColumn={table.ownerColumn}
+          />
         ))}
       </div>
+      <SchemaHistory entries={history} />
     </>
   );
 }
@@ -36,8 +50,8 @@ export function PoliciesPage() {
 function PolicyCard({ table, ownerColumn }: { table: string; ownerColumn: string }) {
   const name = `${table}_owner`;
   const sql = `CREATE POLICY ${name} ON ${table}
-  USING (${ownerColumn} = (current_setting('request.jwt.claims', true)::json->>'sub')::uuid)
-  WITH CHECK (${ownerColumn} = (current_setting('request.jwt.claims', true)::json->>'sub')::uuid);`;
+  USING (${ownerColumn} = baseplate.caller_id())
+  WITH CHECK (${ownerColumn} = baseplate.caller_id());`;
 
   return (
     <article className="overflow-clip rounded-[var(--radius-lg)] border border-[var(--color-border)]">
@@ -76,16 +90,50 @@ function PolicyCard({ table, ownerColumn }: { table: string; ownerColumn: string
         </div>
         <div>
           <p className="mb-2 text-[length:var(--text-xs)] font-medium uppercase tracking-[var(--tracking-caps)] text-[var(--color-text-muted)]">
-            Generated SQL
+            In the database
           </p>
-          <pre className="overflow-auto rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-4 font-mono text-[length:var(--text-xs)] leading-[var(--leading-snug)]">
+          <pre className="overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-[var(--space-md)] py-3 font-mono text-[length:var(--text-xs)] leading-[var(--leading-token)]">
             {sql}
           </pre>
         </div>
-        <p className="text-[length:var(--text-xs)] text-[var(--color-text-muted)]">
-          Defined in stack/postgres/init.sh. Rebuild the stack to change it.
-        </p>
       </div>
     </article>
+  );
+}
+
+function SchemaHistory({ entries }: { entries: SchemaHistoryEntry[] }) {
+  if (entries.length === 0) {
+    return null;
+  }
+  return (
+    <section className="mt-[var(--space-xl)] max-w-[760px]">
+      <h2 className="mb-1 text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
+        Schema history
+      </h2>
+      <p className="mb-[var(--space-md)] text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+        Every change this database has taken, recorded by the database itself.
+      </p>
+      <ol className="space-y-2">
+        {entries.map((entry) => (
+          <li
+            key={entry.id}
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-3"
+          >
+            <div className="flex items-baseline gap-3">
+              <span className="font-mono text-[length:var(--text-sm)]">{entry.change}</span>
+              <time
+                dateTime={entry.appliedAt}
+                className="ms-auto shrink-0 text-[length:var(--text-xs)] tabular-nums text-[var(--color-text-muted)]"
+              >
+                {new Date(entry.appliedAt).toLocaleString()}
+              </time>
+            </div>
+            <pre className="mt-2 overflow-auto font-mono text-[length:var(--text-xs)] leading-[var(--leading-token)] text-[var(--color-text-muted)]">
+              {entry.statement}
+            </pre>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

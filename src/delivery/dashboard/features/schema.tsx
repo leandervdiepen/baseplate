@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getSchema, type SchemaSnapshot } from "../lib/operator-client.ts";
+import { NewTableForm } from "./table-editor.tsx";
+import { TableActions } from "./table-actions.tsx";
+import { Callout } from "../patterns/callout.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { SchemaCanvas } from "../patterns/schema-canvas.tsx";
 import { SchemaCard, SchemaRelations } from "../patterns/schema-card.tsx";
 import { Button } from "../primitives/button.tsx";
+import { IconPlus, IconSchema } from "../primitives/icon.tsx";
 
 export function SchemaPage({
   apiUp,
@@ -17,8 +21,10 @@ export function SchemaPage({
 }) {
   const [schema, setSchema] = useState<SchemaSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     void getSchema()
       .then(setSchema)
       .catch((cause: unknown) => {
@@ -26,48 +32,89 @@ export function SchemaPage({
       });
   }, []);
 
+  useEffect(refresh, [refresh]);
+
+  function afterChange(message: string): void {
+    setNotice(message);
+    setCreating(false);
+    refresh();
+  }
+
   return (
     <>
       <PageHeader
         title="Schema"
         description={
           schema == null
-            ? "Reading tables from the stack and the running API."
+            ? "Reading your tables from the database."
             : schema.live
-              ? "Live columns from the running API. Owner columns are the RLS key."
-              : "Declared tables from stack.json. Provision to see live columns."
+              ? "Your tables, read from the database. The owner column is the row access key."
+              : "The database is not reachable. Provision the stack to see your tables."
         }
       />
+      <Callout icon={<IconSchema />} className="mb-[var(--space-lg)]">
+        These are your tables, in your database. Changes apply immediately and are recorded
+        there, so there is nothing to commit and nothing to keep in step.
+      </Callout>
       {error ? (
         <p className="mb-4 text-[length:var(--text-sm)] text-[var(--color-danger)]">{error}</p>
       ) : null}
-      {!apiUp && !schema?.live ? (
-        <p className="mb-4 text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-          API is down. Cards show the declared stack until you provision.
+      {notice ? (
+        <p className="mb-4 text-[length:var(--text-sm)] text-[var(--color-accent-strong)]">
+          {notice}
         </p>
       ) : null}
-      {schema && schema.tables.length === 0 ? (
+      <div className="mb-[var(--space-lg)] flex flex-wrap items-center gap-2.5">
+        <Button onClick={() => setCreating(true)} disabled={creating || !apiUp}>
+          <IconPlus />
+          New table
+        </Button>
+      </div>
+
+      {creating ? (
+        <div className="mb-[var(--space-lg)]">
+          <NewTableForm onDone={afterChange} onCancel={() => setCreating(false)} />
+        </div>
+      ) : null}
+
+      {schema && schema.tables.length === 0 && !creating ? (
         <EmptyState
-          title="No tables declared"
-          description="A stack needs at least one table in stack/stack.json."
+          title={apiUp ? "No tables yet" : "Stack is not running"}
+          description={
+            apiUp
+              ? "Make your first one. It comes up with row access already on, so a caller only ever sees their own rows."
+              : "Provision the stack, then create your first table."
+          }
           action={
-            <Button onClick={onProvision} disabled={apiUp}>
-              Provision
-            </Button>
+            apiUp ? (
+              <Button onClick={() => setCreating(true)}>New table</Button>
+            ) : (
+              <Button onClick={onProvision}>Provision</Button>
+            )
           }
         />
       ) : null}
+
       {schema ? (
         <>
           <SchemaCanvas>
             <div className="flex flex-wrap gap-[var(--space-lg)]">
               {schema.tables.map((table) => (
-                <SchemaCard
+                <div
                   key={table.name}
-                  name={table.name}
-                  columns={table.columns}
-                  onOpenRows={onOpenRows}
-                />
+                  className="overflow-clip rounded-[var(--radius-lg)] border border-[var(--color-border)]"
+                >
+                  <SchemaCard
+                    name={table.name}
+                    columns={table.columns}
+                    onOpenRows={onOpenRows}
+                  />
+                  <TableActions
+                    table={table.name}
+                    columns={table.columns}
+                    onChanged={afterChange}
+                  />
+                </div>
               ))}
             </div>
           </SchemaCanvas>

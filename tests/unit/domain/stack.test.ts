@@ -1,15 +1,17 @@
-import { createStack, DomainError, parseCallerId, parseHostname } from "#domain";
+import {
+  apiBaseUrl,
+  createStack,
+  DomainError,
+  parseCallerId,
+  parseHostname,
+} from "#domain";
 import { expect, test } from "vitest";
 
 const valid = {
   name: "baseplate",
   hostname: "localhost",
   callerRole: "app_user",
-  database: {
-    name: "app",
-    tables: [{ name: "items", ownerColumn: "owner_id" }],
-  },
-  accessPolicies: [{ table: "items", ownerColumn: "owner_id" }],
+  databaseName: "app",
 };
 
 test("parses a caller UUID", () => {
@@ -31,36 +33,35 @@ test("rejects a hostname that is neither localhost nor a domain", () => {
   expect(() => parseHostname("not a host")).toThrow(DomainError);
 });
 
-test("creates a stack when policies match tables", () => {
+test("creates a stack from the values the operator controls", () => {
   const stack = createStack(valid);
-  expect(stack.database.tables).toHaveLength(1);
-  expect(stack.accessPolicies[0]?.table).toBe("items");
+
+  expect(stack.name).toBe("baseplate");
+  expect(stack.hostname).toBe("localhost");
+  expect(stack.callerRole).toBe("app_user");
+  expect(stack.databaseName).toBe("app");
 });
 
-test("rejects a stack with no tables", () => {
-  expect(() =>
-    createStack({
-      ...valid,
-      database: { name: "app", tables: [] },
-      accessPolicies: [],
-    }),
-  ).toThrowError(/at least one table/);
+test("rejects a caller role that is not a lowercase identifier", () => {
+  expect(() => createStack({ ...valid, callerRole: "App User" })).toThrow(DomainError);
 });
 
-test("rejects a policy on a missing table", () => {
-  expect(() =>
-    createStack({
-      ...valid,
-      accessPolicies: [{ table: "notes", ownerColumn: "owner_id" }],
-    }),
-  ).toThrowError(/missing table/);
+test("rejects a stack name that is not kebab-case", () => {
+  expect(() => createStack({ ...valid, name: "Baseplate Stack" })).toThrow(DomainError);
 });
 
-test("rejects a policy whose owner column does not match the table", () => {
-  expect(() =>
-    createStack({
-      ...valid,
-      accessPolicies: [{ table: "items", ownerColumn: "user_id" }],
-    }),
-  ).toThrowError(/must match table/);
+test("rejects a hostname that is not localhost or a domain", () => {
+  expect(() => createStack({ ...valid, hostname: "not a host" })).toThrow(DomainError);
+});
+
+test("the local API URL follows the published port", () => {
+  expect(apiBaseUrl(parseHostname("localhost"), "127.0.0.1", 9000)).toBe(
+    "http://127.0.0.1:9000",
+  );
+});
+
+test("a real hostname gets HTTPS and no port", () => {
+  expect(apiBaseUrl(parseHostname("api.example.com"), "1.2.3.4", 8080)).toBe(
+    "https://api.example.com",
+  );
 });

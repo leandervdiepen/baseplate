@@ -1,15 +1,15 @@
 import type {
   Clock,
   CloudProvider,
-  MigrationWriter,
+  LiveTable,
   ProvisionedStack,
-  SchemaStore,
+  SchemaAdmin,
+  SchemaHistoryEntry,
   StackRuntime,
   StackStateStore,
   TokenSigner,
-  WrittenMigration,
 } from "#application";
-import type { SchemaChange, TokenClaims } from "#domain";
+import type { SchemaChange, Table, TokenClaims } from "#domain";
 import { changeSlug, createServer, type Server, type Stack } from "#domain";
 
 export class MemoryCloudProvider implements CloudProvider {
@@ -65,37 +65,42 @@ export class MemoryStackRuntime implements StackRuntime {
   }
 }
 
-export class MemorySchemaStore implements SchemaStore {
-  constructor(public stack: Stack) {}
+export class MemorySchemaAdmin implements SchemaAdmin {
+  tables: LiveTable[];
+  readonly applied: string[] = [];
+  applyError: Error | undefined;
 
-  async read(): Promise<Stack> {
-    return this.stack;
+  constructor(tables: LiveTable[] = []) {
+    this.tables = tables;
   }
 
-  async write(stack: Stack): Promise<void> {
-    this.stack = stack;
+  async listTables(): Promise<LiveTable[]> {
+    return this.tables;
   }
-}
 
-export class MemoryMigrationWriter implements MigrationWriter {
-  readonly written: string[] = [];
-  writeError: Error | undefined;
+  async history(_limit: number): Promise<SchemaHistoryEntry[]> {
+    return this.applied.map((change, index) => ({
+      id: index + 1,
+      change,
+      statement: `-- ${change}`,
+      appliedAt: "1970-01-01T00:00:00.000Z",
+    }));
+  }
 
-  async write(change: SchemaChange): Promise<WrittenMigration> {
-    if (this.writeError) {
-      throw this.writeError;
+  async apply(change: SchemaChange, declared: readonly Table[]): Promise<string> {
+    if (this.applyError) {
+      throw this.applyError;
     }
-    const name = `0001_${changeSlug(change)}.sql`;
-    this.written.push(name);
-    return { name, sql: `-- ${change.kind}` };
+    this.applied.push(changeSlug(change));
+    this.tables = declared.map((table) => ({
+      name: table.name,
+      ownerColumn: table.ownerColumn,
+      columns: this.tables.find((live) => live.name === table.name)?.columns ?? [],
+    }));
+    return `-- ${changeSlug(change)}`;
   }
 
-  async remove(name: string): Promise<void> {
-    const index = this.written.indexOf(name);
-    if (index !== -1) {
-      this.written.splice(index, 1);
-    }
-  }
+  async close(): Promise<void> {}
 }
 
 export class MemoryStackStateStore implements StackStateStore {

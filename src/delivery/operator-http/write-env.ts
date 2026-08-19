@@ -23,6 +23,8 @@ export function writeLocalFirstRun(root: string): void {
     AUTHENTICATOR_PASSWORD: current.AUTHENTICATOR_PASSWORD || secretValue(),
     AUTH_SERVICE_PASSWORD: current.AUTH_SERVICE_PASSWORD || secretValue(),
     HTTP_PORT: current.HTTP_PORT || "8080",
+    POSTGRES_PORT: current.POSTGRES_PORT || "5432",
+    BASEPLATE_HOSTNAME: current.BASEPLATE_HOSTNAME || "localhost",
     SITE_ADDRESS: current.SITE_ADDRESS || ":8080",
   });
   writeFileSync(envPath, next, "utf8");

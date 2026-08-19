@@ -1,5 +1,7 @@
-import { applySchemaChange, createSchemaChange, createStack, DomainError } from "#domain";
+import { applySchemaChange, createSchemaChange, createTable, DomainError } from "#domain";
 import { expect, test } from "vitest";
+
+const items = [createTable("items", "owner_id")];
 
 function codeOf(act: () => unknown): string {
   try {
@@ -10,30 +12,22 @@ function codeOf(act: () => unknown): string {
   return "no-error";
 }
 
-const stack = createStack({
-  name: "baseplate",
-  hostname: "localhost",
-  callerRole: "app_user",
-  database: { name: "app", tables: [{ name: "items", ownerColumn: "owner_id" }] },
-  accessPolicies: [{ table: "items", ownerColumn: "owner_id" }],
+test("a created table arrives carrying its owner column", () => {
+  const next = applySchemaChange(
+    items,
+    createSchemaChange({
+      kind: "create-table",
+      table: "notes",
+      columns: [{ name: "title", type: "text" }],
+    }),
+  );
+
+  expect(next).toContainEqual({ name: "notes", ownerColumn: "owner_id" });
 });
 
-test("a created table arrives with a row access policy", () => {
-  const change = createSchemaChange({
-    kind: "create-table",
-    table: "notes",
-    columns: [{ name: "title", type: "text" }],
-  });
-
-  const next = applySchemaChange(stack, change);
-
-  expect(next.database.tables.map((table) => table.name)).toEqual(["items", "notes"]);
-  expect(next.accessPolicies).toContainEqual({ table: "notes", ownerColumn: "owner_id" });
-});
-
-test("a dropped table loses its policy", () => {
+test("a dropped table leaves the set", () => {
   const withNotes = applySchemaChange(
-    stack,
+    items,
     createSchemaChange({ kind: "create-table", table: "notes" }),
   );
 
@@ -42,43 +36,47 @@ test("a dropped table loses its policy", () => {
     createSchemaChange({ kind: "drop-table", table: "notes" }),
   );
 
-  expect(next.accessPolicies.map((policy) => policy.table)).toEqual(["items"]);
+  expect(next.map((table) => table.name)).toEqual(["items"]);
 });
 
-test("a renamed table keeps its policy under the new name", () => {
+test("a renamed table keeps its owner column under the new name", () => {
   const next = applySchemaChange(
-    stack,
+    items,
     createSchemaChange({ kind: "rename-table", table: "items", to: "notes" }),
   );
 
-  expect(next.accessPolicies).toEqual([{ table: "notes", ownerColumn: "owner_id" }]);
+  expect(next).toEqual([{ name: "notes", ownerColumn: "owner_id" }]);
 });
 
 test("rejects dropping the owner column", () => {
-  expect(() =>
-    applySchemaChange(
-      stack,
-      createSchemaChange({
-        kind: "drop-column",
-        table: "items",
-        column: { name: "owner_id" },
-      }),
-    ),
-  ).toThrow(/owner column/i);
-});
-
-test("rejects dropping the last table", () => {
-  expect(() =>
-    applySchemaChange(stack, createSchemaChange({ kind: "drop-table", table: "items" })),
-  ).toThrow(/at least one table/i);
-});
-
-test("rejects a change to a table that is not declared", () => {
   expect(
     codeOf(() =>
-      applySchemaChange(stack, createSchemaChange({ kind: "drop-table", table: "ghost" })),
+      applySchemaChange(
+        items,
+        createSchemaChange({
+          kind: "drop-column",
+          table: "items",
+          column: { name: "owner_id" },
+        }),
+      ),
+    ),
+  ).toBe("schema.owner_column_required");
+});
+
+test("rejects a change to a table that does not exist", () => {
+  expect(
+    codeOf(() =>
+      applySchemaChange(items, createSchemaChange({ kind: "drop-table", table: "ghost" })),
     ),
   ).toBe("schema.unknown_table");
+});
+
+test("rejects creating a table that is already there", () => {
+  expect(
+    codeOf(() =>
+      applySchemaChange(items, createSchemaChange({ kind: "create-table", table: "items" })),
+    ),
+  ).toBe("schema.table_exists");
 });
 
 test("rejects a column type the stack cannot create", () => {

@@ -1,4 +1,3 @@
-export { ApplyMigrations } from "./apply-migrations.ts";
 export { ChangeSchema, type SchemaChangeResult } from "./change-schema.ts";
 export { MintToken } from "./mint-token.ts";
 export { ProvisionStack } from "./provision-stack.ts";

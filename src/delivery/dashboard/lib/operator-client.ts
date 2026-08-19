@@ -5,8 +5,12 @@ export type OperatorStatus = {
   siteAddress: string | null;
   dnsZone: string | null;
   sshKeyName: string | null;
+  serverLocation: string | null;
+  accessTokenTtl: string;
+  refreshTokenTtl: string;
   baseUrl: string | null;
   apiUp: boolean;
+  readiness: ReadinessCheck[];
   secrets: {
     jwt: boolean;
     hcloud: boolean;
@@ -16,12 +20,94 @@ export type OperatorStatus = {
   };
 };
 
-export type StackShape = {
-  hostname: string;
-  callerRole: string;
-  database: { tables: { name: string; ownerColumn: string }[] };
-  accessPolicies: { table: string; ownerColumn: string }[];
+export type ReadinessCheck = {
+  id: string;
+  label: string;
+  ok: boolean;
+  detail: string;
 };
+
+export type ColumnType =
+  | "text"
+  | "integer"
+  | "bigint"
+  | "numeric"
+  | "boolean"
+  | "uuid"
+  | "timestamptz"
+  | "date"
+  | "jsonb";
+
+export const COLUMN_TYPES: ColumnType[] = [
+  "text",
+  "integer",
+  "bigint",
+  "numeric",
+  "boolean",
+  "uuid",
+  "timestamptz",
+  "date",
+  "jsonb",
+];
+
+export type SchemaChangeBody =
+  | {
+      kind: "create-table";
+      table: string;
+      ownerColumn?: string;
+      columns: { name: string; type: ColumnType; nullable: boolean }[];
+    }
+  | { kind: "drop-table"; table: string }
+  | { kind: "rename-table"; table: string; to: string }
+  | {
+      kind: "add-column";
+      table: string;
+      column: { name: string; type: ColumnType; nullable: boolean };
+    }
+  | { kind: "drop-column"; table: string; column: { name: string } };
+
+export type LiveColumn = {
+  name: string;
+  type: string;
+  nullable: boolean;
+  primaryKey: boolean;
+  references?: { table: string; column: string };
+};
+
+export type LiveTable = {
+  name: string;
+  ownerColumn: string;
+  columns: LiveColumn[];
+};
+
+export type SchemaHistoryEntry = {
+  id: number;
+  change: string;
+  statement: string;
+  appliedAt: string;
+};
+
+export async function changeSchema(
+  body: SchemaChangeBody,
+): Promise<{ statement: string; tables: LiveTable[] }> {
+  const response = await fetch("/api/schema", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+  return (await response.json()) as { statement: string; tables: LiveTable[] };
+}
+
+export async function getHistory(): Promise<SchemaHistoryEntry[]> {
+  const response = await fetch("/api/history");
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+  return ((await response.json()) as { entries: SchemaHistoryEntry[] }).entries;
+}
 
 export type ItemRow = {
   id: string;
@@ -44,14 +130,6 @@ export async function getStatus(): Promise<OperatorStatus> {
     throw new Error(await parseError(response));
   }
   return (await response.json()) as OperatorStatus;
-}
-
-export async function getStack(): Promise<StackShape> {
-  const response = await fetch("/api/stack");
-  if (!response.ok) {
-    throw new Error(await parseError(response));
-  }
-  return (await response.json()) as StackShape;
 }
 
 export async function firstRunLocal(): Promise<void> {
@@ -147,11 +225,7 @@ export type SchemaColumn = {
 
 export type SchemaSnapshot = {
   live: boolean;
-  tables: {
-    name: string;
-    ownerColumn: string;
-    columns: SchemaColumn[];
-  }[];
+  tables: { name: string; ownerColumn: string; columns: SchemaColumn[] }[];
 };
 
 export async function getSchema(): Promise<SchemaSnapshot> {
@@ -159,7 +233,21 @@ export async function getSchema(): Promise<SchemaSnapshot> {
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
-  return (await response.json()) as SchemaSnapshot;
+  const body = (await response.json()) as { tables: LiveTable[]; live?: boolean };
+  return {
+    live: body.live !== false,
+    tables: body.tables.map((table) => ({
+      name: table.name,
+      ownerColumn: table.ownerColumn,
+      columns: table.columns.map((column) => ({
+        name: column.name,
+        type: column.type,
+        primaryKey: column.primaryKey,
+        owner: column.name === table.ownerColumn,
+        ...(column.references ? { references: column.references } : {}),
+      })),
+    })),
+  };
 }
 
 export async function dbFetch(

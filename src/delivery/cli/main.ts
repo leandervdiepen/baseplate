@@ -1,14 +1,15 @@
 import { parseArgs } from "node:util";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { createStack, DomainError } from "#domain";
+import { DomainError } from "#domain";
 import { InfraError } from "#shared";
-import { createOperatorFromRoot, repoRootFromDelivery } from "../operator-setup.ts";
+import {
+  createOperatorFromRoot,
+  repoRootFromDelivery,
+  stackFromEnv,
+} from "../operator-setup.ts";
 import { schemaChangeFromArgs } from "./schema-command.ts";
 
 const ROOT = repoRootFromDelivery(import.meta.dirname);
-const USAGE =
-  "Usage: baseplate <provision|teardown|migrate|schema|mint-token --sub UUID>";
+const USAGE = "Usage: baseplate <up|down|schema|tables|mint-token --sub UUID>";
 
 async function main(): Promise<void> {
   const { positionals, values } = parseArgs({
@@ -26,46 +27,44 @@ async function main(): Promise<void> {
   }
 
   const operator = createOperatorFromRoot(ROOT, false);
-
-  if (command === "provision") {
-    const stack = createStack(
-      JSON.parse(readFileSync(resolve(ROOT, "stack/stack.json"), "utf8")),
-    );
-    const result = await operator.provision.execute(stack);
-    console.log(`${result.baseUrl}`);
-    return;
-  }
-  if (command === "teardown") {
-    await operator.teardown.execute();
-    return;
-  }
-  if (command === "migrate") {
-    await operator.applyMigrations.execute();
-    return;
-  }
-  if (command === "schema") {
-    const change = schemaChangeFromArgs(positionals[1], positionals[2], {
-      columns: values.column ?? [],
-      to: values.to,
-    });
-    const result = await operator.changeSchema.execute(change);
-    console.log(
-      result.applied
-        ? `${result.migration} applied`
-        : `${result.migration} written. Provision the stack to apply it.`,
-    );
-    return;
-  }
-  if (command === "mint-token") {
-    if (!values.sub) {
-      throw new DomainError("cli.sub_required", "mint-token requires --sub <uuid>.");
+  try {
+    if (command === "up" || command === "provision") {
+      const result = await operator.provision.execute(stackFromEnv());
+      console.log(result.baseUrl);
+      return;
     }
-    console.log(await operator.mintToken.execute(values.sub));
-    return;
+    if (command === "down" || command === "teardown") {
+      await operator.teardown.execute();
+      return;
+    }
+    if (command === "tables") {
+      for (const table of await operator.admin.listTables()) {
+        const columns = table.columns.map((column) => column.name).join(", ");
+        console.log(`${table.name} (owner ${table.ownerColumn}): ${columns}`);
+      }
+      return;
+    }
+    if (command === "schema") {
+      const change = schemaChangeFromArgs(positionals[1], positionals[2], {
+        columns: values.column ?? [],
+        to: values.to,
+      });
+      const result = await operator.changeSchema.execute(change);
+      console.log(result.statement);
+      return;
+    }
+    if (command === "mint-token") {
+      if (!values.sub) {
+        throw new DomainError("cli.sub_required", "mint-token requires --sub <uuid>.");
+      }
+      console.log(await operator.mintToken.execute(values.sub));
+      return;
+    }
+    console.error(USAGE);
+    process.exit(1);
+  } finally {
+    await operator.admin.close();
   }
-
-  console.error(USAGE);
-  process.exit(1);
 }
 
 main().catch((error: unknown) => {

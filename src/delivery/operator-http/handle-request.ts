@@ -1,12 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createSchemaChange, createStack, DomainError } from "#domain";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { createOperatorFromRoot } from "../operator-setup.ts";
+import { createSchemaChange, DomainError } from "#domain";
+import { createOperatorFromRoot, stackFromEnv } from "../operator-setup.ts";
 import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
-import { readSchema } from "./read-schema.ts";
 import { readStatus } from "./status.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
@@ -23,16 +20,13 @@ export async function handleOperatorRequest(
       sendJson(res, 200, await readStatus(root));
       return;
     }
-    if (path === "/api/stack" && method === "GET") {
-      sendJson(res, 200, JSON.parse(readFileSync(resolve(root, "stack/stack.json"), "utf8")));
-      return;
-    }
+
     if (path === "/api/first-run" && method === "POST") {
       const body = (await readJsonBody(req)) as { target?: string };
       if (body.target && body.target !== "local") {
         throw new DomainError(
           "operator.hetzner_needs_domain",
-          "Hetzner needs a domain in Hetzner DNS first. Start with local.",
+          "Start local. Hetzner needs a domain you already own, and Settings walks through it.",
         );
       }
       writeLocalFirstRun(root);
@@ -44,11 +38,9 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/provision" && method === "POST") {
-      const operator = createOperatorFromRoot(root, true);
-      const stack = createStack(
-        JSON.parse(readFileSync(resolve(root, "stack/stack.json"), "utf8")),
+      const result = await createOperatorFromRoot(root, true).provision.execute(
+        stackFromEnv(),
       );
-      const result = await operator.provision.execute(stack);
       sendJson(res, 200, result);
       return;
     }
@@ -67,20 +59,37 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/schema" && method === "GET") {
-      sendJson(res, 200, await readSchema(root));
+      const operator = createOperatorFromRoot(root, true);
+      try {
+        sendJson(res, 200, { tables: await operator.admin.listTables() });
+      } catch {
+        // The database is only reachable while the stack is up.
+        sendJson(res, 200, { tables: [], live: false });
+      } finally {
+        await operator.admin.close();
+      }
       return;
     }
     if (path === "/api/schema" && method === "POST") {
       const change = createSchemaChange(
         (await readJsonBody(req)) as Parameters<typeof createSchemaChange>[0],
       );
-      const result = await createOperatorFromRoot(root, true).changeSchema.execute(change);
-      sendJson(res, 200, { migration: result.migration, applied: result.applied });
+      const operator = createOperatorFromRoot(root, true);
+      try {
+        const result = await operator.changeSchema.execute(change);
+        sendJson(res, 200, { statement: result.statement, tables: result.tables });
+      } finally {
+        await operator.admin.close();
+      }
       return;
     }
-    if (path === "/api/migrate" && method === "POST") {
-      await createOperatorFromRoot(root, true).applyMigrations.execute();
-      sendJson(res, 200, { ok: true });
+    if (path === "/api/history" && method === "GET") {
+      const operator = createOperatorFromRoot(root, true);
+      try {
+        sendJson(res, 200, { entries: await operator.admin.history(50) });
+      } finally {
+        await operator.admin.close();
+      }
       return;
     }
     if (path === "/api/logs" && method === "GET") {
@@ -101,6 +110,19 @@ export async function handleOperatorRequest(
   }
 }
 
+const CONFIG_KEYS = [
+  "TARGET",
+  "SITE_ADDRESS",
+  "HCLOUD_TOKEN",
+  "HETZNER_DNS_TOKEN",
+  "HETZNER_DNS_ZONE",
+  "SSH_KEY_NAME",
+  "SERVER_LOCATION",
+  "BASEPLATE_HOSTNAME",
+  "ACCESS_TOKEN_TTL",
+  "REFRESH_TOKEN_TTL",
+] as const;
+
 async function saveConfig(
   root: string,
   req: IncomingMessage,
@@ -108,15 +130,7 @@ async function saveConfig(
 ): Promise<void> {
   const body = (await readJsonBody(req)) as Record<string, string | undefined>;
   const updates: Record<string, string> = {};
-  for (const key of [
-    "TARGET",
-    "SITE_ADDRESS",
-    "HCLOUD_TOKEN",
-    "HETZNER_DNS_TOKEN",
-    "HETZNER_DNS_ZONE",
-    "SSH_KEY_NAME",
-    "SERVER_LOCATION",
-  ]) {
+  for (const key of CONFIG_KEYS) {
     const value = body[key];
     if (typeof value === "string" && value.length > 0) {
       updates[key] = value;

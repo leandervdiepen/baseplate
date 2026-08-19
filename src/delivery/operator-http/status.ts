@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createStack } from "#domain";
 import { FileStackStateStore } from "#infrastructure";
 import { parseEnvMap } from "./env-file.ts";
+import { migrationFiles, readReadiness, type ReadinessCheck } from "./readiness.ts";
 
 export type OperatorStatus = {
   configured: boolean;
@@ -11,6 +11,11 @@ export type OperatorStatus = {
   siteAddress: string | null;
   dnsZone: string | null;
   sshKeyName: string | null;
+  serverLocation: string | null;
+  accessTokenTtl: string;
+  refreshTokenTtl: string;
+  migrations: string[];
+  readiness: ReadinessCheck[];
   baseUrl: string | null;
   apiUp: boolean;
   secrets: {
@@ -24,17 +29,19 @@ export type OperatorStatus = {
 
 export async function readStatus(root: string): Promise<OperatorStatus> {
   const envPath = resolve(root, "operator.env");
-  const stack = createStack(
-    JSON.parse(readFileSync(resolve(root, "stack/stack.json"), "utf8")),
-  );
   if (!existsSync(envPath)) {
     return {
       configured: false,
       target: null,
-      hostname: stack.hostname,
+      hostname: "localhost",
       siteAddress: null,
       dnsZone: null,
       sshKeyName: null,
+      serverLocation: null,
+      accessTokenTtl: "1h",
+      refreshTokenTtl: "30d",
+      migrations: migrationFiles(root),
+      readiness: [],
       baseUrl: null,
       apiUp: false,
       secrets: {
@@ -47,6 +54,7 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
     };
   }
   const env = parseEnvMap(readFileSync(envPath, "utf8"));
+  const hostname = env.BASEPLATE_HOSTNAME || "localhost";
   const store = new FileStackStateStore(resolve(root, ".baseplate/state.json"));
   const record = await store.load();
   const baseUrl = record?.baseUrl ?? null;
@@ -59,21 +67,34 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
       apiUp = false;
     }
   }
+  const target = env.TARGET ?? "local";
+  const secrets = {
+    jwt: Boolean(env.JWT_SECRET),
+    hcloud: Boolean(env.HCLOUD_TOKEN),
+    dnsToken: Boolean(env.HETZNER_DNS_TOKEN),
+    dnsZone: Boolean(env.HETZNER_DNS_ZONE),
+    sshKey: Boolean(env.SSH_KEY_NAME),
+  };
   return {
     configured: Boolean(env.JWT_SECRET),
-    target: env.TARGET ?? "local",
-    hostname: stack.hostname,
+    target,
+    hostname,
     siteAddress: env.SITE_ADDRESS ?? null,
     dnsZone: env.HETZNER_DNS_ZONE ?? null,
     sshKeyName: env.SSH_KEY_NAME ?? null,
+    serverLocation: env.SERVER_LOCATION ?? "nbg1",
+    accessTokenTtl: env.ACCESS_TOKEN_TTL || "1h",
+    refreshTokenTtl: env.REFRESH_TOKEN_TTL || "30d",
+    migrations: migrationFiles(root),
+    readiness: readReadiness({
+      target,
+      hostname,
+      siteAddress: env.SITE_ADDRESS ?? null,
+      dnsZone: env.HETZNER_DNS_ZONE ?? null,
+      secrets,
+    }),
     baseUrl,
     apiUp,
-    secrets: {
-      jwt: Boolean(env.JWT_SECRET),
-      hcloud: Boolean(env.HCLOUD_TOKEN),
-      dnsToken: Boolean(env.HETZNER_DNS_TOKEN),
-      dnsZone: Boolean(env.HETZNER_DNS_ZONE),
-      sshKey: Boolean(env.SSH_KEY_NAME),
-    },
+    secrets,
   };
 }

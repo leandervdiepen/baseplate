@@ -1,5 +1,8 @@
-import { createSchemaChange } from "#domain";
-import { renderChange } from "../../../src/infrastructure/postgres/render-change.ts";
+import { createSchemaChange, createTable } from "#domain";
+import {
+  protectStatements,
+  renderChange,
+} from "../../../src/infrastructure/postgres/render-change.ts";
 import { expect, test } from "vitest";
 
 test("a created table gets an id and a not-null owner column", () => {
@@ -16,10 +19,10 @@ test("a created table gets an id and a not-null owner column", () => {
 
   expect(sql).toBe(
     'CREATE TABLE "notes" (\n' +
-      '\t"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n' +
-      '\t"owner_id" uuid NOT NULL,\n' +
-      '\t"title" text NOT NULL,\n' +
-      '\t"pinned" boolean\n' +
+      '  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n' +
+      '  "owner_id" uuid NOT NULL,\n' +
+      '  "title" text NOT NULL,\n' +
+      '  "pinned" boolean\n' +
       ");",
   );
 });
@@ -52,4 +55,21 @@ test("renders drop and rename", () => {
       }),
     ),
   ).toBe('ALTER TABLE "items" DROP COLUMN "body";');
+});
+
+test("a new table is protected in the same breath as it is created", () => {
+  const statements = protectStatements(createTable("notes", "owner_id"));
+  const joined = statements.join("\n");
+
+  expect(joined).toContain("ENABLE ROW LEVEL SECURITY");
+  expect(joined).toContain('CREATE POLICY "notes_owner"');
+  expect(joined).toContain("baseplate.caller_id()");
+  expect(joined).toContain('GRANT SELECT, INSERT, UPDATE, DELETE ON public."notes" TO app_user');
+  expect(joined).toContain('REVOKE ALL ON public."notes" FROM anon');
+});
+
+test("refuses to build SQL from an identifier the domain would not allow", () => {
+  expect(() => protectStatements({ name: "items; drop table x", ownerColumn: "owner_id" })).toThrow(
+    /identifier/,
+  );
 });

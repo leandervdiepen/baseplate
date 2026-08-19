@@ -12,9 +12,17 @@ LANGUAGE sql STABLE AS $caller$
 $caller$`;
 
 /**
- * stack.json is the single source of truth for who can read a row.
- * Migrations own table shape; this owns access, and runs after every migration.
+ * `baseplate.tables` is the single source of truth for who can read a row.
+ * The operator changes it from the dashboard; this makes the database match.
  */
+export async function readDeclaredPolicies(
+  sql: postgres.Sql,
+): Promise<DeclaredPolicy[]> {
+  const rows = await sql<{ name: string; owner_column: string }[]>`
+    SELECT name, owner_column FROM baseplate.tables ORDER BY name`;
+  return rows.map((row) => ({ table: row.name, ownerColumn: row.owner_column }));
+}
+
 export async function syncPolicies(
   sql: postgres.Sql,
   policies: readonly DeclaredPolicy[],

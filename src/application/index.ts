@@ -1,16 +1,16 @@
 export type {
   Clock,
   CloudProvider,
-  MigrationWriter,
+  LiveColumn,
+  LiveTable,
   ProvisionedStack,
-  SchemaStore,
+  SchemaAdmin,
+  SchemaHistoryEntry,
   StackRuntime,
   StackStateStore,
   TokenSigner,
-  WrittenMigration,
 } from "./ports/index.ts";
 export {
-  ApplyMigrations,
   ChangeSchema,
   MintToken,
   ProvisionStack,

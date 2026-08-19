@@ -1,8 +1,6 @@
 import { assertIdentifier, createColumn, type Column } from "./column.ts";
-import { createDatabase } from "./database.ts";
 import { DomainError } from "./errors.ts";
-import { createAccessPolicy } from "./access-policy.ts";
-import type { Stack } from "./stack.ts";
+import { createTable, type Table } from "./table.ts";
 
 /** Tables the stack itself needs. The operator may not drop these. */
 const RESERVED_TABLES = new Set(["users", "migrations"]);
@@ -80,11 +78,14 @@ export function createSchemaChange(input: SchemaChangeInput): SchemaChange {
 }
 
 /**
- * The declaration in stack.json after the change lands. Row access is derived
- * here rather than at the call site so a new table can never arrive unprotected.
+ * The tables that should exist after the change lands. Every table carries its
+ * owner column, so a new one can never arrive without row access.
  */
-export function applySchemaChange(stack: Stack, change: SchemaChange): Stack {
-  const tables = stack.database.tables.map((table) => ({ ...table }));
+export function applySchemaChange(
+  current: readonly Table[],
+  change: SchemaChange,
+): Table[] {
+  const tables = current.map((table) => ({ ...table }));
   const named = (name: string) => tables.some((table) => table.name === name);
 
   if (change.kind === "create-table") {
@@ -129,19 +130,7 @@ export function applySchemaChange(stack: Stack, change: SchemaChange): Stack {
     }
   }
 
-  if (tables.length === 0) {
-    throw new DomainError(
-      "stack.table_required",
-      "A stack database must have at least one table.",
-    );
-  }
-  return {
-    ...stack,
-    database: createDatabase(stack.database.name, tables),
-    accessPolicies: tables.map((table) =>
-      createAccessPolicy(table.name, table.ownerColumn),
-    ),
-  };
+  return tables.map((table) => createTable(table.name, table.ownerColumn));
 }
 
 export function changeSlug(change: SchemaChange): string {

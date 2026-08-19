@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createStack, DomainError } from "#domain";
+import { createStack, DomainError, type Stack } from "#domain";
 import {
   createOperator,
   type Operator,
@@ -87,7 +87,7 @@ export function assertHetznerConfig(target: OperatorTarget, hostname: string): v
   if (hostname === "localhost") {
     throw new DomainError(
       "cli.hetzner_localhost",
-      "TARGET=hetzner needs a real hostname in stack/stack.json (not localhost).",
+      "TARGET=hetzner needs a hostname you own. Set it in Settings.",
     );
   }
   const zone = process.env.HETZNER_DNS_ZONE ?? "";
@@ -97,26 +97,25 @@ export function assertHetznerConfig(target: OperatorTarget, hostname: string): v
       `Hostname '${hostname}' must be under DNS zone '${zone}'.`,
     );
   }
-  const siteAddress = process.env.SITE_ADDRESS ?? "";
-  if (!siteAddress || siteAddress === ":8080" || siteAddress.startsWith(":")) {
-    throw new DomainError(
-      "cli.hetzner_site_address",
-      `TARGET=hetzner needs SITE_ADDRESS=${hostname} in operator.env (Caddy TLS).`,
-    );
-  }
-  if (siteAddress !== hostname) {
-    throw new DomainError(
-      "cli.hetzner_site_mismatch",
-      `SITE_ADDRESS ('${siteAddress}') must match stack hostname ('${hostname}').`,
-    );
-  }
+}
+
+/**
+ * Everything except the hostname is a Baseplate constant. The operator picks a
+ * hostname; they do not maintain a stack file.
+ */
+export function stackFromEnv(): Stack {
+  return createStack({
+    name: "baseplate",
+    hostname: process.env.HOSTNAME_OVERRIDE || process.env.BASEPLATE_HOSTNAME || "localhost",
+    callerRole: "app_user",
+    databaseName: "app",
+  });
 }
 
 export function createOperatorFromRoot(root: string, overrideEnv = false): Operator {
   ensureOperatorSecrets(root);
   loadEnvFile(resolve(root, "operator.env"), overrideEnv);
-  const stackFile = resolve(root, "stack/stack.json");
-  const stack = createStack(JSON.parse(readFileSync(stackFile, "utf8")));
+  const stack = stackFromEnv();
   const target = parseTarget(process.env.TARGET ?? "local");
   assertHetznerKeys(target);
   assertHetznerConfig(target, stack.hostname);
@@ -125,9 +124,9 @@ export function createOperatorFromRoot(root: string, overrideEnv = false): Opera
     jwtSecret: requiredEnv("JWT_SECRET"),
     stack,
     stackDir: resolve(root, "stack"),
-    stackFile,
-    migrationsDir: resolve(root, "stack/migrations"),
     envFile: writeStackEnv(root),
+    postgresPassword: requiredEnv("POSTGRES_PASSWORD"),
+    postgresPort: Number(process.env.POSTGRES_PORT ?? "5432"),
     statePath: resolve(root, ".baseplate/state.json"),
     httpPort: Number(process.env.HTTP_PORT ?? "8080"),
     infraDir: resolve(root, "infra"),

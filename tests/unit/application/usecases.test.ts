@@ -13,11 +13,7 @@ const stack = createStack({
   name: "baseplate",
   hostname: "localhost",
   callerRole: "app_user",
-  database: {
-    name: "app",
-    tables: [{ name: "items", ownerColumn: "owner_id" }],
-  },
-  accessPolicies: [{ table: "items", ownerColumn: "owner_id" }],
+  databaseName: "app",
 });
 
 const subject = "11111111-1111-4111-8111-111111111111";
