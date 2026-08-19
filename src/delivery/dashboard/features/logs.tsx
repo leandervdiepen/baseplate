@@ -20,16 +20,18 @@ function serviceName(raw: string): string {
 function parseLogs(text: string): LogLine[] {
   return text
     .split("\n")
-    .filter(Boolean)
     .map((line) => {
       const match = line.match(/^(\S+)\s+\|\s?(.*)$/);
-      const message = match?.[2] ?? line;
+      const message = (match?.[2] ?? line).trimEnd();
       return {
         service: serviceName(match?.[1] ?? "compose"),
         message,
         error: /error|fatal|panic|timeout|reset by peer/i.test(message),
       };
-    });
+    })
+    // A service that printed a blank line said nothing. Giving it a row only
+    // pushes the lines that do say something off the screen.
+    .filter((line) => line.message.length > 0);
 }
 
 export function LogsPage({ target }: { target: string }) {
@@ -114,10 +116,10 @@ export function LogsPage({ target }: { target: string }) {
       </div>
       <StatusMessage message={error} tone="error" className="mb-4 block" />
       <div className="flex min-h-[24rem] flex-col overflow-clip rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-raised)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-[var(--space-md)] py-2.5">
-          <h2 className="text-[length:var(--text-sm)] font-medium">
-            {service === ALL ? "All services" : service}
-          </h2>
+        <div className="flex items-center justify-end gap-3 border-b border-[var(--color-border)] px-[var(--space-md)] py-2.5">
+          {/* The active filter is already named in the toolbar above, so this
+              heading is for the reader who cannot see it. */}
+          <h2 className="sr-only">Log output</h2>
           <p aria-live="polite" className="text-[length:var(--text-xs)] tabular-nums text-[var(--color-text-muted)]">
             {visible.length} of {lines.length} lines
           </p>

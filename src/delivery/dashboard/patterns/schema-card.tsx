@@ -20,9 +20,9 @@ export function SchemaCard({
   return (
     <Card className="w-[360px] max-w-full shrink-0 overflow-clip">
       <header className="flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-2.5">
-        <h3 className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)] font-medium">
+        <h2 className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)] font-medium">
           public.{name}
-        </h3>
+        </h2>
         <StatusPill tone="accent">rls</StatusPill>
       </header>
       <ul>

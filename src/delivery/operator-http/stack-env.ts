@@ -4,8 +4,8 @@ import { parseEnvMap } from "./env-file.ts";
 import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 
 /**
- * Keys the running stack needs. Everything else in operator.env, including the
- * operator's Hetzner credentials, stays on this machine.
+ * Keys the running stack needs. Everything else in the project's config,
+ * including the operator's Hetzner credentials, stays on this machine.
  */
 export const STACK_ENV_KEYS = [
   "JWT_SECRET",
@@ -20,7 +20,7 @@ export const STACK_ENV_KEYS = [
 ] as const;
 
 export function stackEnvText(operatorEnv: Record<string, string>): string {
-  const lines = ["# Generated from operator.env. Cloud credentials never land here."];
+  const lines = [`# Generated from ${CONFIG_FILE}. Cloud credentials never land here.`];
   for (const key of STACK_ENV_KEYS) {
     const value = operatorEnv[key];
     if (value !== undefined && value !== "") {

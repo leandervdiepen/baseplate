@@ -88,17 +88,15 @@ export function SettingsPage({
           <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
             Target
           </h2>
-          <Field label="Where the stack runs" hint="Local needs no cloud account and no domain.">
-            <Segmented
-              label="Where the stack runs"
-              value={target}
-              onChange={setTarget}
-              options={[
-                { id: "local", label: "This machine" },
-                { id: "hetzner", label: "Hetzner" },
-              ]}
-            />
-          </Field>
+          <Segmented
+            label="Where the stack runs"
+            value={target}
+            onChange={setTarget}
+            options={[
+              { id: "local", label: "This machine" },
+              { id: "hetzner", label: "Hetzner" },
+            ]}
+          />
           {cloud ? (
             <Field
               label="Hostname"
@@ -114,7 +112,10 @@ export function SettingsPage({
               />
             </Field>
           ) : (
-            <Hint>Local serves plain HTTP on 127.0.0.1, with no domain and no certificate.</Hint>
+            <Hint>
+              This machine serves plain HTTP on 127.0.0.1, with no cloud account, no domain, and no
+              certificate.
+            </Hint>
           )}
         </section>
 
@@ -134,12 +135,7 @@ export function SettingsPage({
         />
         <ReadinessList checks={status.readiness} />
 
-        <div className="pt-[var(--space-md)]">
-          <StatusMessage message={message} />
-          <StatusMessage message={error} tone="error" />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-[var(--space-md)] border-t border-[var(--color-border)] pt-[var(--space-lg)]">
+        <div className="flex flex-wrap items-center gap-[var(--space-md)] pt-[var(--space-lg)]">
           <p className="max-w-xs text-[length:var(--text-xs)] leading-[var(--leading-tight)] text-[var(--color-text-muted)]">
             {blocking > 0
               ? "Starting the stack will fail until the checks above pass."
@@ -162,6 +158,10 @@ export function SettingsPage({
             <Button type="submit" busy={busy === "save"}>
               Save settings
             </Button>
+          </div>
+          <div className="w-full">
+            <StatusMessage message={message} />
+            <StatusMessage message={error} tone="error" />
           </div>
         </div>
       </form>

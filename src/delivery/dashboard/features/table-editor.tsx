@@ -33,6 +33,7 @@ export function NewTableForm({
   const [columns, setColumns] = useState<Draft[]>([{ ...EMPTY }]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState<string | null>(null);
 
   async function submit(): Promise<void> {
     setBusy(true);
@@ -57,6 +58,11 @@ export function NewTableForm({
         className="flex max-w-[var(--container-form)] flex-col gap-[var(--space-md)]"
         onSubmit={(event) => {
           event.preventDefault();
+          if (name.trim().length === 0) {
+            setInvalid("Give the table a name.");
+            return;
+          }
+          setInvalid(null);
           void submit();
         }}
       >
@@ -70,7 +76,7 @@ export function NewTableForm({
             </Hint>
           </div>
         </div>
-        <Field label="Table name" hint="Lowercase letters, digits, and underscores.">
+        <Field label="Table name" hint="Lowercase letters, digits, and underscores." error={invalid}>
           <Input
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -81,7 +87,7 @@ export function NewTableForm({
         <ColumnRows columns={columns} onChange={setColumns} />
         <StatusMessage message={error} tone="error" />
         <div className="flex items-center gap-2.5">
-          <Button type="submit" busy={busy} disabled={name.trim().length === 0}>
+          <Button type="submit" busy={busy}>
             Create table
           </Button>
           <Button variant="secondary" onClick={onCancel} disabled={busy}>

@@ -75,9 +75,9 @@ export function SchemaPage({
         </div>
       ) : null}
 
-      {!empty ? (
+      {!empty && !creating ? (
         <div className="mb-[var(--space-lg)]">
-          <Button onClick={() => setCreating(true)} disabled={creating || !apiUp}>
+          <Button onClick={() => setCreating(true)} disabled={!apiUp}>
             <IconPlus />
             New table
           </Button>
