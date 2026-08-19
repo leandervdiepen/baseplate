@@ -39,3 +39,7 @@ export type TableRow<DB, T extends TableName<DB>> = DB[T] extends { Row: infer R
 export type TableInsert<DB, T extends TableName<DB>> = DB[T] extends { Insert: infer I }
   ? I
   : never;
+
+export type TableUpdate<DB, T extends TableName<DB>> = DB[T] extends { Update: infer U }
+  ? U
+  : never;

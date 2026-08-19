@@ -55,6 +55,8 @@ services:
       AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       CALLER_ROLE: app_user
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-1h}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-30d}
       PORT: "3001"
     expose:
       - "3001"

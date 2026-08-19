@@ -1,8 +1,16 @@
+import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 
 export type AuthUser = {
   id: string;
   email: string;
+};
+
+export type TokenConfig = {
+  secret: Uint8Array;
+  role: string;
+  accessTtlSeconds: number;
+  refreshTtlSeconds: number;
 };
 
 export function tokenSecret(secret: string): Uint8Array {
@@ -12,22 +20,40 @@ export function tokenSecret(secret: string): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-export async function signUserToken(
-  secret: Uint8Array,
+/**
+ * Short-lived and signed. PostgREST reads `sub` and `role`, and rejects the
+ * token once `exp` passes, so a leaked access token stops working on its own.
+ */
+export async function signAccessToken(
+  config: TokenConfig,
   user: AuthUser,
-  role: string,
 ): Promise<string> {
-  return new SignJWT({ role })
+  return new SignJWT({ role: config.role, email: user.email })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
-    .sign(secret);
+    .setIssuedAt()
+    .setExpirationTime(`${config.accessTtlSeconds}s`)
+    .sign(config.secret);
 }
 
-export async function readUserId(secret: Uint8Array, token: string): Promise<string | undefined> {
+export async function readUserId(
+  secret: Uint8Array,
+  token: string,
+): Promise<string | undefined> {
   try {
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
     return typeof payload.sub === "string" ? payload.sub : undefined;
   } catch {
     return undefined;
   }
+}
+
+/** Opaque, not a JWT: it is checked against a row that can be revoked. */
+export function createRefreshToken(): { value: string; hash: string } {
+  const value = randomBytes(32).toString("base64url");
+  return { value, hash: hashRefreshToken(value) };
+}
+
+export function hashRefreshToken(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }

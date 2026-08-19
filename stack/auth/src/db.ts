@@ -1,10 +1,19 @@
 import postgres from "postgres";
 import type { AuthUser } from "./token.ts";
 
+export type StoredRefreshToken = {
+  id: string;
+  userId: string;
+};
+
 export type AuthDb = {
   findByEmail(email: string): Promise<(AuthUser & { passwordHash: string }) | undefined>;
   findById(id: string): Promise<AuthUser | undefined>;
   insertUser(email: string, passwordHash: string): Promise<AuthUser>;
+  storeRefreshToken(userId: string, hash: string, expiresAt: Date): Promise<void>;
+  findLiveRefreshToken(hash: string): Promise<StoredRefreshToken | undefined>;
+  revokeRefreshToken(id: string): Promise<void>;
+  revokeAllForUser(userId: string): Promise<void>;
   close(): Promise<void>;
 };
 
@@ -47,6 +56,24 @@ export function connectAuthDb(config: { authPassword: string }): AuthDb {
         throw new Error("insert into auth.users returned no row");
       }
       return row;
+    },
+    async storeRefreshToken(userId, hash, expiresAt) {
+      await sql`insert into auth.refresh_tokens (user_id, token_hash, expires_at)
+        values (${userId}, ${hash}, ${expiresAt})`;
+    },
+    async findLiveRefreshToken(hash) {
+      const rows = await sql<{ id: string; user_id: string }[]>`
+        select id, user_id from auth.refresh_tokens
+        where token_hash = ${hash} and revoked_at is null and expires_at > now()`;
+      const row = rows[0];
+      return row ? { id: row.id, userId: row.user_id } : undefined;
+    },
+    async revokeRefreshToken(id) {
+      await sql`update auth.refresh_tokens set revoked_at = now() where id = ${id}`;
+    },
+    async revokeAllForUser(userId) {
+      await sql`update auth.refresh_tokens set revoked_at = now()
+        where user_id = ${userId} and revoked_at is null`;
     },
     async close() {
       await sql.end();

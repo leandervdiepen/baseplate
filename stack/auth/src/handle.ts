@@ -1,16 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { AuthDb } from "./db.ts";
 import { assertPassword, normalizeEmail } from "./email.ts";
 import { hashPassword, verifyPassword } from "./password.ts";
-import type { AuthDb } from "./db.ts";
-import { readUserId, signUserToken, type AuthUser } from "./token.ts";
+import { issueSession } from "./session.ts";
+import { hashRefreshToken, readUserId, type TokenConfig } from "./token.ts";
 
-export type AuthConfig = {
+export type AuthConfig = TokenConfig & {
   db: AuthDb;
-  secret: Uint8Array;
-  role: string;
 };
 
-type JsonBody = { email?: unknown; password?: unknown };
+type JsonBody = { email?: unknown; password?: unknown; refreshToken?: unknown };
 
 export async function handleAuthRequest(
   config: AuthConfig,
@@ -32,6 +31,14 @@ export async function handleAuthRequest(
     await login(config, req, res);
     return;
   }
+  if (path === "/refresh" && method === "POST") {
+    await refresh(config, req, res);
+    return;
+  }
+  if (path === "/logout" && method === "POST") {
+    await logout(config, req, res);
+    return;
+  }
   if (path === "/me" && method === "GET") {
     await me(config, req, res);
     return;
@@ -51,7 +58,7 @@ async function signup(
   try {
     const passwordHash = await hashPassword(parsed.password);
     const user = await config.db.insertUser(parsed.email, passwordHash);
-    await sendSession(config, res, 201, user);
+    sendJson(res, 201, await issueSession(config.db, config, user));
   } catch (error) {
     if (isUniqueViolation(error)) {
       sendJson(res, 409, {
@@ -81,7 +88,52 @@ async function login(
     });
     return;
   }
-  await sendSession(config, res, 200, { id: row.id, email: row.email });
+  sendJson(
+    res,
+    200,
+    await issueSession(config.db, config, { id: row.id, email: row.email }),
+  );
+}
+
+/**
+ * Single use: the presented token is revoked and a new one issued. A replay of
+ * an already-spent token gets nothing.
+ */
+async function refresh(
+  config: AuthConfig,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const body = (await readJsonBody(req)) as JsonBody;
+  const presented = typeof body.refreshToken === "string" ? body.refreshToken : undefined;
+  const stored = presented
+    ? await config.db.findLiveRefreshToken(hashRefreshToken(presented))
+    : undefined;
+  const user = stored ? await config.db.findById(stored.userId) : undefined;
+  if (!stored || !user) {
+    sendJson(res, 401, {
+      code: "auth.invalid_refresh_token",
+      message: "That session has expired. Sign in again.",
+    });
+    return;
+  }
+  await config.db.revokeRefreshToken(stored.id);
+  sendJson(res, 200, await issueSession(config.db, config, user));
+}
+
+async function logout(
+  config: AuthConfig,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const body = (await readJsonBody(req)) as JsonBody;
+  if (typeof body.refreshToken === "string") {
+    const stored = await config.db.findLiveRefreshToken(hashRefreshToken(body.refreshToken));
+    if (stored) {
+      await config.db.revokeRefreshToken(stored.id);
+    }
+  }
+  sendJson(res, 200, { ok: true });
 }
 
 async function me(
@@ -102,16 +154,6 @@ async function me(
     return;
   }
   sendJson(res, 200, { user });
-}
-
-async function sendSession(
-  config: AuthConfig,
-  res: ServerResponse,
-  status: number,
-  user: AuthUser,
-): Promise<void> {
-  const token = await signUserToken(config.secret, user, config.role);
-  sendJson(res, status, { token, user });
 }
 
 async function readCredentials(

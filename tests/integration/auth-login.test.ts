@@ -89,6 +89,89 @@ test("wrong password is rejected", async () => {
   expect(response.status).toBe(401);
 });
 
+test("an access token carries an expiry", async () => {
+  const session = await auth("signup", `exp-${Date.now()}@example.com`, "a-long-password");
+
+  expect(session.expiresIn).toBeGreaterThan(0);
+  const claims = readClaims(session.token);
+  expect(claims.exp - claims.iat).toBe(session.expiresIn);
+});
+
+test("a refresh token buys a new session and cannot be spent twice", async () => {
+  const session = await auth("signup", `ref-${Date.now()}@example.com`, "a-long-password");
+
+  const renewed = await post("/auth/refresh", { refreshToken: session.refreshToken });
+  expect(renewed.status).toBe(200);
+  const next = (await renewed.json()) as Session;
+  expect(next.refreshToken).not.toBe(session.refreshToken);
+  expect(next.user.id).toBe(session.user.id);
+
+  const replay = await post("/auth/refresh", { refreshToken: session.refreshToken });
+  expect(replay.status).toBe(401);
+});
+
+test("a refreshed token reads the rows the first one wrote", async () => {
+  const session = await auth("signup", `own-${Date.now()}@example.com`, "a-long-password");
+  const body = `before-refresh-${Date.now()}`;
+  await postItem(session.token, body);
+
+  const renewed = (await (
+    await post("/auth/refresh", { refreshToken: session.refreshToken })
+  ).json()) as Session;
+
+  const rows = await listItems(renewed.token);
+  expect(rows.some((row) => row.body === body)).toBe(true);
+});
+
+test("logging out revokes the refresh token", async () => {
+  const session = await auth("signup", `out-${Date.now()}@example.com`, "a-long-password");
+
+  expect((await post("/auth/logout", { refreshToken: session.refreshToken })).status).toBe(200);
+
+  const after = await post("/auth/refresh", { refreshToken: session.refreshToken });
+  expect(after.status).toBe(401);
+});
+
+test("an expired access token is refused by the API", async () => {
+  const session = await auth("signup", `old-${Date.now()}@example.com`, "a-long-password");
+  const expired = await signExpired(session.user.id);
+
+  const response = await fetch(`${BASE_URL}/items`, {
+    headers: { Authorization: `Bearer ${expired}` },
+  });
+
+  expect(response.status).toBe(401);
+});
+
+function post(path: string, body: unknown): Promise<Response> {
+  return fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function readClaims(token: string): { exp: number; iat: number } {
+  const part = token.split(".")[1] ?? "";
+  return JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as {
+    exp: number;
+    iat: number;
+  };
+}
+
+async function signExpired(subject: string): Promise<string> {
+  const { SignJWT } = await import("jose");
+  const secret = new TextEncoder().encode(
+    "dev-jwt-secret-must-be-at-least-32-chars",
+  );
+  return new SignJWT({ role: "app_user" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(subject)
+    .setIssuedAt(Math.floor(Date.now() / 1000) - 7200)
+    .setExpirationTime(Math.floor(Date.now() / 1000) - 3600)
+    .sign(secret);
+}
+
 async function auth(kind: "signup" | "login", email: string, password: string): Promise<Session> {
   const response = await fetch(`${BASE_URL}/auth/${kind}`, {
     method: "POST",
@@ -135,7 +218,12 @@ async function isUp(): Promise<boolean> {
   }
 }
 
-type Session = { token: string; user: { id: string; email: string } };
+type Session = {
+  token: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: { id: string; email: string };
+};
 type Item = { id: string; owner_id: string; body: string };
 
 function run(command: string, args: string[], cwd: string): Promise<void> {

@@ -15,4 +15,17 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Apps import sdk/src as TypeScript, so it has to survive Node's
+    // strip-only type removal: no parameter properties, enums, or namespaces.
+    files: ["sdk/src/**/*.ts"],
+    rules: {
+      "@typescript-eslint/parameter-properties": ["error", { prefer: "class-property" }],
+      "@typescript-eslint/no-namespace": "error",
+      "no-restricted-syntax": [
+        "error",
+        { selector: "TSEnumDeclaration", message: "Enums do not survive type stripping. Use a const object." },
+      ],
+    },
+  },
 );
