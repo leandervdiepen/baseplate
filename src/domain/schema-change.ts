@@ -14,6 +14,11 @@ export type SchemaChange =
       readonly ownerColumn: string;
       readonly columns: readonly Column[];
     }
+  | {
+      readonly kind: "adopt-table";
+      readonly table: string;
+      readonly ownerColumn: string;
+    }
   | { readonly kind: "drop-table"; readonly table: string }
   | { readonly kind: "rename-table"; readonly table: string; readonly to: string }
   | { readonly kind: "add-column"; readonly table: string; readonly column: Column }
@@ -45,6 +50,17 @@ export function createSchemaChange(input: SchemaChangeInput): SchemaChange {
     );
     assertNoDuplicates(columns, ownerColumn);
     return { kind: "create-table", table, ownerColumn, columns };
+  }
+  if (input.kind === "adopt-table") {
+    return {
+      kind: "adopt-table",
+      table,
+      ownerColumn: assertIdentifier(
+        input.ownerColumn || DEFAULT_OWNER_COLUMN,
+        "schema.invalid_owner_column",
+        "Owner column",
+      ),
+    };
   }
   if (input.kind === "drop-table") {
     assertNotReserved(table);
@@ -92,7 +108,7 @@ export function applySchemaChange(
   const tables = current.map((table) => ({ ...table }));
   const named = (name: string) => tables.some((table) => table.name === name);
 
-  if (change.kind === "create-table") {
+  if (change.kind === "create-table" || change.kind === "adopt-table") {
     if (named(change.table)) {
       throw new DomainError(
         "schema.table_exists",
@@ -104,7 +120,7 @@ export function applySchemaChange(
     if (!named(change.table)) {
       throw new DomainError(
         "schema.unknown_table",
-        `Table '${change.table}' is not declared in stack.json.`,
+        `Table '${change.table}' is not one Baseplate knows about.`,
       );
     }
     if (change.kind === "drop-table") {

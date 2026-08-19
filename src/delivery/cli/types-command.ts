@@ -26,7 +26,12 @@ export function renderTypes(tables: readonly LiveTable[]): string {
       .join("\n");
     const insert = table.columns
       .filter((column) => !column.primaryKey && column.name !== table.ownerColumn)
-      .map((column) => `  ${column.name}${column.nullable ? "?" : ""}: ${tsType(column.type)}${column.nullable ? " | null" : ""};`)
+      // A column is only required on insert if nothing else will supply it:
+      // not the caller leaving it null, and not a default in the database.
+      .map((column) => {
+        const optional = column.nullable || column.hasDefault;
+        return `  ${column.name}${optional ? "?" : ""}: ${tsType(column.type)}${column.nullable ? " | null" : ""};`;
+      })
       .join("\n");
     const update = table.columns
       .filter((column) => !column.primaryKey && column.name !== table.ownerColumn)

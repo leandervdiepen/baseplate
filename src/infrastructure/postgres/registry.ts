@@ -6,7 +6,7 @@ import { literal, quote } from "./sql.ts";
  * stack reads on every start to decide who can see a row.
  */
 export function registryStatements(change: SchemaChange): string[] {
-  if (change.kind === "create-table") {
+  if (change.kind === "create-table" || change.kind === "adopt-table") {
     return [
       `INSERT INTO baseplate.tables (name, owner_column)
        VALUES (${literal(change.table)}, ${literal(change.ownerColumn)})`,

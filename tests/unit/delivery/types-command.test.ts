@@ -6,11 +6,18 @@ const notes = [
     name: "notes",
     ownerColumn: "owner_id",
     columns: [
-      { name: "id", type: "uuid", nullable: false, primaryKey: true },
-      { name: "owner_id", type: "uuid", nullable: false, primaryKey: false },
-      { name: "title", type: "text", nullable: false, primaryKey: false },
-      { name: "pinned", type: "boolean", nullable: true, primaryKey: false },
-      { name: "rank", type: "integer", nullable: false, primaryKey: false },
+      { name: "id", type: "uuid", nullable: false, primaryKey: true, hasDefault: true },
+      { name: "owner_id", type: "uuid", nullable: false, primaryKey: false, hasDefault: false },
+      { name: "title", type: "text", nullable: false, primaryKey: false, hasDefault: false },
+      { name: "pinned", type: "boolean", nullable: true, primaryKey: false, hasDefault: false },
+      { name: "rank", type: "integer", nullable: false, primaryKey: false, hasDefault: false },
+      {
+        name: "created_at",
+        type: "timestamp with time zone",
+        nullable: false,
+        primaryKey: false,
+        hasDefault: true,
+      },
     ],
   },
 ];
@@ -31,6 +38,14 @@ test("insert leaves out the columns the database fills in", () => {
   expect(insert).not.toContain("owner_id");
   expect(insert).toContain("title: string;");
   expect(insert).toContain("pinned?: boolean | null;");
+});
+
+test("a column the database defaults is optional to send, not required", () => {
+  const insert = renderTypes(notes).split("NotesInsert = {")[1]?.split("};")[0] ?? "";
+
+  // NOT NULL with a default still needs no value from the caller.
+  expect(insert).toContain("created_at?: string;");
+  expect(insert).not.toContain("created_at: string;");
 });
 
 test("update makes every column optional", () => {

@@ -3,6 +3,7 @@ import { DomainError, createSchemaChange, type SchemaChange } from "#domain";
 export const SCHEMA_USAGE = `Usage: baseplate schema <command>
 
   add-table <name> [--column name:type[:null]]...
+  adopt-table <name> [--owner-column name]   (a table you made yourself)
   drop-table <name>
   rename-table <name> --to <new-name>
   add-column <table> --column name:type   (always optional)
@@ -11,6 +12,7 @@ export const SCHEMA_USAGE = `Usage: baseplate schema <command>
 export type SchemaArgs = {
   columns: string[];
   to?: string | undefined;
+  ownerColumn?: string | undefined;
 };
 
 /**
@@ -43,6 +45,13 @@ export function schemaChangeFromArgs(
       kind: "create-table",
       table: target,
       columns: args.columns.map(parseColumn),
+    });
+  }
+  if (command === "adopt-table") {
+    return createSchemaChange({
+      kind: "adopt-table",
+      table: target,
+      ...(args.ownerColumn ? { ownerColumn: args.ownerColumn } : {}),
     });
   }
   if (command === "drop-table") {

@@ -5,6 +5,8 @@ export type LiveColumn = {
   readonly type: string;
   readonly nullable: boolean;
   readonly primaryKey: boolean;
+  /** The database supplies a value when the insert leaves it out. */
+  readonly hasDefault: boolean;
   readonly references?: { readonly table: string; readonly column: string };
 };
 

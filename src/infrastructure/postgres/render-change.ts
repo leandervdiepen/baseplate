@@ -11,6 +11,11 @@ export function renderChange(change: SchemaChange): string {
     ];
     return `CREATE TABLE ${quote(change.table)} (\n${lines.join(",\n")}\n);`;
   }
+  if (change.kind === "adopt-table") {
+    // Nothing to build. The table is already there; this is Baseplate taking
+    // responsibility for who can see its rows.
+    return "";
+  }
   if (change.kind === "drop-table") {
     return `DROP TABLE ${quote(change.table)};`;
   }

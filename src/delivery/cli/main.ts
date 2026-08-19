@@ -22,6 +22,7 @@ async function main(): Promise<void> {
       sub: { type: "string" },
       to: { type: "string" },
       column: { type: "string", multiple: true },
+      "owner-column": { type: "string" },
       port: { type: "string" },
       "postgres-port": { type: "string" },
       "dashboard-port": { type: "string" },
@@ -100,6 +101,7 @@ async function main(): Promise<void> {
       const change = schemaChangeFromArgs(positionals[1], positionals[2], {
         columns: values.column ?? [],
         to: values.to,
+        ownerColumn: values["owner-column"],
       });
       console.log((await operator.changeSchema.execute(change)).statement);
       return;

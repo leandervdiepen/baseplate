@@ -42,6 +42,7 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
         column_name: string;
         data_type: string;
         is_nullable: string;
+        has_default: boolean;
         is_primary: boolean;
         references_table: string | null;
         references_column: string | null;
@@ -52,6 +53,7 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
              c.column_name,
              c.data_type,
              c.is_nullable,
+             (c.column_default IS NOT NULL) AS has_default,
              COALESCE(k.is_primary, false) AS is_primary,
              f.foreign_table AS references_table,
              f.foreign_column AS references_column
@@ -88,6 +90,7 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
         name: row.column_name,
         type: row.data_type,
         nullable: row.is_nullable === "YES",
+        hasDefault: row.has_default,
         primaryKey: row.is_primary,
         ...(row.references_table && row.references_column
           ? { references: { table: row.references_table, column: row.references_column } }
@@ -130,9 +133,20 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
    * history entry. A failure anywhere leaves the database exactly as it was.
    */
   async apply(change: SchemaChange, declared: readonly Table[]): Promise<string> {
+    if (change.kind === "adopt-table") {
+      await this.assertAdoptable(change.table, change.ownerColumn);
+    }
     const ddl = renderChange(change);
+    // Adopting builds nothing, so there is no DDL to run. Everything else in
+    // the transaction is the same: the registry row, the access rules, the
+    // history entry.
+    const record =
+      ddl ||
+      `-- adopted ${change.table}, owned by ${
+        change.kind === "adopt-table" ? change.ownerColumn : "owner_id"
+      }`;
     const statements = [
-      ddl,
+      ...(ddl ? [ddl] : []),
       ...registryStatements(change),
       ...policyStatements(change, declared),
     ];
@@ -142,13 +156,47 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
           await tx.unsafe(statement).simple();
         }
         await tx`INSERT INTO baseplate.schema_history (change, statement)
-          VALUES (${changeSlug(change)}, ${ddl})`;
+          VALUES (${changeSlug(change)}, ${record})`;
         await tx.unsafe("NOTIFY pgrst, 'reload schema'").simple();
       });
     } catch (cause) {
+      if (cause instanceof InfraError) {
+        throw cause;
+      }
       throw new InfraError("schema.rejected", messageOf(cause), cause);
     }
-    return ddl;
+    return record;
+  }
+
+  /**
+   * A table made outside Baseplate is only adoptable if it is really there and
+   * really has somewhere to put the owner. Checking here means the failure names
+   * the problem instead of surfacing as a policy that will not compile.
+   */
+  private async assertAdoptable(table: string, ownerColumn: string): Promise<void> {
+    const rows = await this.sql<{ column_name: string; data_type: string }[]>`
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = ${table}`;
+    if (rows.length === 0) {
+      throw new InfraError(
+        "schema.unknown_table",
+        `There is no table called '${table}' in this database. Create it first, then adopt it.`,
+      );
+    }
+    const owner = rows.find((row) => row.column_name === ownerColumn);
+    if (!owner) {
+      throw new InfraError(
+        "schema.missing_owner_column",
+        `Table '${table}' has no '${ownerColumn}' column, so there is no way to tell whose rows are whose. Add a uuid column called '${ownerColumn}', or name a different one with --owner-column.`,
+      );
+    }
+    if (owner.data_type !== "uuid") {
+      throw new InfraError(
+        "schema.owner_column_type",
+        `'${table}.${ownerColumn}' is ${owner.data_type}, and the owner column has to be uuid to match the sub of a token.`,
+      );
+    }
   }
 
   async close(): Promise<void> {

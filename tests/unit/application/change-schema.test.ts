@@ -8,7 +8,7 @@ function adminWithItems(): MemorySchemaAdmin {
     {
       name: "items",
       ownerColumn: "owner_id",
-      columns: [{ name: "id", type: "uuid", nullable: false, primaryKey: true }],
+      columns: [{ name: "id", type: "uuid", nullable: false, primaryKey: true, hasDefault: true }],
     },
   ]);
 }
