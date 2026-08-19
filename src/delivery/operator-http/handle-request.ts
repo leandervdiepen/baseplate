@@ -60,15 +60,7 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/schema" && method === "GET") {
-      const operator = createOperatorFor(roots, true);
-      try {
-        sendJson(res, 200, { tables: await operator.admin.listTables() });
-      } catch {
-        // The database is only reachable while the stack is up.
-        sendJson(res, 200, { tables: [], live: false });
-      } finally {
-        await operator.admin.close();
-      }
+      sendJson(res, 200, await readTables(roots));
       return;
     }
     if (path === "/api/schema" && method === "POST") {
@@ -85,12 +77,7 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/history" && method === "GET") {
-      const operator = createOperatorFor(roots, true);
-      try {
-        sendJson(res, 200, { entries: await operator.admin.history(50) });
-      } finally {
-        await operator.admin.close();
-      }
+      sendJson(res, 200, await readHistory(roots));
       return;
     }
     if (path === "/api/logs" && method === "GET") {
@@ -108,6 +95,43 @@ export async function handleOperatorRequest(
     sendJson(res, 404, { code: "operator.not_found", message: "Unknown operator route." });
   } catch (error) {
     sendError(res, error);
+  }
+}
+
+/**
+ * Reading the schema must never break another screen. The stack may be down, or
+ * the target may be set to one whose keys are not filled in yet; neither is an
+ * error the operator needs thrown at them while they are looking at Settings.
+ */
+async function readTables(roots: OperatorRoots): Promise<unknown> {
+  let operator;
+  try {
+    operator = createOperatorFor(roots, true);
+  } catch {
+    return { tables: [], live: false };
+  }
+  try {
+    return { tables: await operator.admin.listTables(), live: true };
+  } catch {
+    return { tables: [], live: false };
+  } finally {
+    await operator.admin.close();
+  }
+}
+
+async function readHistory(roots: OperatorRoots): Promise<unknown> {
+  let operator;
+  try {
+    operator = createOperatorFor(roots, true);
+  } catch {
+    return { entries: [] };
+  }
+  try {
+    return { entries: await operator.admin.history(50) };
+  } catch {
+    return { entries: [] };
+  } finally {
+    await operator.admin.close();
   }
 }
 

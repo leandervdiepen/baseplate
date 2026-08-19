@@ -28,7 +28,9 @@ export function SettingsPage({
   const [dnsToken, setDnsToken] = useState("");
   const [ssh, setSsh] = useState(status.sshKeyName ?? "");
   const [location, setLocation] = useState(status.serverLocation ?? "nbg1");
-  const [hostname, setHostname] = useState(status.hostname);
+  const [hostname, setHostname] = useState(
+    status.hostname === "localhost" ? "" : status.hostname,
+  );
   const [busy, setBusy] = useState(false);
   const [confirmDown, setConfirmDown] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -143,7 +145,7 @@ export function SettingsPage({
                 value={hcloud}
                 onChange={setHcloud}
                 stored={status.secrets.hcloud}
-                hint="Read-write token from the Hetzner console. Stored only in operator.env on this computer."
+                hint="Read-write token from your Hetzner Cloud console. Stored only in this project, on this computer."
               />
               <Field label="SERVER_LOCATION" hint="Hetzner region for the server.">
                 <Input
@@ -162,7 +164,7 @@ export function SettingsPage({
                 value={dnsToken}
                 onChange={setDnsToken}
                 stored={status.secrets.dnsToken}
-                hint="For the A record pointing at your server. Stored only in operator.env on this computer."
+                hint="For the A record pointing at your server. Stored only in this project, on this computer."
               />
               <div className="flex gap-[var(--space-md)]">
                 <Field label="DNS_ZONE" hint="The zone in Hetzner DNS that owns the hostname.">
