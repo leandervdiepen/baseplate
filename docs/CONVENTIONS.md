@@ -74,7 +74,7 @@ Few.
 
 The acceptance script is the end-to-end proof of row access.
 Dashboard work does not replace it.
-There is no requirement for a browser suite until a dashboard screen exists.
+The studio is checked by driving a real browser against a running stack, not by a snapshot suite.
 
 Name tests by the behaviour: `rejects a change to a table that does not exist`.
 Arrange, act, assert.
@@ -106,6 +106,64 @@ Aim under 200 lines.
 Split by responsibility when a file grows.
 No one-line wrappers.
 A layer folder's `index.ts` re-exports the public surface and does nothing else.
+
+## Studio UI
+
+The studio is `src/delivery/dashboard/`: Vite, React, and Tailwind, with hand-written components.
+Not Next.js, and not a component library: this is a localhost operator tool, not a hosted app.
+Visual source: [Baseplate operator dashboard](https://app.paper.design/file/01M07TKASYE9J372976D943J30) (alpine: snow x evergreen, IBM Plex Sans / Mono).
+
+### Three tiers
+
+Imports flow one way: features, then patterns, then primitives.
+
+**Primitives** (`primitives/`) know nothing about the product.
+Buttons, fields, selects, chips, icons.
+Styled only through tokens.
+
+**Patterns** (`patterns/`) combine primitives to solve a recurring layout problem: the app shell, a page header, a data table, a callout, a code block.
+Still no product knowledge and no fetching.
+
+**Features** (`features/`) are bound to one part of the product and may hold domain types.
+They reach the operator only through the localhost HTTP client, never Hetzner or PostgREST directly.
+A feature may import a sibling file of its own feature; it never reaches into another feature.
+
+Anything that fetches or mutates lives outside the component tree.
+
+### Tokens
+
+Colours, spacing, radii, and the type scale live in `styles/tokens.css` and nowhere else.
+Name them by role (`color-danger`, `space-md`), never by hue.
+No raw hex, rgb, or px values in a component file.
+
+### Rules that are not negotiable
+
+Every field is wired to its label through `Field`, which owns the id and points `aria-describedby` at the hint and the error.
+A visible `<label>` that is only a sibling of its control labels nothing.
+
+Never remove the focus ring.
+`globals.css` draws one for the whole studio; a border colour change is not a replacement.
+
+Hit areas are at least 40x40, or the control is wrapped in a label that is.
+One filled primary action per view.
+Verb-first, sentence-case labels: "Save settings", "Insert row", "Create a table".
+Placeholders show a format, never a label.
+
+Keep a submit enabled and validate on submit, with the message next to the field that failed.
+Status and errors go through `StatusMessage`, so they are announced rather than only drawn.
+Tabular numbers on ids, timestamps, and counts.
+
+Tailwind compiles `scale-*` to the `scale` property, so a transition has to name `scale`; naming `transform` silently does nothing.
+No `transition: all`.
+`prefers-reduced-motion` is honoured in `globals.css`; do not opt a component out of it.
+
+### What a component is not
+
+Not a use case.
+Not an API client for Hetzner.
+Not a place for access-policy logic.
+Those belong in `src/application/` and `src/domain/`.
+Secrets belong in the project's `baseplate.env`, written by operator HTTP, never in the browser.
 
 ## Linear
 

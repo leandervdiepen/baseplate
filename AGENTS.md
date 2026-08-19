@@ -44,41 +44,39 @@ npm run lint             eslint
 npm run lint:arch        dependency-cruiser
 npm run typecheck        src, stack services, and the dashboard
 
-./scripts/dev <command>  the CLI from this checkout, project root is the repo
+./scripts/dev <command>  the CLI from this checkout, with the repo as the project
 ```
 
-`./scripts/dev init` once, then `./scripts/dev up`, before integration or acceptance tests.
+`./scripts/dev` exists for working on Baseplate itself.
+An operator never uses it; they install the package and run `baseplate`.
+Run `./scripts/dev init` once, then `./scripts/dev up`, before integration or acceptance tests.
 
 ## Architecture
 
-Dependencies point inward only. Import `#domain`, `#application`, `#infrastructure`, `#shared` only.
-Details: `docs/ARCHITECTURE.md`.
+Four layers, dependencies pointing inward only.
+Outside a layer, import `#domain`, `#application`, `#infrastructure`, or `#shared` and nothing deeper.
 
-## Where a new file goes
+`docs/ARCHITECTURE.md` holds the layers, the two roots, where state lives, and the table of where a new file goes.
+Do not answer that question from memory; the table is the answer.
 
-- Types and rules: `src/domain/`
-- Operator action: `src/application/usecases/` plus a port in `src/application/ports/`
-- Vendor or OS: `src/infrastructure/<system>/`
-- CLI: `src/delivery/cli/`
-- Studio UI: `src/delivery/dashboard/` (primitives / patterns / features)
-- Local operator HTTP: `src/delivery/operator-http/`
-- App client: `sdk/src/` (published as the `/client` subpath)
-- Type generation from a live database: `src/delivery/cli/types-command.ts`
-- What runs: `stack/` (compose, Caddy, platform migrations, auth, migrate)
-- The server: `infra/`
-- Tests: `tests/unit/`, `tests/integration/`, `tests/acceptance/`
-- No business meaning: `src/shared/`
+Two constraints that are easy to trip over:
 
-`sdk/src` is imported by apps as TypeScript, so it must survive Node's strip-only type removal: no parameter properties, enums, or namespaces. A lint rule enforces this.
+`sdk/src` is imported by apps as TypeScript, so it must survive Node's strip-only type removal: no parameter properties, enums, or namespaces.
+A lint rule enforces this.
 
 `stack/platform/` is Baseplate's own schema and ships with the version.
 There is no directory for an operator's tables, by design.
 
-Visual source: Paper file [Baseplate operator dashboard](https://app.paper.design/file/01M07TKASYE9J372976D943J30).
-Tokens land in `src/delivery/dashboard/styles/tokens.css`.
-UI rules: `docs/COMPONENTS.md`.
-
 ## Docs
+
+| File | What it is |
+| --- | --- |
+| `README.md` | The front door: install, first table, first app |
+| `docs/PRD.md` | Product, phases, done criteria, DX bar |
+| `docs/ARCHITECTURE.md` | Layers, dependency rule, where code goes |
+| `docs/DOMAINS.md` | Ubiquitous language and per-concept rules |
+| `docs/CONVENTIONS.md` | Naming, errors, secrets, tests, commits, studio UI |
+| `sdk/README.md` | App client: install, auth, typed queries |
 
 Docs are current truth. On any major decision, edit the affected doc in place and delete what it replaced.
 Never append a history, an ADR, or a changelog of choices. Git holds the past.

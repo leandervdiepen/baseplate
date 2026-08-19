@@ -10,3 +10,4 @@ crash.log
 *.tfvars
 .DS_Store
 .cursor/
+.playwright-mcp/

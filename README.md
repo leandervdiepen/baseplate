@@ -11,24 +11,26 @@ It exists so a solo developer who runs a handful of small apps can own the datab
 
 ## Start
 
+You need Docker running. Nothing else.
+
 ```bash
 mkdir my-backend && cd my-backend
 npx @diepen/baseplate init
 npx @diepen/baseplate up
-npx @diepen/baseplate dashboard
 ```
 
-`init` writes `baseplate.env` with secrets generated for this project.
-`up` starts Postgres, PostgREST, auth, and Caddy, and prints the API URL your app talks to (locally `http://127.0.0.1:8080`).
-`dashboard` opens the studio at http://127.0.0.1:8788, which never binds off loopback.
+`init` writes `baseplate.env` with secrets generated for this project alone.
+`up` starts Postgres, PostgREST, auth, and Caddy, then prints the API URL your app talks to (locally `http://127.0.0.1:8080`).
 
 That directory holds your config, your secrets, and your state.
 It is yours, and Baseplate never writes anything else into it.
 
-## Your tables live in your database
+Two projects on one machine share nothing: not ports, not volumes, not secrets.
+
+## Make a table
 
 A fresh Baseplate has no application tables.
-You make them, from the studio or from the CLI:
+You make them:
 
 ```bash
 npx @diepen/baseplate schema add-table notes --column title:text --column pinned:boolean:null
@@ -36,14 +38,21 @@ npx @diepen/baseplate schema add-table notes --column title:text --column pinned
 
 That runs one transaction against your database: the `CREATE TABLE`, the row access policy, the owner trigger, the grants, and an entry in `baseplate.schema_history`.
 There is no file to commit and nothing to keep in step.
-A table made this way is protected before it can take its first row: a caller only ever sees rows whose `owner_id` matches the `sub` of their token.
+
+A table made this way is protected before it can take its first row.
+A caller only ever sees rows whose `owner_id` matches the `sub` of their token.
+
+```bash
+npx @diepen/baseplate tables            # what you have
+npx @diepen/baseplate schema            # every change it takes
+```
 
 Renaming, dropping, and adding columns work the same way.
-`npx @diepen/baseplate tables` lists what you have.
+So does the studio, if you would rather click:
 
-If you prefer schema as code in your app's repo, point drizzle-kit at the database like you would at any Postgres.
-`drizzle-kit pull` reads what is there; `drizzle-kit push` applies changes.
-Declare row access for anything you make that way by adding it to `baseplate.tables`.
+```bash
+npx @diepen/baseplate dashboard         # http://127.0.0.1:8788, loopback only
+```
 
 ## Connect an app
 
@@ -51,10 +60,11 @@ There is no public key and no anon key.
 `JWT_SECRET` stays on the server.
 Signup and login are public HTTP; after login the client holds a user JWT whose `sub` is the user id.
 
-The typed client is in this package:
+Install the package in your app and generate types from the database you just made:
 
-```json
-{ "dependencies": { "@diepen/baseplate": "^0.4.0" } }
+```bash
+npm install @diepen/baseplate
+npx @diepen/baseplate types > src/database.ts
 ```
 
 ```ts
@@ -77,13 +87,29 @@ await client.from("notes").update({ title: "renamed" }).eq("id", id);
 await client.from("notes").delete().eq("id", id);
 ```
 
-`npx @diepen/baseplate types > src/database.ts` writes those types from your live database, so an unknown column is a compile error rather than a 400.
+Because the types come from your live database, an unknown table or column is a compile error rather than a 400 at runtime.
+Regenerate after a schema change.
 
-Sessions persist in `localStorage` and refresh themselves before the access token expires.
+Sessions persist and refresh themselves before the access token expires.
 Access tokens are short-lived and refresh tokens are single use; both lifetimes are yours to set in the studio.
 
 Row-level security keeps each caller on their own rows.
 The client never filters: every filter becomes a query the database answers.
+
+Full client reference: [`sdk/README.md`](sdk/README.md).
+
+## Schema as code, if you prefer it
+
+Point drizzle-kit at the database like you would at any Postgres.
+`drizzle-kit pull` reads what is there; `drizzle-kit push` applies changes.
+Declare row access for anything you make that way by adding it to `baseplate.tables`.
+
+## Go to a server
+
+Set the target to Hetzner in the studio's Settings and Baseplate creates a VM, a firewall, a DNS record, and a TLS certificate in **your** account, from your own API tokens.
+Those tokens stay on your machine; only the database and JWT secrets are sent to the server.
+
+This is not required to work locally, and local needs no domain and no cloud account.
 
 ## What you get
 
@@ -94,19 +120,17 @@ The client never filters: every filter becomes a query the database answers.
 - A local studio for tables, schema, policies, auth, logs, and settings
 - `init`, `up`, `down`, `dashboard`, `schema`, `tables`, `types`, `mint-token`
 
-Set the target to Hetzner in Settings and Baseplate creates a VM, firewall, DNS record, and TLS certificate in **your** account.
-It is not required to work locally.
+Run `npx @diepen/baseplate --help` for the whole list.
 
 ## Docs
 
 | File | What it is |
 | --- | --- |
+| `sdk/README.md` | App client: install, auth, typed queries |
 | `docs/PRD.md` | Product, phases, done criteria, DX bar |
 | `docs/ARCHITECTURE.md` | Layers, dependency rule, where code goes |
 | `docs/DOMAINS.md` | Ubiquitous language and per-concept rules |
-| `docs/CONVENTIONS.md` | Naming, errors, secrets, tests, commits |
-| `docs/COMPONENTS.md` | Studio UI rules and Paper source |
-| `sdk/README.md` | App client: install, auth, typed queries |
+| `docs/CONVENTIONS.md` | Naming, errors, secrets, tests, commits, studio UI |
 | `AGENTS.md` | Short rules for the next agent |
 
 ## Status
