@@ -90,7 +90,7 @@ export function Sidebar({
           </span>
         </div>
         <p className="text-[length:var(--text-xs)] leading-[var(--leading-tight)] text-[var(--color-text-muted)]">
-          Keys live in operator.env on this machine.
+          Keys stay in this project on this machine.
         </p>
       </div>
     </aside>

@@ -109,12 +109,6 @@ export async function getHistory(): Promise<SchemaHistoryEntry[]> {
   return ((await response.json()) as { entries: SchemaHistoryEntry[] }).entries;
 }
 
-export type ItemRow = {
-  id: string;
-  owner_id: string;
-  body: string;
-};
-
 async function parseError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { message?: string };

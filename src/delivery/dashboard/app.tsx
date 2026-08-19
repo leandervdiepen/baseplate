@@ -65,6 +65,7 @@ export function App() {
         <TablesPage
           onNeedToken={() => setNav("auth")}
           onEditPolicy={() => setNav("policies")}
+          onCreateTable={() => setNav("schema")}
           apiUp={status.apiUp}
           onProvision={runProvision}
         />
@@ -78,7 +79,7 @@ export function App() {
       ) : null}
       {nav === "policies" ? <PoliciesPage /> : null}
       {nav === "logs" ? <LogsPage target={status.target ?? "local"} /> : null}
-      {nav === "auth" ? <AuthPage onIssued={() => setSessionAt(Date.now())} /> : null}
+      {nav === "auth" ? <AuthPage onIssued={() => setSessionAt(Date.now())} baseUrl={status.baseUrl} /> : null}
       {nav === "settings" ? <SettingsPage status={status} onChanged={refresh} /> : null}
     </AppShell>
   );

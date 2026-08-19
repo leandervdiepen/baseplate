@@ -1,0 +1,49 @@
+- generic [ref=f8e8]:
+  - complementary [ref=f8e9]:
+    - generic [ref=f8e10]:
+      - generic [ref=f8e11]:
+        - generic [ref=f8e15]: Baseplate
+        - generic [ref=f8e16]: studio
+      - navigation [ref=f8e17]:
+        - generic [ref=f8e18]: Workspace
+        - button [ref=f8e19]
+        - button [ref=f8e24]
+        - button [ref=f8e30]
+        - button [ref=f8e35]
+        - button [ref=f8e40]
+        - button [ref=f8e45]
+    - generic [ref=f8e50]:
+      - generic [ref=f8e51]:
+        - generic [ref=f8e53]: local
+        - generic [ref=f8e54]: :8080
+      - paragraph [ref=f8e55]: Keys stay in this project on this machine.
+  - generic [ref=f8e56]:
+    - banner [ref=f8e57]:
+      - generic [ref=f8e58]:
+        - generic [ref=f8e59]: Tables
+        - generic [ref=f8e60]: /
+        - generic [ref=f8e61]: rows
+      - generic [ref=f8e62]:
+        - generic [ref=f8e64]: caller
+        - generic [ref=f8e65]: sub 11111111…
+        - generic [ref=f8e67]: role app_user
+    - main [ref=f8e68]:
+      - generic [ref=f8e69]:
+        - heading "notes" [level=1] [ref=f8e70]
+        - paragraph [ref=f8e71]: public schema · 0 rows visible to this caller
+      - radiogroup [ref=f8e73]:
+        - radio "items" [ref=f8e74]
+        - radio "notes" [checked] [active] [ref=f8e75]
+      - generic [ref=f8e77]:
+        - textbox "title (text)" [ref=f8e78]
+        - textbox "pinned (boolean)" [ref=f8e79]
+        - button "Insert row" [ref=f8e80]
+      - generic [ref=f8e83]:
+        - generic [ref=f8e88]:
+          - text: Row security on. This caller sees rows where
+          - generic [ref=f8e89]: owner_id
+          - text: matches their token.
+        - button "See policy" [ref=f8e91]
+      - generic [ref=f8e92]:
+        - heading "No rows yet" [level=2] [ref=f8e97]
+        - paragraph [ref=f8e98]: Insert the first row into public.notes. Each row is visible only to its owner.

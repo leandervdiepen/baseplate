@@ -57,7 +57,7 @@ export function MintPanel({ onIssued }: { onIssued: () => void }) {
         <Button onClick={() => void issue()} disabled={busy}>
           {busy ? "Signing…" : "Mint token"}
         </Button>
-        <Hint>CLI still works: ./scripts/mint-token --sub UUID</Hint>
+        <Hint>Same from a terminal: baseplate mint-token --sub UUID</Hint>
       </section>
       <section className="flex flex-col gap-3.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5">
         <CapsLabel>Latest token</CapsLabel>

@@ -25,7 +25,7 @@ export function FirstRun({ onDone }: { onDone: () => void }) {
     <div className="flex min-h-screen flex-col items-center justify-center px-[var(--space-xl)]">
       <EmptyState
         title="Start on this machine"
-        description="No domain and no Hetzner account. Secrets stay in operator.env on this computer. You can add Hetzner later in Settings."
+        description="No domain and no Hetzner account needed. Secrets stay in this project on this computer, and you can point it at Hetzner later from Settings."
         action={
           <div className="flex flex-col items-center gap-3">
             {error ? (

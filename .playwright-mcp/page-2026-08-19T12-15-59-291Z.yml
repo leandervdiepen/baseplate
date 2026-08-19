@@ -1,0 +1,60 @@
+- generic [ref=f6e8]:
+  - complementary [ref=f6e9]:
+    - generic [ref=f6e10]:
+      - generic [ref=f6e11]:
+        - generic [ref=f6e15]: Baseplate
+        - generic [ref=f6e16]: studio
+      - navigation [ref=f6e17]:
+        - generic [ref=f6e18]: Workspace
+        - button [ref=f6e19]
+        - button [ref=f6e24]
+        - button [ref=f6e30]
+        - button [active] [ref=f6e35]
+        - button [ref=f6e40]
+        - button [ref=f6e45]
+    - generic [ref=f6e50]:
+      - generic [ref=f6e51]:
+        - generic [ref=f6e53]: local
+        - generic [ref=f6e54]: :8080
+      - paragraph [ref=f6e55]: Keys stay in this project on this machine.
+  - generic [ref=f6e56]:
+    - banner [ref=f6e57]:
+      - generic [ref=f6e58]:
+        - generic [ref=f6e59]: Auth
+        - generic [ref=f6e60]: /
+        - generic [ref=f6e61]: issue token
+      - generic [ref=f6e62]: no caller yet
+    - main [ref=f6e63]:
+      - generic [ref=f6e64]:
+        - heading "Auth" [level=1] [ref=f6e65]
+        - paragraph [ref=f6e66]: Users sign up with email and password. The API already trusts the JWT. No public key.
+      - generic [ref=f6e67]:
+        - generic [ref=f6e68]:
+          - heading "Sign up or log in" [level=2] [ref=f6e69]
+          - generic [ref=f6e70]:
+            - generic [ref=f6e71]: Email
+            - textbox [ref=f6e72]
+          - generic [ref=f6e73]:
+            - generic [ref=f6e74]: Password
+            - textbox [ref=f6e75]
+            - paragraph [ref=f6e76]: At least 8 characters. JWT_SECRET never leaves the server.
+          - generic [ref=f6e77]:
+            - button "Create account" [disabled] [ref=f6e78]
+            - button "Log in" [disabled] [ref=f6e79]
+          - paragraph [ref=f6e80]: This hits the stack at /auth, not operator mint. The JWT sub is the user id.
+        - generic [ref=f6e81]:
+          - heading "Connect from code" [level=2] [ref=f6e82]
+          - paragraph [ref=f6e83]: No public key. Point the in-repo client at your API URL. Depend on it with file:../baseplate/sdk, not npm publish.
+          - generic [ref=f6e84]: "import { createClient, type Database } from \"@baseplate/client\"; const client = createClient<Database>(\"http://127.0.0.1:8080\"); await client.auth.signUp({ email, password }); const { data } = await client.from(\"items\").select();"
+      - generic [ref=f6e85]:
+        - generic [ref=f6e86]:
+          - heading "Impersonate a caller" [level=2] [ref=f6e87]
+          - generic [ref=f6e88]:
+            - generic [ref=f6e89]: Subject (user UUID)
+            - textbox [ref=f6e90]: 11111111-1111-4111-8111-111111111111
+            - paragraph [ref=f6e91]: Operator mint for tests. Apps should sign up with email.
+          - button "Mint token" [ref=f6e92]
+          - paragraph [ref=f6e93]: "CLI still works: ./scripts/mint-token --sub UUID"
+        - generic [ref=f6e94]:
+          - generic [ref=f6e95]: Latest token
+          - paragraph [ref=f6e96]: Sign up or mint a token to see the JWT here.

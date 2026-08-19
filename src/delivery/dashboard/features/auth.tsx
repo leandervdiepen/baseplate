@@ -3,7 +3,13 @@ import { MintPanel } from "./mint-panel.tsx";
 import { UserLogin } from "./user-login.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
 
-export function AuthPage({ onIssued }: { onIssued: () => void }) {
+export function AuthPage({
+  onIssued,
+  baseUrl,
+}: {
+  onIssued: () => void;
+  baseUrl: string | null;
+}) {
   return (
     <>
       <PageHeader
@@ -12,7 +18,7 @@ export function AuthPage({ onIssued }: { onIssued: () => void }) {
       />
       <div className="mb-[var(--space-lg)] grid gap-[var(--space-lg)] md:grid-cols-2">
         <UserLogin onIssued={onIssued} />
-        <ConnectSnippet />
+        <ConnectSnippet baseUrl={baseUrl} />
       </div>
       <MintPanel onIssued={onIssued} />
     </>
