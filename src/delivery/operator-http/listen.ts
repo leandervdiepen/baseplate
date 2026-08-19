@@ -1,15 +1,17 @@
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
-import { OPERATOR_HTTP_PORT, repoRootFromDelivery } from "../operator-setup.ts";
+import { OPERATOR_HTTP_PORT } from "../operator-setup.ts";
+import { packageRootFrom, projectRoot } from "../paths.ts";
 import { handleOperatorRequest } from "./handle-request.ts";
 import { isLocalhostHost, isLoopbackAddress } from "./localhost.ts";
 
-const ROOT = repoRootFromDelivery(import.meta.dirname);
+const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
+const PROJECT_ROOT = projectRoot();
 
 async function main(): Promise<void> {
   const vite = await createViteServer({
-    configFile: resolve(ROOT, "src/delivery/dashboard/vite.config.ts"),
+    configFile: resolve(PACKAGE_ROOT, "src/delivery/dashboard/vite.config.ts"),
     server: { middlewareMode: true, host: "127.0.0.1" },
     appType: "spa",
   });
@@ -28,7 +30,7 @@ async function main(): Promise<void> {
     }
     const url = req.url ?? "/";
     if (url.startsWith("/api/")) {
-      void handleOperatorRequest(ROOT, req, res);
+      void handleOperatorRequest({ packageRoot: PACKAGE_ROOT, projectRoot: PROJECT_ROOT }, req, res);
       return;
     }
     vite.middlewares(req, res, () => {

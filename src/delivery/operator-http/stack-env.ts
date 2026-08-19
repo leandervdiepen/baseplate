@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseEnvMap } from "./env-file.ts";
+import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 
 /**
  * Keys the running stack needs. Everything else in operator.env, including the
@@ -29,9 +30,10 @@ export function stackEnvText(operatorEnv: Record<string, string>): string {
   return `${lines.join("\n")}\n`;
 }
 
+/** Written into the operator's own directory, never into the package. */
 export function writeStackEnv(root: string): string {
-  const target = resolve(root, ".baseplate/stack.env");
-  const operatorEnv = parseEnvMap(readFileSync(resolve(root, "operator.env"), "utf8"));
+  const target = resolve(root, STATE_DIR, "stack.env");
+  const operatorEnv = parseEnvMap(readFileSync(resolve(root, CONFIG_FILE), "utf8"));
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, stackEnvText(operatorEnv), { encoding: "utf8", mode: 0o600 });
   return target;

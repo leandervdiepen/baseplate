@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Contributor helper: run the CLI from this checkout against ./ as the project.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec node bin/baseplate.js "$@"

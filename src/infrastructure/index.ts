@@ -32,6 +32,7 @@ export type OperatorConfig = {
   jwtSecret: string;
   stack: Stack;
   stackDir: string;
+  projectName: string;
   envFile: string;
   postgresPassword: string;
   postgresPort: number;
@@ -73,7 +74,7 @@ export function createOperator(config: OperatorConfig): Operator {
     const runtime = new DockerComposeRuntime({
       stackDir: config.stackDir,
       envFile: config.envFile,
-      projectName: "baseplate",
+      projectName: config.projectName,
     });
     return {
       provision: new ProvisionStack({
@@ -104,6 +105,7 @@ export function createOperator(config: OperatorConfig): Operator {
     stackDir: config.stackDir,
     envFile: config.envFile,
     remoteDir: "/opt/baseplate",
+    projectName: config.projectName,
     sshUser: "root",
   });
   return {

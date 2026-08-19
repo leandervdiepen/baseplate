@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FileStackStateStore } from "#infrastructure";
 import { parseEnvMap } from "./env-file.ts";
+import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 import { migrationFiles, readReadiness, type ReadinessCheck } from "./readiness.ts";
 
 export type OperatorStatus = {
@@ -28,7 +29,7 @@ export type OperatorStatus = {
 };
 
 export async function readStatus(root: string): Promise<OperatorStatus> {
-  const envPath = resolve(root, "operator.env");
+  const envPath = resolve(root, CONFIG_FILE);
   if (!existsSync(envPath)) {
     return {
       configured: false,
@@ -55,7 +56,7 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
   }
   const env = parseEnvMap(readFileSync(envPath, "utf8"));
   const hostname = env.BASEPLATE_HOSTNAME || "localhost";
-  const store = new FileStackStateStore(resolve(root, ".baseplate/state.json"));
+  const store = new FileStackStateStore(resolve(root, STATE_DIR, "state.json"));
   const record = await store.load();
   const baseUrl = record?.baseUrl ?? null;
   let apiUp = false;

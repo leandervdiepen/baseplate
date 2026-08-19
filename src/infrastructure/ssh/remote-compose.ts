@@ -18,17 +18,23 @@ const READY_INTERVAL_MS = 2_000;
  * from the operator's cloud account.
  */
 const STACK_ENV = "stack.env";
-const COMPOSE = `docker compose --env-file ${STACK_ENV} --project-name baseplate -f compose.yaml -f compose.cloud.yaml`;
 
 export type RemoteComposeConfig = {
   stackDir: string;
   envFile: string;
   remoteDir: string;
+  projectName: string;
   sshUser: string;
 };
 
 export class RemoteComposeRuntime implements StackRuntime {
-  constructor(private readonly config: RemoteComposeConfig) {}
+  private readonly config: RemoteComposeConfig;
+  private readonly compose: string;
+
+  constructor(config: RemoteComposeConfig) {
+    this.config = config;
+    this.compose = `docker compose --env-file ${STACK_ENV} --project-name ${config.projectName} -f compose.yaml -f compose.cloud.yaml`;
+  }
 
   async up(server: Server): Promise<void> {
     const host = `${this.config.sshUser}@${server.ipv4}`;
@@ -37,7 +43,7 @@ export class RemoteComposeRuntime implements StackRuntime {
     await run("ssh", [
       ...SSH_OPTS,
       host,
-      `cd ${this.config.remoteDir} && ${COMPOSE} up -d --build --force-recreate --wait --wait-timeout 180`,
+      `cd ${this.config.remoteDir} && ${this.compose} up -d --build --force-recreate --wait --wait-timeout 180`,
     ]);
   }
 
@@ -53,7 +59,7 @@ export class RemoteComposeRuntime implements StackRuntime {
     await run("ssh", [
       ...SSH_OPTS,
       host,
-      `cd ${this.config.remoteDir} && ${COMPOSE} run --rm --build migrate`,
+      `cd ${this.config.remoteDir} && ${this.compose} run --rm --build migrate`,
     ]);
   }
 
@@ -65,7 +71,7 @@ export class RemoteComposeRuntime implements StackRuntime {
     await run("ssh", [
       ...SSH_OPTS,
       host,
-      `cd ${this.config.remoteDir} && ${COMPOSE} down -v`,
+      `cd ${this.config.remoteDir} && ${this.compose} down -v`,
     ]);
   }
 

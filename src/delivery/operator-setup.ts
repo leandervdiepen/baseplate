@@ -8,12 +8,10 @@ import {
 } from "#infrastructure";
 import { ensureOperatorSecrets } from "./operator-http/write-env.ts";
 import { writeStackEnv } from "./operator-http/stack-env.ts";
+import { CONFIG_FILE, STATE_DIR } from "./paths.ts";
+import { composeProjectName } from "./project-name.ts";
 
 export const OPERATOR_HTTP_PORT = 8788;
-
-export function repoRootFromDelivery(deliveryDirname: string): string {
-  return resolve(deliveryDirname, "../../..");
-}
 
 export function loadEnvFile(path: string, override: boolean): void {
   let text: string;
@@ -22,7 +20,7 @@ export function loadEnvFile(path: string, override: boolean): void {
   } catch {
     throw new DomainError(
       "cli.missing_env_file",
-      "Copy operator.env.example to operator.env and run again.",
+      "No Baseplate project here. Run `baseplate init` first.",
     );
   }
   applyEnvText(text, override);
@@ -56,7 +54,7 @@ export function parseTarget(raw: string): OperatorTarget {
 export function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new DomainError("cli.missing_env", `Missing ${name} in operator.env.`);
+    throw new DomainError("cli.missing_env", `Missing ${name} in ${CONFIG_FILE}.`);
   }
   return value;
 }
@@ -74,7 +72,7 @@ export function assertHetznerKeys(target: OperatorTarget): void {
     if (!process.env[name]) {
       throw new DomainError(
         "cli.missing_hetzner_key",
-        `TARGET=hetzner is BYOK. Put your Hetzner ${name} in operator.env.`,
+        `TARGET=hetzner is BYOK. Put your Hetzner ${name} in Settings.`,
       );
     }
   }
@@ -112,9 +110,17 @@ export function stackFromEnv(): Stack {
   });
 }
 
-export function createOperatorFromRoot(root: string, overrideEnv = false): Operator {
-  ensureOperatorSecrets(root);
-  loadEnvFile(resolve(root, "operator.env"), overrideEnv);
+export type OperatorRoots = {
+  /** Where Baseplate is installed. */
+  packageRoot: string;
+  /** The operator's own directory: config, secrets, state. */
+  projectRoot: string;
+};
+
+export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Operator {
+  const { packageRoot, projectRoot: project } = roots;
+  ensureOperatorSecrets(project);
+  loadEnvFile(resolve(project, CONFIG_FILE), overrideEnv);
   const stack = stackFromEnv();
   const target = parseTarget(process.env.TARGET ?? "local");
   assertHetznerKeys(target);
@@ -123,13 +129,14 @@ export function createOperatorFromRoot(root: string, overrideEnv = false): Opera
     target,
     jwtSecret: requiredEnv("JWT_SECRET"),
     stack,
-    stackDir: resolve(root, "stack"),
-    envFile: writeStackEnv(root),
+    stackDir: resolve(packageRoot, "stack"),
+    projectName: composeProjectName(project),
+    envFile: writeStackEnv(project),
     postgresPassword: requiredEnv("POSTGRES_PASSWORD"),
     postgresPort: Number(process.env.POSTGRES_PORT ?? "5432"),
-    statePath: resolve(root, ".baseplate/state.json"),
+    statePath: resolve(project, STATE_DIR, "state.json"),
     httpPort: Number(process.env.HTTP_PORT ?? "8080"),
-    infraDir: resolve(root, "infra"),
+    infraDir: resolve(packageRoot, "infra"),
     hcloudToken: process.env.HCLOUD_TOKEN ?? "",
     hetznerDnsToken: process.env.HETZNER_DNS_TOKEN ?? "",
     hetznerDnsZone: process.env.HETZNER_DNS_ZONE ?? "",

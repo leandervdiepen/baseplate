@@ -15,7 +15,7 @@ beforeAll(async () => {
   await run("docker", [
     "compose",
     "--env-file",
-    resolve(ROOT, "operator.env.example"),
+    resolve(ROOT, ".baseplate/stack.env"),
     "--project-name",
     "baseplate-it",
     "-f",
@@ -33,8 +33,8 @@ beforeAll(async () => {
   // App tables live in the database, not in this repo, so the suite makes the
   // one it needs the same way an operator would.
   await run(
-    "npx",
-    ["tsx", "src/delivery/cli/main.ts", "schema", "add-table", "items", "--column", "body:text"],
+    "./scripts/dev",
+    ["schema", "add-table", "items", "--column", "body:text"],
     ROOT,
   ).catch(() => undefined);
 });

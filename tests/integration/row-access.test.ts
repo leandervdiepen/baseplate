@@ -3,13 +3,25 @@ import { afterAll, beforeAll, expect, test } from "vitest";
 import { JwtTokenSigner } from "#infrastructure";
 import { createTokenClaims, parseCallerId } from "#domain";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const BASE_URL = "http://127.0.0.1:8080";
-const SECRET = "dev-jwt-secret-must-be-at-least-32-chars";
+// Secrets are generated per project now, so the suite reads the one in use
+// rather than assuming a shared development value.
+const SECRET = readSecret();
 const ALICE = parseCallerId("11111111-1111-4111-8111-111111111111");
 const BOB = parseCallerId("22222222-2222-4222-8222-222222222222");
+
+function readSecret(): string {
+  const text = readFileSync(resolve(ROOT, "baseplate.env"), "utf8");
+  const match = /^JWT_SECRET=(.+)$/m.exec(text);
+  if (!match?.[1]) {
+    throw new Error("No JWT_SECRET in baseplate.env. Run `./scripts/dev init` first.");
+  }
+  return match[1].trim();
+}
 
 let startedHere = false;
 
@@ -21,7 +33,7 @@ beforeAll(async () => {
   await run("docker", [
     "compose",
     "--env-file",
-    resolve(ROOT, "operator.env.example"),
+    resolve(ROOT, ".baseplate/stack.env"),
     "--project-name",
     "baseplate-it",
     "-f",
@@ -36,8 +48,8 @@ beforeAll(async () => {
   // App tables live in the database, not in this repo, so the suite makes the
   // one it needs the same way an operator would.
   await run(
-    "npx",
-    ["tsx", "src/delivery/cli/main.ts", "schema", "add-table", "items", "--column", "body:text"],
+    "./scripts/dev",
+    ["schema", "add-table", "items", "--column", "body:text"],
     ROOT,
   ).catch(() => undefined);
 });

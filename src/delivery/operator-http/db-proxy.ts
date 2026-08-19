@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { parseEnvMap } from "./env-file.ts";
+import { CONFIG_FILE } from "../paths.ts";
 import { sendJson } from "./json.ts";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -29,7 +30,7 @@ async function proxyLocalStack(
   res: ServerResponse,
   rewrite: (url: string) => string,
 ): Promise<void> {
-  const envPath = resolve(root, "operator.env");
+  const envPath = resolve(root, CONFIG_FILE);
   const env = parseEnvMap(readFileSync(envPath, "utf8"));
   const port = env.HTTP_PORT || "8080";
   const rest = rewrite(req.url ?? "/");

@@ -9,16 +9,12 @@ SUB_B="22222222-2222-4222-8222-222222222222"
 BODY_A="from-a-$RANDOM"
 BODY_B="from-b-$RANDOM"
 
-if [[ ! -f operator.env ]]; then
-  cp operator.env.example operator.env
-fi
-
 # A fresh Baseplate has no app tables. The operator makes them; nothing in the
 # repo declares them. Creating it here is part of what this proves.
-npx tsx src/delivery/cli/main.ts schema add-table items --column body:text >/dev/null 2>&1 || true
+./scripts/dev schema add-table items --column body:text >/dev/null 2>&1 || true
 
-TOKEN_A="$(npx tsx src/delivery/cli/main.ts mint-token --sub "$SUB_A")"
-TOKEN_B="$(npx tsx src/delivery/cli/main.ts mint-token --sub "$SUB_B")"
+TOKEN_A="$(./scripts/dev mint-token --sub "$SUB_A")"
+TOKEN_B="$(./scripts/dev mint-token --sub "$SUB_B")"
 TAMPERED="${TOKEN_A%????}xxxx"
 
 post_item() {

@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { InfraError } from "#shared";
 import { writeStackEnv } from "./stack-env.ts";
+import { composeProjectName } from "../project-name.ts";
 
 export function readComposeLogs(root: string): Promise<string> {
   const args = [
@@ -9,7 +10,7 @@ export function readComposeLogs(root: string): Promise<string> {
     "--env-file",
     writeStackEnv(root),
     "--project-name",
-    "baseplate",
+    composeProjectName(root),
     "-f",
     "compose.yaml",
     "logs",

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createSchemaChange, DomainError } from "#domain";
-import { createOperatorFromRoot, stackFromEnv } from "../operator-setup.ts";
+import { createOperatorFor, type OperatorRoots, stackFromEnv } from "../operator-setup.ts";
 import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
@@ -8,10 +8,11 @@ import { readStatus } from "./status.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
 export async function handleOperatorRequest(
-  root: string,
+  roots: OperatorRoots,
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
+  const root = roots.projectRoot;
   try {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const path = url.pathname;
@@ -38,14 +39,14 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/provision" && method === "POST") {
-      const result = await createOperatorFromRoot(root, true).provision.execute(
+      const result = await createOperatorFor(roots, true).provision.execute(
         stackFromEnv(),
       );
       sendJson(res, 200, result);
       return;
     }
     if (path === "/api/teardown" && method === "POST") {
-      await createOperatorFromRoot(root, true).teardown.execute();
+      await createOperatorFor(roots, true).teardown.execute();
       sendJson(res, 200, { ok: true });
       return;
     }
@@ -54,12 +55,12 @@ export async function handleOperatorRequest(
       if (!body.sub) {
         throw new DomainError("cli.sub_required", "mint-token requires sub.");
       }
-      const token = await createOperatorFromRoot(root, true).mintToken.execute(body.sub);
+      const token = await createOperatorFor(roots, true).mintToken.execute(body.sub);
       sendJson(res, 200, { token, sub: body.sub });
       return;
     }
     if (path === "/api/schema" && method === "GET") {
-      const operator = createOperatorFromRoot(root, true);
+      const operator = createOperatorFor(roots, true);
       try {
         sendJson(res, 200, { tables: await operator.admin.listTables() });
       } catch {
@@ -74,7 +75,7 @@ export async function handleOperatorRequest(
       const change = createSchemaChange(
         (await readJsonBody(req)) as Parameters<typeof createSchemaChange>[0],
       );
-      const operator = createOperatorFromRoot(root, true);
+      const operator = createOperatorFor(roots, true);
       try {
         const result = await operator.changeSchema.execute(change);
         sendJson(res, 200, { statement: result.statement, tables: result.tables });
@@ -84,7 +85,7 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/history" && method === "GET") {
-      const operator = createOperatorFromRoot(root, true);
+      const operator = createOperatorFor(roots, true);
       try {
         sendJson(res, 200, { entries: await operator.admin.history(50) });
       } finally {
