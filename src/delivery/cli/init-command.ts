@@ -33,6 +33,49 @@ function assertNoOrphanedData(project: string): void {
   );
 }
 
+/** The ports a developer may name, rather than accept whatever was free. */
+export type PortChoice = {
+  http?: number | undefined;
+  postgres?: number | undefined;
+  dashboard?: number | undefined;
+};
+
+export function portValue(raw: string | undefined, flag: string): number | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > 65535) {
+    throw new DomainError(
+      "cli.invalid_port",
+      `${flag} wants a port between 1 and 65535, got '${raw}'.`,
+    );
+  }
+  return value;
+}
+
+/**
+ * A port nobody asked for may move to whatever is free. A port the developer
+ * named is used as named, or the failure says which one and why, because
+ * quietly using a different one than they asked for is worse than stopping.
+ */
+async function choosePort(
+  label: string,
+  chosen: number | undefined,
+  start: number,
+): Promise<number> {
+  if (chosen === undefined) {
+    return freePortFrom(start);
+  }
+  if (!(await isFree(chosen))) {
+    throw new DomainError(
+      "cli.port_in_use",
+      `Port ${chosen} is already in use, so the ${label} cannot have it.`,
+    );
+  }
+  return chosen;
+}
+
 export async function freePortFrom(start: number): Promise<number> {
   for (let port = start; port < start + 50; port += 1) {
     if (await isFree(port)) {
@@ -84,10 +127,10 @@ function canBind(port: number): Promise<boolean> {
  * Creates the operator's project: a config file with freshly generated secrets
  * and a place to keep state. Nothing else, and nothing they have to maintain.
  *
- * Ports are chosen from what is free, so a second project on this machine comes
- * up instead of failing to bind.
+ * Ports the developer did not name are chosen from what is free, so a second
+ * project on this machine comes up instead of failing to bind.
  */
-export async function initProject(project: string): Promise<string> {
+export async function initProject(project: string, ports: PortChoice = {}): Promise<string> {
   const configPath = resolve(project, CONFIG_FILE);
   if (existsSync(configPath)) {
     throw new DomainError(
@@ -97,9 +140,9 @@ export async function initProject(project: string): Promise<string> {
   }
   assertNoOrphanedData(project);
   mkdirSync(resolve(project, STATE_DIR), { recursive: true });
-  const httpPort = await freePortFrom(8080);
-  const postgresPort = await freePortFrom(5432);
-  const dashboardPort = await freePortFrom(8788);
+  const httpPort = await choosePort("API", ports.http, 8080);
+  const postgresPort = await choosePort("database", ports.postgres, 5432);
+  const dashboardPort = await choosePort("studio", ports.dashboard, 8788);
   // SITE_ADDRESS is what Caddy listens on inside the container and stays 8080.
   // HTTP_PORT is only the host mapping, which is what has to dodge a collision.
   const config = TEMPLATE.replace("HTTP_PORT=8080", `HTTP_PORT=${httpPort}`)

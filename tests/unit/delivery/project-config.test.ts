@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { freePortFrom, initProject } from "../../../src/delivery/cli/init-command.ts";
+import { freePortFrom, initProject, portValue } from "../../../src/delivery/cli/init-command.ts";
 import { parseEnvMap } from "../../../src/delivery/operator-http/env-file.ts";
 import { stackEnvText } from "../../../src/delivery/operator-http/stack-env.ts";
 import { composeProjectName } from "../../../src/delivery/project-name.ts";
@@ -136,4 +136,41 @@ test("a config written before studio ports existed keeps working", () => {
   writeFileSync(join(dir, "baseplate.env"), "TARGET=local\nHTTP_PORT=8080\n", "utf8");
 
   expect(dashboardPortFor(dir)).toBe(OPERATOR_HTTP_PORT);
+});
+
+test("ports the developer names are the ports they get", async () => {
+  const dir = project();
+
+  await initProject(dir, { http: 9100, postgres: 5599, dashboard: 9788 });
+
+  const env = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8"));
+  expect(env.HTTP_PORT).toBe("9100");
+  expect(env.POSTGRES_PORT).toBe("5599");
+  expect(env.DASHBOARD_PORT).toBe("9788");
+  expect(dashboardPortFor(dir)).toBe(9788);
+});
+
+test("a named port that is taken stops init rather than moving quietly", async () => {
+  const busy = createServer();
+  const port = await new Promise<number>((done) => {
+    busy.listen(0, "127.0.0.1", () => {
+      const address = busy.address();
+      done(typeof address === "object" && address ? address.port : 0);
+    });
+  });
+  try {
+    await expect(initProject(project(), { http: port })).rejects.toThrow(/already in use/);
+  } finally {
+    await new Promise<void>((done) => {
+      busy.close(() => done());
+    });
+  }
+});
+
+test("a port that is not a port is refused before anything is written", () => {
+  expect(() => portValue("abc", "--port")).toThrow(/between 1 and 65535/);
+  expect(() => portValue("99999", "--port")).toThrow(/between 1 and 65535/);
+  expect(() => portValue("0", "--port")).toThrow(/between 1 and 65535/);
+  expect(portValue(undefined, "--port")).toBeUndefined();
+  expect(portValue("9100", "--port")).toBe(9100);
 });

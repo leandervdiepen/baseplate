@@ -3,10 +3,12 @@ import { resolve } from "node:path";
 
 export const USAGE = `Usage: baseplate <command>
 
-  init                     Start a project here: config, secrets, state
+  init [--port N]          Start a project here: config, secrets, state
+                           Also --postgres-port N and --dashboard-port N.
+                           Any port you leave out is picked from what is free.
   up                       Bring the stack up and print the API URL
   down                     Stop the stack and destroy its volumes
-  dashboard                Open the studio on 127.0.0.1
+  dashboard [--port N]     Open the studio on 127.0.0.1
 
   tables                   List your tables and their columns
   types                    Print TypeScript types for your tables

@@ -27,6 +27,8 @@ It is yours, and Baseplate never writes anything else into it.
 
 Two projects on one machine share nothing: not ports, not volumes, not secrets.
 `init` picks free ports for the API, Postgres, and the studio, so a second project comes up beside the first and both studios can be open at once.
+Name them yourself when you care which: `init --port 9100 --postgres-port 5599 --dashboard-port 9788`.
+A port you name is used or the command stops; only a port you left out is allowed to move.
 
 ## Make a table
 

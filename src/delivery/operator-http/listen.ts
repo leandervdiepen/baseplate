@@ -8,7 +8,8 @@ import { isLocalhostHost, isLoopbackAddress } from "./localhost.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
 const PROJECT_ROOT = projectRoot();
-const PORT = dashboardPortFor(PROJECT_ROOT);
+// `--port` beats the project's config, which beats the default.
+const PORT = Number(process.env.BASEPLATE_DASHBOARD_PORT) || dashboardPortFor(PROJECT_ROOT);
 
 /**
  * Vite's hot-reload socket needs a port of its own, and it too would be shared

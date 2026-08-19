@@ -5,7 +5,7 @@ import { DomainError } from "#domain";
 import { InfraError } from "#shared";
 import { createOperatorFor, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
-import { initProject } from "./init-command.ts";
+import { initProject, portValue } from "./init-command.ts";
 import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
 import { renderTypes } from "./types-command.ts";
 import { USAGE, version } from "./usage.ts";
@@ -22,6 +22,9 @@ async function main(): Promise<void> {
       sub: { type: "string" },
       to: { type: "string" },
       column: { type: "string", multiple: true },
+      port: { type: "string" },
+      "postgres-port": { type: "string" },
+      "dashboard-port": { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -49,11 +52,16 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "init") {
-    console.log(`Wrote ${await initProject(project)}. Run \`baseplate up\` next.`);
+    const written = await initProject(project, {
+      http: portValue(values.port, "--port"),
+      postgres: portValue(values["postgres-port"], "--postgres-port"),
+      dashboard: portValue(values["dashboard-port"], "--dashboard-port"),
+    });
+    console.log(`Wrote ${written}. Run \`baseplate up\` next.`);
     return;
   }
   if (command === "dashboard") {
-    await runDashboard(project);
+    await runDashboard(project, portValue(values.port, "--port"));
     return;
   }
 
@@ -109,7 +117,7 @@ async function main(): Promise<void> {
 }
 
 /** The studio is a long-running server, so it replaces this process's job. */
-function runDashboard(project: string): Promise<void> {
+function runDashboard(project: string, port: number | undefined): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(
       process.execPath,
@@ -117,7 +125,14 @@ function runDashboard(project: string): Promise<void> {
         resolve(PACKAGE_ROOT, "node_modules/tsx/dist/cli.mjs"),
         resolve(PACKAGE_ROOT, "src/delivery/operator-http/listen.ts"),
       ],
-      { stdio: "inherit", env: { ...process.env, BASEPLATE_PROJECT: project } },
+      {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          BASEPLATE_PROJECT: project,
+          ...(port === undefined ? {} : { BASEPLATE_DASHBOARD_PORT: String(port) }),
+        },
+      },
     );
     child.on("error", reject);
     child.on("exit", (code) => {
