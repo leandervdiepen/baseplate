@@ -7,6 +7,7 @@ import { createOperatorFor, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
 import { initProject } from "./init-command.ts";
 import { schemaChangeFromArgs } from "./schema-command.ts";
+import { renderTypes } from "./types-command.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
 const USAGE = `Usage: baseplate <command>
@@ -16,6 +17,7 @@ const USAGE = `Usage: baseplate <command>
   down                     Stop the stack and destroy its volumes
   dashboard                Open the studio on 127.0.0.1
   tables                   List your tables and their columns
+  types                    Print TypeScript types for your tables
   schema <change>          Add, rename, or drop a table or column
   mint-token --sub UUID    Sign a caller JWT, for scripts and tests`;
 
@@ -64,6 +66,10 @@ async function main(): Promise<void> {
         const columns = table.columns.map((column) => column.name).join(", ");
         console.log(`${table.name} (owner ${table.ownerColumn}): ${columns}`);
       }
+      return;
+    }
+    if (command === "types") {
+      process.stdout.write(renderTypes(await operator.admin.listTables()));
       return;
     }
     if (command === "schema") {

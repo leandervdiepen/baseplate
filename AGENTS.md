@@ -63,6 +63,7 @@ Details: `docs/ARCHITECTURE.md`.
 - Studio UI: `src/delivery/dashboard/` (primitives / patterns / features)
 - Local operator HTTP: `src/delivery/operator-http/`
 - App client: `sdk/src/` (published as the `/client` subpath)
+- Type generation from a live database: `src/delivery/cli/types-command.ts`
 - What runs: `stack/` (compose, Caddy, platform migrations, auth, migrate)
 - The server: `infra/`
 - Tests: `tests/unit/`, `tests/integration/`, `tests/acceptance/`

@@ -59,8 +59,9 @@ The typed client is in this package:
 
 ```ts
 import { createClient } from "@diepen/baseplate/client";
+import type { Database } from "./database.ts";
 
-const client = createClient("http://127.0.0.1:8080");
+const client = createClient<Database>("http://127.0.0.1:8080");
 await client.auth.signUp({ email, password });
 
 await client.from("notes").insert({ title: "hello" });
@@ -76,6 +77,8 @@ await client.from("notes").update({ title: "renamed" }).eq("id", id);
 await client.from("notes").delete().eq("id", id);
 ```
 
+`npx @diepen/baseplate types > src/database.ts` writes those types from your live database, so an unknown column is a compile error rather than a 400.
+
 Sessions persist in `localStorage` and refresh themselves before the access token expires.
 Access tokens are short-lived and refresh tokens are single use; both lifetimes are yours to set in the studio.
 
@@ -89,7 +92,7 @@ The client never filters: every filter becomes a query the database answers.
 - An HTTP API over your tables (PostgREST and auth behind Caddy)
 - A typed client with the queries an app needs
 - A local studio for tables, schema, policies, auth, logs, and settings
-- `init`, `up`, `down`, `dashboard`, `schema`, `tables`, `mint-token`
+- `init`, `up`, `down`, `dashboard`, `schema`, `tables`, `types`, `mint-token`
 
 Set the target to Hetzner in Settings and Baseplate creates a VM, firewall, DNS record, and TLS certificate in **your** account.
 It is not required to work locally.

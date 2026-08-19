@@ -6,29 +6,17 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type ItemsRow = {
-  id: string;
-  owner_id: string;
-  body: string;
-};
-
-export type ItemsInsert = {
-  body: string;
-  id?: string;
-  owner_id?: string;
-};
-
-export type ItemsUpdate = {
-  body?: string;
-};
-
-export type Database = {
-  items: {
-    Row: ItemsRow;
-    Insert: ItemsInsert;
-    Update: ItemsUpdate;
-  };
-};
+/**
+ * Replaced by whatever `baseplate types` prints for your database:
+ *
+ *   npx @diepen/baseplate types > src/database.ts
+ *
+ * Until then `from()` accepts any table name and returns loosely typed rows.
+ */
+export type Database = Record<
+  string,
+  { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> }
+>;
 
 export type TableName<DB> = Extract<keyof DB, string>;
 

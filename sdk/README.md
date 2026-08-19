@@ -62,13 +62,20 @@ None of this filters in the client. Each filter becomes a query the database ans
 
 ## Types
 
-`createClient<Database>(url)` takes a shape describing your tables, which gives `from()` and its columns real types.
-Generate it from a running API with a caller token, because anonymous callers cannot see your tables:
+Generate them from your running database:
 
 ```bash
-BASEPLATE_TOKEN=$(npx @diepen/baseplate mint-token --sub 11111111-1111-4111-8111-111111111111) \
-  npx tsx sdk/scripts/gen-types.ts
+npx @diepen/baseplate types > src/database.ts
 ```
+
+```ts
+import type { Database } from "./database.ts";
+
+const client = createClient<Database>(url);
+```
+
+Then an unknown table, an unknown column, or a wrong insert shape is a compile error rather than a 400 at runtime.
+Regenerate after a schema change.
 
 ## Operator tokens
 

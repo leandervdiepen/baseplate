@@ -12,9 +12,7 @@ export type { QueryResult } from "./request.ts";
 export { memoryStorage, type SessionStorage } from "./storage.ts";
 export type {
   Database,
-  ItemsInsert,
-  ItemsRow,
-  ItemsUpdate,
+  Json,
   TableInsert,
   TableName,
   TableRow,

@@ -20,7 +20,6 @@
     "lint": "eslint src tests sdk/src stack/auth/src stack/migrate/src",
     "lint:arch": "depcruise src --config dependency-cruiser.cjs",
     "dashboard": "node bin/baseplate-dashboard.js",
-    "sdk:types": "tsx sdk/scripts/gen-types.ts",
     "baseplate": "node bin/baseplate.js"
   },
   "dependencies": {
