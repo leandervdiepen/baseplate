@@ -133,7 +133,21 @@ export function SettingsPage({
           onAccess={setAccess}
           onRefresh={setRefreshTtl}
         />
-        <ReadinessList checks={status.readiness} />
+        {target === (status.target ?? "local") ? (
+          <ReadinessList checks={status.readiness} />
+        ) : (
+          /* The checks came back for the saved target. Showing them next to an
+             unsaved one would vouch for something nobody has looked at. */
+          <section className="border-b border-[var(--color-border)] py-[var(--space-lg)]">
+            <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
+              Before you start the stack
+            </h2>
+            <p className="mt-1 text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+              Save these settings to check what {target === "hetzner" ? "Hetzner" : "this machine"}{" "}
+              still needs.
+            </p>
+          </section>
+        )}
 
         <div className="flex flex-wrap items-center gap-[var(--space-md)] pt-[var(--space-lg)]">
           <p className="max-w-xs text-[length:var(--text-xs)] leading-[var(--leading-tight)] text-[var(--color-text-muted)]">
