@@ -3,6 +3,7 @@ import type postgres from "postgres";
 export type RolePasswords = {
   authenticator: string;
   authService: string;
+  storageService: string;
 };
 
 /**
@@ -17,9 +18,14 @@ export async function ensureRoles(
   await ensureRole(sql, "app_user", undefined);
   await ensureRole(sql, "authenticator", passwords.authenticator);
   await ensureRole(sql, "auth_service", passwords.authService);
+  await ensureRole(sql, "storage_service", passwords.storageService);
   await sql.unsafe("GRANT anon TO authenticator");
   await sql.unsafe("GRANT app_user TO authenticator");
   await sql.unsafe("ALTER ROLE authenticator NOINHERIT");
+  // Storage answers as the caller, never as itself, so row access decides what
+  // an object is just as it decides what a row is.
+  await sql.unsafe("GRANT app_user TO storage_service");
+  await sql.unsafe("ALTER ROLE storage_service NOINHERIT");
 }
 
 async function ensureRole(

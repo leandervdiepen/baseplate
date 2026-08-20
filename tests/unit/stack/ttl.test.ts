@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatTtl, parseTtl } from "../../../stack/auth/src/ttl.ts";
+import { formatTtl, parseTtl } from "../../../stack/shared/ttl.ts";
 
 test("reads seconds, minutes, hours, and days", () => {
   expect(parseTtl("900", "1h")).toBe(900);

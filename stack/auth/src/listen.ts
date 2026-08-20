@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { connectAuthDb } from "./db.ts";
 import { handleAuthRequest } from "./handle.ts";
 import { tokenSecret } from "./token.ts";
-import { DEFAULT_ACCESS_TTL, DEFAULT_REFRESH_TTL, parseTtl } from "./ttl.ts";
+import { DEFAULT_ACCESS_TTL, DEFAULT_REFRESH_TTL, parseTtl } from "../../shared/ttl.ts";
 
 const port = Number(process.env.PORT ?? "3001");
 const authPassword = required("AUTH_SERVICE_PASSWORD");

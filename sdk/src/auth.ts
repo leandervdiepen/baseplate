@@ -1,4 +1,4 @@
-import { defaultStorage, SESSION_KEY, type SessionStorage } from "./storage.ts";
+import { defaultStorage, SESSION_KEY, type SessionStorage } from "./session-storage.ts";
 
 export type AuthUser = {
   id: string;

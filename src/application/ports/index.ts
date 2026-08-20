@@ -12,4 +12,5 @@ export type {
   ProvisionedStack,
   StackStateStore,
 } from "./stack-state-store.ts";
+export type { BucketUsage, StorageAdmin, StoredObject } from "./storage-admin.ts";
 export type { TokenSigner } from "./token-signer.ts";

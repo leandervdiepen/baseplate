@@ -23,6 +23,14 @@ DASHBOARD_PORT=8788
 # name your app's origin once it has one.
 CORS_ORIGIN=*
 
+# The largest file an app may upload, in bytes. 25 MB by default.
+STORAGE_MAX_BYTES=26214400
+# Where object bytes are kept. The bundled store runs beside the stack and is
+# never published; point these at Hetzner Object Storage, B2, or S3 to use one.
+STORAGE_ENDPOINT=http://storage-blobs:8333
+STORAGE_BUCKET=baseplate
+STORAGE_REGION=us-east-1
+
 # How long a signed-in user's tokens last. 900, 15m, 12h, and 30d all parse.
 ACCESS_TOKEN_TTL=1h
 REFRESH_TOKEN_TTL=30d
@@ -53,6 +61,9 @@ export function writeLocalFirstRun(root: string): void {
     POSTGRES_PASSWORD: current.POSTGRES_PASSWORD || secretValue(),
     AUTHENTICATOR_PASSWORD: current.AUTHENTICATOR_PASSWORD || secretValue(),
     AUTH_SERVICE_PASSWORD: current.AUTH_SERVICE_PASSWORD || secretValue(),
+    STORAGE_SERVICE_PASSWORD: current.STORAGE_SERVICE_PASSWORD || secretValue(),
+    STORAGE_ACCESS_KEY: current.STORAGE_ACCESS_KEY || secretValue(),
+    STORAGE_SECRET_KEY: current.STORAGE_SECRET_KEY || secretValue(),
     HTTP_PORT: current.HTTP_PORT || "8080",
     POSTGRES_PORT: current.POSTGRES_PORT || "5432",
     DASHBOARD_PORT: current.DASHBOARD_PORT || "8788",
@@ -70,8 +81,15 @@ export function ensureOperatorSecrets(root: string): void {
   const existing = readFileSync(envPath, "utf8");
   const current = parseEnvMap(existing);
   const updates: Record<string, string> = {};
-  if (!current.AUTH_SERVICE_PASSWORD) {
-    updates.AUTH_SERVICE_PASSWORD = secretValue();
+  for (const key of [
+    "AUTH_SERVICE_PASSWORD",
+    "STORAGE_SERVICE_PASSWORD",
+    "STORAGE_ACCESS_KEY",
+    "STORAGE_SECRET_KEY",
+  ]) {
+    if (!current[key]) {
+      updates[key] = secretValue();
+    }
   }
   if (Object.keys(updates).length === 0) {
     return;

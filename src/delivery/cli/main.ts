@@ -8,6 +8,7 @@ import { createOperatorFor, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
 import { initProject, portValue } from "./init-command.ts";
 import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
+import { runStorageCommand, STORAGE_USAGE } from "./storage-command.ts";
 import { renderTypes } from "./types-command.ts";
 import { USAGE, version } from "./usage.ts";
 
@@ -21,6 +22,7 @@ const STACK_COMMANDS = new Set([
   "tables",
   "types",
   "schema",
+  "storage",
   "mint-token",
 ]);
 
@@ -36,6 +38,7 @@ async function main(): Promise<void> {
       "postgres-port": { type: "string" },
       "dashboard-port": { type: "string" },
       replace: { type: "boolean" },
+      public: { type: "boolean" },
       yes: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
@@ -61,6 +64,10 @@ async function main(): Promise<void> {
   }
   if (command === "schema" && positionals[1] === undefined) {
     console.log(SCHEMA_USAGE);
+    return;
+  }
+  if (command === "storage" && positionals[1] === undefined) {
+    console.log(STORAGE_USAGE);
     return;
   }
   if (command === "init") {
@@ -127,6 +134,18 @@ async function main(): Promise<void> {
       console.log((await operator.changeSchema.execute(change)).statement);
       return;
     }
+    if (command === "storage") {
+      await runStorageCommand(
+        operator.storage,
+        positionals[1],
+        positionals.slice(2),
+        { makePublic: values.public === true, yes: values.yes === true },
+        (line) => {
+          console.log(line);
+        },
+      );
+      return;
+    }
     if (command === "mint-token") {
       if (!values.sub) {
         throw new DomainError("cli.sub_required", "mint-token requires --sub <uuid>.");
@@ -136,6 +155,7 @@ async function main(): Promise<void> {
     }
   } finally {
     await operator.admin.close();
+    await operator.storage.close();
   }
 }
 

@@ -6,6 +6,13 @@ export {
   type Column,
   type ColumnType,
 } from "./column.ts";
+export {
+  createBucket,
+  isBucketVisibility,
+  parseObjectKey,
+  type Bucket,
+  type BucketVisibility,
+} from "./bucket.ts";
 export { DomainError } from "./errors.ts";
 export { isLocalHostname, parseHostname, type Hostname } from "./hostname.ts";
 export {

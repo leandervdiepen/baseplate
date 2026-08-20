@@ -15,6 +15,7 @@ export const USAGE = `Usage: baseplate <command>
   tables                   List your tables and their columns
   types                    Print TypeScript types for your tables
   schema <change>          Change your tables; run \`baseplate schema\` for the list
+  storage <command>        Buckets for files; run \`baseplate storage\` for the list
   mint-token --sub UUID    Sign a caller JWT, for scripts and tests
 
   --help, -h               Show this

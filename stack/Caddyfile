@@ -19,6 +19,9 @@
 	handle /auth* {
 		reverse_proxy auth:3001
 	}
+	handle /storage* {
+		reverse_proxy storage:3002
+	}
 	handle {
 		reverse_proxy postgrest:3000
 	}

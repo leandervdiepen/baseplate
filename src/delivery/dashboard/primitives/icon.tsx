@@ -79,6 +79,16 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+/** A bucket, drawn on the same 16 grid as the rest. */
+export function IconStorage(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M2 4.5 3.2 13a1.5 1.5 0 0 0 1.5 1.3h6.6a1.5 1.5 0 0 0 1.5-1.3L14 4.5" {...stroke} />
+      <ellipse cx="8" cy="4" rx="6" ry="2.3" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconPlus(props: IconProps) {
   return (
     <Svg {...props}>

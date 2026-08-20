@@ -6,6 +6,7 @@ import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
 import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
+import { handleStorageRoute } from "./storage.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
 export async function handleOperatorRequest(
@@ -82,6 +83,10 @@ export async function handleOperatorRequest(
       } finally {
         await operator.admin.close();
       }
+      return;
+    }
+    if (path.startsWith("/api/storage")) {
+      await handleStorageRoute(roots, path, method, url, req, res);
       return;
     }
     if (path === "/api/history" && method === "GET") {

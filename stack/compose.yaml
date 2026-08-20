@@ -26,7 +26,9 @@ services:
       start_period: 5s
 
   migrate:
-    build: ./migrate
+    build:
+      context: .
+      dockerfile: migrate/Dockerfile
     restart: "no"
     depends_on:
       postgres:
@@ -35,6 +37,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD}
       AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD}
+      STORAGE_SERVICE_PASSWORD: ${STORAGE_SERVICE_PASSWORD}
     volumes:
       - ./platform:/platform:ro
 
@@ -57,7 +60,9 @@ services:
       - "3000"
 
   auth:
-    build: ./auth
+    build:
+      context: .
+      dockerfile: auth/Dockerfile
     restart: unless-stopped
     labels: *baseplate-labels
     depends_on:
@@ -87,6 +92,60 @@ services:
       retries: 30
       start_period: 10s
 
+  # Bytes only, on the compose network only. Never published, never routed by
+  # Caddy, and the sole client is the storage service in front of it.
+  storage-blobs:
+    image: chrislusf/seaweedfs:3.80
+    restart: unless-stopped
+    labels: *baseplate-labels
+    entrypoint: ["/bin/sh", "/baseplate-entrypoint.sh"]
+    environment:
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    volumes:
+      - blobs:/data
+      - ./storage/blobs-entrypoint.sh:/baseplate-entrypoint.sh:ro
+    expose:
+      - "8333"
+
+  storage:
+    build:
+      context: .
+      dockerfile: storage/Dockerfile
+    restart: unless-stopped
+    labels: *baseplate-labels
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      storage-blobs:
+        condition: service_started
+    environment:
+      STORAGE_SERVICE_PASSWORD: ${STORAGE_SERVICE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://storage-blobs:8333}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-baseplate}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_MAX_BYTES: ${STORAGE_MAX_BYTES:-26214400}
+      PORT: "3002"
+    expose:
+      - "3002"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3002/storage/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped
@@ -95,6 +154,8 @@ services:
       postgrest:
         condition: service_started
       auth:
+        condition: service_healthy
+      storage:
         condition: service_healthy
     ports:
       - "${HTTP_PORT:-8080}:8080"
@@ -114,3 +175,4 @@ services:
 volumes:
   pgdata:
   caddy_data:
+  blobs:

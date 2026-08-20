@@ -44,7 +44,40 @@ export async function syncPolicies(
       log(`locked ${table} (no declared policy)`);
     }
   }
+  await applyStoragePolicies(sql);
+  log("policy storage.objects on owner_id");
   await sql.unsafe("NOTIFY pgrst, 'reload schema'").simple();
+}
+
+/**
+ * An object is a row, so it is guarded the same way a row is: the caller sees
+ * their own, and a bucket the operator marked public is readable by anyone
+ * holding a token. Re-applied on every start, like every other policy here.
+ */
+export async function applyStoragePolicies(sql: postgres.Sql): Promise<void> {
+  const objects = "storage.objects";
+  await sql.unsafe(`ALTER TABLE ${objects} ENABLE ROW LEVEL SECURITY`).simple();
+  await sql.unsafe(`DROP POLICY IF EXISTS objects_owner ON ${objects}`).simple();
+  await sql.unsafe(`CREATE POLICY objects_owner ON ${objects}
+    USING (owner_id = baseplate.caller_id())
+    WITH CHECK (owner_id = baseplate.caller_id())`).simple();
+
+  await sql.unsafe(`DROP POLICY IF EXISTS objects_public_read ON ${objects}`).simple();
+  await sql.unsafe(`CREATE POLICY objects_public_read ON ${objects} FOR SELECT
+    USING (EXISTS (
+      SELECT 1 FROM storage.buckets b
+      WHERE b.name = ${objects}.bucket AND b.public
+    ))`).simple();
+
+  // The policy above reads storage.buckets as the caller, so the caller needs
+  // to be allowed to.
+  await sql.unsafe("GRANT SELECT ON storage.buckets TO app_user").simple();
+  await sql
+    .unsafe(`GRANT SELECT, INSERT, UPDATE, DELETE ON ${objects} TO app_user`)
+    .simple();
+  await sql.unsafe("GRANT SELECT ON storage.buckets TO storage_service").simple();
+  await sql.unsafe("REVOKE ALL ON storage.buckets FROM anon").simple();
+  await sql.unsafe(`REVOKE ALL ON ${objects} FROM anon`).simple();
 }
 
 async function applyPolicy(sql: postgres.Sql, policy: DeclaredPolicy): Promise<void> {

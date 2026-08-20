@@ -200,6 +200,82 @@ export async function mintToken(sub: string): Promise<{ token: string; sub: stri
   return (await response.json()) as { token: string; sub: string };
 }
 
+export type BucketSummary = {
+  name: string;
+  visibility: "private" | "public";
+  objects: number;
+  bytes: number;
+};
+
+export type BucketList = {
+  live: boolean;
+  buckets: BucketSummary[];
+};
+
+export type StoredObject = {
+  bucket: string;
+  key: string;
+  ownerId: string;
+  bytes: number;
+  contentType: string;
+  createdAt: string;
+};
+
+export async function getBuckets(): Promise<BucketList> {
+  const response = await fetch("/api/storage");
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return (await response.json()) as BucketList;
+}
+
+export async function createBucket(
+  name: string,
+  visibility: "private" | "public",
+): Promise<BucketList> {
+  return writeBuckets("POST", { name, visibility });
+}
+
+export async function setBucketVisibility(
+  name: string,
+  visibility: "private" | "public",
+): Promise<BucketList> {
+  return writeBuckets("PATCH", { name, visibility });
+}
+
+export async function dropBucket(name: string): Promise<BucketList> {
+  const response = await fetch(`/api/storage?bucket=${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return (await response.json()) as BucketList;
+}
+
+async function writeBuckets(
+  method: string,
+  body: { name: string; visibility: "private" | "public" },
+): Promise<BucketList> {
+  const response = await fetch("/api/storage", {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return (await response.json()) as BucketList;
+}
+
+export async function getBucketObjects(bucket: string): Promise<StoredObject[]> {
+  const response = await fetch(`/api/storage/objects?bucket=${encodeURIComponent(bucket)}`);
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return ((await response.json()) as { objects: StoredObject[] }).objects;
+}
+
 export type AuthSession = {
   token: string;
   user: { id: string; email: string };

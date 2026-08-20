@@ -1,4 +1,5 @@
 export type {
+  BucketUsage,
   Clock,
   CloudAccount,
   CloudAccountSnapshot,
@@ -12,6 +13,8 @@ export type {
   SchemaHistoryEntry,
   StackRuntime,
   StackStateStore,
+  StorageAdmin,
+  StoredObject,
   TokenSigner,
 } from "./ports/index.ts";
 export {

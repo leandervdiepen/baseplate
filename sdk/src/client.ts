@@ -2,6 +2,7 @@ import { createAuth, type AuthClient, type AuthOptions } from "./auth.ts";
 import type { Database, TableName } from "./database.ts";
 import { createQuery } from "./query.ts";
 import type { RequestState } from "./request.ts";
+import { createStorage, type StorageClient } from "./storage.ts";
 
 export type CreateClientOptions = AuthOptions & {
   /** A caller JWT for a script or a test. Apps sign in instead. */
@@ -10,6 +11,7 @@ export type CreateClientOptions = AuthOptions & {
 
 export type BaseplateClient<DB> = {
   auth: AuthClient;
+  storage: StorageClient;
   from<T extends TableName<DB>>(table: T): ReturnType<typeof createQuery<DB, T>>;
 };
 
@@ -30,6 +32,7 @@ export function createClient<DB = Database>(
   state.authorize = auth.authorize;
   return {
     auth,
+    storage: createStorage(state),
     from<T extends TableName<DB>>(table: T) {
       return createQuery<DB, T>(state, table);
     },

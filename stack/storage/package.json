@@ -1,0 +1,10 @@
+{
+  "name": "baseplate-storage",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "jose": "^6.2.9",
+    "postgres": "^3.4.7",
+    "tsx": "^4.23.12"
+  }
+}

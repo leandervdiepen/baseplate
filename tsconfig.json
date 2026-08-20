@@ -11,9 +11,24 @@
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "rootDir": ".",
-    "types": ["node"],
-    "lib": ["ES2023", "DOM"]
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2023",
+      "DOM"
+    ]
   },
-  "include": ["src", "tests", "sdk/src", "stack/auth/src", "stack/migrate/src"],
-  "exclude": ["src/delivery/dashboard/**/*.tsx"]
+  "include": [
+    "src",
+    "tests",
+    "sdk/src",
+    "stack/shared",
+    "stack/auth/src",
+    "stack/migrate/src",
+    "stack/storage/src"
+  ],
+  "exclude": [
+    "src/delivery/dashboard/**/*.tsx"
+  ]
 }

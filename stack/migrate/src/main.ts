@@ -36,6 +36,7 @@ async function main(): Promise<void> {
     await ensureRoles(sql, {
       authenticator: required("AUTHENTICATOR_PASSWORD"),
       authService: required("AUTH_SERVICE_PASSWORD"),
+      storageService: required("STORAGE_SERVICE_PASSWORD"),
     });
     await ensureLedger(sql);
     const count = await applyMigrations(sql, [{ label: "platform", dir: PLATFORM_DIR }], log);

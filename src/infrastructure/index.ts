@@ -1,12 +1,12 @@
 import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
-import type { SchemaAdmin } from "#application";
+import type { SchemaAdmin, StorageAdmin } from "#application";
 import type { Stack } from "#domain";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
 import { FileStackStateStore } from "./fs/index.ts";
 import { HetznerCloudProvider } from "./hetzner/index.ts";
 import { JwtTokenSigner } from "./jwt/index.ts";
-import { PostgresSchemaAdmin } from "./postgres/index.ts";
+import { PostgresSchemaAdmin, PostgresStorageAdmin } from "./postgres/index.ts";
 import { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
@@ -26,7 +26,7 @@ export {
   MemoryStackStateStore,
   MemoryTokenSigner,
 } from "./memory/index.ts";
-export { PostgresSchemaAdmin } from "./postgres/index.ts";
+export { PostgresSchemaAdmin, PostgresStorageAdmin } from "./postgres/index.ts";
 export { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export type OperatorTarget = "local" | "hetzner";
@@ -58,6 +58,7 @@ export type Operator = {
   mintToken: MintToken;
   changeSchema: ChangeSchema;
   admin: SchemaAdmin;
+  storage: StorageAdmin;
 };
 
 export function createOperator(config: OperatorConfig): Operator {
@@ -68,12 +69,14 @@ export function createOperator(config: OperatorConfig): Operator {
     signer,
     callerRole: config.stack.callerRole,
   });
-  const admin = new PostgresSchemaAdmin({
+  const database = {
     host: "127.0.0.1",
     port: config.postgresPort,
     database: config.stack.databaseName,
     password: config.postgresPassword,
-  });
+  };
+  const admin = new PostgresSchemaAdmin(database);
+  const storage = new PostgresStorageAdmin(database);
 
   if (config.target === "local") {
     const cloud = new DockerHostCloudProvider();
@@ -96,6 +99,7 @@ export function createOperator(config: OperatorConfig): Operator {
       mintToken,
       changeSchema: new ChangeSchema({ admin }),
       admin,
+      storage,
     };
   }
 
@@ -130,5 +134,6 @@ export function createOperator(config: OperatorConfig): Operator {
     mintToken,
     changeSchema: new ChangeSchema({ admin }),
     admin,
+    storage,
   };
 }

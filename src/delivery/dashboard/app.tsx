@@ -5,6 +5,7 @@ import { LogsPage } from "./features/logs.tsx";
 import { PoliciesPage } from "./features/policies.tsx";
 import { SchemaPage } from "./features/schema.tsx";
 import { SettingsPage } from "./features/settings.tsx";
+import { StoragePage } from "./features/storage.tsx";
 import { TablesPage } from "./features/tables.tsx";
 import { getStatus, provision, type OperatorStatus } from "./lib/operator-client.ts";
 import { AppShell, type NavId } from "./patterns/app-shell.tsx";
@@ -99,6 +100,7 @@ export function App() {
         />
       ) : null}
       {nav === "policies" ? <PoliciesPage /> : null}
+      {nav === "storage" ? <StoragePage apiUp={status.apiUp} /> : null}
       {nav === "logs" ? <LogsPage target={status.target ?? "local"} /> : null}
       {nav === "auth" ? <AuthPage baseUrl={status.baseUrl} /> : null}
       {nav === "settings" ? <SettingsPage status={status} onChanged={refresh} /> : null}
