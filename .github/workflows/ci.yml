@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Fast, and enough to catch most of what breaks: types, layering, lint, units.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run lint:arch
+      - run: npm run typecheck
+      - run: npm test
+
+  # The definition of done: a real stack, real HTTP, two callers who cannot see
+  # each other. Slower, and the only thing that actually proves the product.
+  stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start the stack
+        run: |
+          ./scripts/dev init
+          ./scripts/dev up
+      - run: npm run test:integration
+      - run: npm run test:acceptance
+      - name: Show the logs when something failed
+        if: failure()
+        run: |
+          docker ps -a
+          for id in $(docker ps -aq --filter "label=baseplate.project-root"); do
+            echo "===== $(docker inspect --format '{{.Name}}' "$id") ====="
+            docker logs --tail 100 "$id" 2>&1 || true
+          done
+      - name: Stop the stack
+        if: always()
+        run: ./scripts/dev destroy --yes
