@@ -72,6 +72,7 @@ export type LiveColumn = {
   type: string;
   nullable: boolean;
   primaryKey: boolean;
+  hasDefault: boolean;
   references?: { table: string; column: string };
 };
 
@@ -363,6 +364,9 @@ export type SchemaColumn = {
   type: string;
   primaryKey: boolean;
   owner: boolean;
+  nullable: boolean;
+  /** The database supplies a value when an insert leaves it out. */
+  hasDefault: boolean;
   references?: { table: string; column: string };
 };
 
@@ -387,6 +391,8 @@ export async function getSchema(): Promise<SchemaSnapshot> {
         type: column.type,
         primaryKey: column.primaryKey,
         owner: column.name === table.ownerColumn,
+        nullable: column.nullable,
+        hasDefault: column.hasDefault,
         ...(column.references ? { references: column.references } : {}),
       })),
     })),

@@ -52,11 +52,14 @@ export function Field({
   label,
   hint,
   error,
+  hideLabel,
   children,
 }: {
   label: string;
   hint?: ReactNode;
   error?: string | null;
+  /** The label is still read; it just has no room to be drawn. */
+  hideLabel?: boolean;
   children: ReactNode;
 }) {
   const id = useId();
@@ -68,7 +71,9 @@ export function Field({
   return (
     <FieldContext value={{ id, describedBy, invalid: Boolean(error) }}>
       <div className="flex flex-col gap-[var(--space-sm)]">
-        <Label htmlFor={id}>{label}</Label>
+        <Label htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
+          {label}
+        </Label>
         {hint ? <Hint id={hintId}>{hint}</Hint> : null}
         {children}
         {error ? (

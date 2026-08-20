@@ -158,3 +158,24 @@ function run(command: string, args: string[], cwd: string): Promise<void> {
     });
   });
 }
+
+/**
+ * `/auth*` in the Caddyfile also matches `/authors`, so a table whose name
+ * starts with a route prefix used to be answered by the wrong service and 404
+ * for reasons nothing on screen could explain.
+ */
+test("a table whose name starts with a route prefix is still the API's", async () => {
+  await run(
+    "./scripts/dev",
+    ["schema", "add-table", "authored", "--column", "note:text"],
+    ROOT,
+  ).catch(() => undefined);
+  const token = await new JwtTokenSigner(SECRET).sign(createTokenClaims(ALICE, "app_user"));
+
+  const response = await fetch(`${BASE_URL}/authored?limit=1`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  expect(response.status).toBe(200);
+  expect(Array.isArray(await response.json())).toBe(true);
+});

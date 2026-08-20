@@ -6,8 +6,6 @@ import {
   IconAuth,
   IconBackups,
   IconLogs,
-  IconPolicies,
-  IconSchema,
   IconSettings,
   IconStorage,
   IconTables,
@@ -16,8 +14,6 @@ import {
 
 const NAV: { id: NavId; label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
   { id: "tables", label: "Tables", Icon: IconTables },
-  { id: "schema", label: "Schema", Icon: IconSchema },
-  { id: "policies", label: "Policies", Icon: IconPolicies },
   { id: "storage", label: "Storage", Icon: IconStorage },
   { id: "backups", label: "Backups", Icon: IconBackups },
   { id: "auth", label: "Auth", Icon: IconAuth },

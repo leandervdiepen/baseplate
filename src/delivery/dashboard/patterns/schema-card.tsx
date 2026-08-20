@@ -27,7 +27,12 @@ export function SchemaCard({
       </header>
       <ul>
         {columns.map((column, index) => (
-          <ColumnRow key={column.name} column={column} last={index === columns.length - 1} />
+          <ColumnRow
+            key={column.name}
+            table={name}
+            column={column}
+            last={index === columns.length - 1}
+          />
         ))}
       </ul>
       {footer ? <div className="border-t border-[var(--color-border)]">{footer}</div> : null}
@@ -35,9 +40,19 @@ export function SchemaCard({
   );
 }
 
-function ColumnRow({ column, last }: { column: SchemaColumn; last: boolean }) {
+function ColumnRow({
+  table,
+  column,
+  last,
+}: {
+  table: string;
+  column: SchemaColumn;
+  last: boolean;
+}) {
   return (
     <li
+      // Where a foreign key line starts or lands, measured by SchemaGraph.
+      data-anchor={`${table}.${column.name}`}
       className={cn(
         "flex min-h-10 items-center gap-2 px-3",
         !last && "border-b border-[var(--color-border)]",
@@ -53,6 +68,9 @@ function ColumnRow({ column, last }: { column: SchemaColumn; last: boolean }) {
         {column.primaryKey ? <StatusPill>pk</StatusPill> : null}
         {column.references ? <StatusPill>fk</StatusPill> : null}
         {column.owner ? <StatusPill tone="accent">owner</StatusPill> : null}
+        {!column.primaryKey && !column.owner && column.nullable ? (
+          <StatusPill>null</StatusPill>
+        ) : null}
       </span>
     </li>
   );

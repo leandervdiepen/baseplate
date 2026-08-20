@@ -62,8 +62,13 @@ async function proxyLocalStack(
   try {
     const response = await fetch(target, init);
     const body = Buffer.from(await response.arrayBuffer());
+    // PostgREST answers `Prefer: count=exact` in Content-Range and nowhere
+    // else, so dropping it here would mean the studio could never say how many
+    // rows a caller can see.
+    const range = response.headers.get("content-range");
     res.writeHead(response.status, {
       "content-type": response.headers.get("content-type") ?? "application/json",
+      ...(range ? { "content-range": range } : {}),
     });
     res.end(body);
   } catch {

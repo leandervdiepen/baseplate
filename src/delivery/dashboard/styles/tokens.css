@@ -4,6 +4,8 @@
   --color-text: #0b1f16;
   --color-text-muted: #3d4f47;
   --color-border: #d7e0db;
+  /* For a line that has to read against the dotted canvas, not beside it. */
+  --color-border-strong: #a8b8af;
   --color-accent: #1f6b4a;
   --color-accent-strong: #17573c;
   --color-accent-subtle: #e4eee9;
@@ -58,11 +60,14 @@
   --size-dot: 8px;
   --size-dot-sm: 7px;
   --size-col-id: 180px;
+  --size-table-rail: 220px;
   --duration-press: 150ms;
   --duration-hover: 120ms;
   --duration-enter: 220ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --press-scale: 0.96;
+
+  --color-scrim: oklch(0.22 0.02 160 / 0.28);
 
   /* Depth. Layered and transparent so a surface reads the same on any ground. */
   --shadow-raised: 0 1px 1px oklch(0 0 0 / 0.04), 0 2px 4px oklch(0 0 0 / 0.04);

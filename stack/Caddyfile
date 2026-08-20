@@ -16,10 +16,15 @@
 	handle @options {
 		respond 204
 	}
-	handle /auth* {
+	# Matched on whole path segments. `/auth*` also matches `/authors`, so a
+	# table with a name starting `auth` would be answered by the auth service
+	# instead of the API, and the operator would see a baffling 404.
+	@auth path /auth /auth/*
+	handle @auth {
 		reverse_proxy auth:3001
 	}
-	handle /storage* {
+	@storage path /storage /storage/*
+	handle @storage {
 		reverse_proxy storage:3002
 	}
 	handle {

@@ -3,8 +3,6 @@ import { AuthPage } from "./features/auth.tsx";
 import { BackupsPage } from "./features/backups.tsx";
 import { FirstRun } from "./features/first-run.tsx";
 import { LogsPage } from "./features/logs.tsx";
-import { PoliciesPage } from "./features/policies.tsx";
-import { SchemaPage } from "./features/schema.tsx";
 import { SettingsPage } from "./features/settings.tsx";
 import { StoragePage } from "./features/storage.tsx";
 import { TablesPage } from "./features/tables.tsx";
@@ -87,20 +85,10 @@ export function App() {
           selected={table}
           onSelect={setTable}
           onNeedToken={() => setNav("auth")}
-          onEditPolicy={() => setNav("policies")}
-          onCreateTable={() => setNav("schema")}
           apiUp={status.apiUp}
           onProvision={runProvision}
         />
       ) : null}
-      {nav === "schema" ? (
-        <SchemaPage
-          apiUp={status.apiUp}
-          onOpenRows={() => setNav("tables")}
-          onProvision={() => void runProvision()}
-        />
-      ) : null}
-      {nav === "policies" ? <PoliciesPage /> : null}
       {nav === "storage" ? <StoragePage apiUp={status.apiUp} /> : null}
       {nav === "backups" ? <BackupsPage /> : null}
       {nav === "logs" ? <LogsPage target={status.target ?? "local"} /> : null}
