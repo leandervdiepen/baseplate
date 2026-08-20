@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const operator = createOperatorFor({ packageRoot: PACKAGE_ROOT, projectRoot: project });
+  const operator = await createOperatorFor({ packageRoot: PACKAGE_ROOT, projectRoot: project });
   try {
     if (command === "up") {
       const result = await operator.provision.execute(stackFromEnv(), {
@@ -269,15 +269,20 @@ async function confirmRestore(project: string, assumeYes: boolean): Promise<bool
   return answer.trim() === name;
 }
 
-/** The studio is a long-running server, so it replaces this process's job. */
+/**
+ * The studio is a long-running server, so it replaces this process's job.
+ *
+ * It starts through `bin/baseplate-dashboard.js` rather than reaching for tsx
+ * directly. That file is where Baseplate works out where tsx actually is, and
+ * npm hoists dependencies: on a real install tsx sits in the consumer's
+ * top-level node_modules, so a path under this package's own node_modules does
+ * not exist and this command died with MODULE_NOT_FOUND. One place knows.
+ */
 function runDashboard(project: string, port: number | undefined): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(
       process.execPath,
-      [
-        resolve(PACKAGE_ROOT, "node_modules/tsx/dist/cli.mjs"),
-        resolve(PACKAGE_ROOT, "src/delivery/operator-http/listen.ts"),
-      ],
+      [resolve(PACKAGE_ROOT, "bin/baseplate-dashboard.js")],
       {
         stdio: "inherit",
         env: {
