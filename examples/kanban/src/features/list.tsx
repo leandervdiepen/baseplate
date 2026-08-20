@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { client } from "../client.ts";
+import { Attachments } from "./attachments.tsx";
 import type { CardsRow, ListsRow } from "../database.ts";
 
 export function List({
@@ -94,15 +95,18 @@ export function List({
               onDrop(list.id, card.id);
             }}
           >
-            <span>{card.title}</span>
-            <button
-              className="button ghost"
-              type="button"
-              aria-label={`Delete card ${card.title}`}
-              onClick={() => void removeCard(card.id)}
-            >
-              ×
-            </button>
+            <div className="kcard-top">
+              <span>{card.title}</span>
+              <button
+                className="button ghost"
+                type="button"
+                aria-label={`Delete card ${card.title}`}
+                onClick={() => void removeCard(card.id)}
+              >
+                ×
+              </button>
+            </div>
+            <Attachments cardId={card.id} onError={onError} />
           </article>
         ))}
       </div>

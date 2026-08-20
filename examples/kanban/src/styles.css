@@ -161,8 +161,7 @@ main { padding: 20px; }
 .cards.over { outline: 2px dashed var(--accent); outline-offset: 3px; border-radius: 8px; }
 
 .kcard {
-  display: flex;
-  align-items: center;
+  display: grid;
   gap: 6px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -173,10 +172,36 @@ main { padding: 20px; }
 }
 .kcard:hover { box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
 .kcard.dragging { opacity: 0.4; }
-.kcard span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.kcard-top { display: flex; align-items: center; gap: 6px; }
+.kcard-top span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 /* A card is one line of text, not a toolbar. Its delete keeps a 24px target
    without forcing the whole card to the height of a full button. */
 .kcard .button.ghost { min-height: 24px; padding: 0 6px; font-size: 16px; line-height: 1; }
+
+/* Attachments sit under the title, and stay quiet until there are some. */
+.files { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.file { display: inline-flex; align-items: center; gap: 2px; }
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.attach {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+}
+.attach:hover { color: var(--accent); }
+.attach input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 .add { display: flex; gap: 6px; }
 .add .input { min-height: 36px; }
