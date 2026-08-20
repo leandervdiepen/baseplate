@@ -1,11 +1,14 @@
 export { createClient, type BaseplateClient, type CreateClientOptions } from "./client.ts";
+export { createAuth, type AuthClient, type AuthOptions } from "./auth.ts";
 export {
-  createAuth,
-  type AuthClient,
-  type AuthOptions,
+  AuthError,
+  type AuthChangeEvent,
+  type AuthListener,
+  type AuthResult,
   type AuthSession,
   type AuthUser,
-} from "./auth.ts";
+  type UserResult,
+} from "./auth-types.ts";
 export { QueryBuilder, type OrderOptions } from "./builder.ts";
 export type { Filter, FilterOperator, FilterValue } from "./filters.ts";
 export type { QueryResult } from "./request.ts";

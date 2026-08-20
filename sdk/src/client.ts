@@ -30,6 +30,7 @@ export function createClient<DB = Database>(
     options,
   );
   state.authorize = auth.authorize;
+  state.refresh = async () => (await auth.refreshSession()).data.session?.token;
   return {
     auth,
     storage: createStorage(state),

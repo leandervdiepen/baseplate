@@ -9,6 +9,8 @@ export type RequestState = {
   token: string | undefined;
   /** Called before every request so an expired access token refreshes first. */
   authorize?: () => Promise<string | undefined>;
+  /** Called after a 401, so a token that expired mid-flight costs one retry, not an error. */
+  refresh?: () => Promise<string | undefined>;
 };
 
 export async function request<T>(
@@ -16,23 +18,18 @@ export async function request<T>(
   path: string,
   init: RequestInit,
 ): Promise<QueryResult<T>> {
-  const headers = new Headers(init.headers);
   const token = state.authorize ? await state.authorize() : state.token;
-  if (token) {
-    headers.set("authorization", `Bearer ${token}`);
+  let attempt = await send(state, path, init, token);
+  if (attempt.response?.status === 401 && state.refresh) {
+    const renewed = await state.refresh();
+    // Replaying with the same token would just earn the same 401.
+    if (renewed && renewed !== token) {
+      attempt = await send(state, path, init, renewed);
+    }
   }
-  if (init.body && !headers.has("content-type")) {
-    headers.set("content-type", "application/json");
-  }
-  let response: Response;
-  try {
-    response = await fetch(`${state.url}${path}`, { ...init, headers });
-  } catch (cause) {
-    return {
-      data: null,
-      error: new Error(`Could not reach ${state.url}.`, { cause }),
-      status: 0,
-    };
+  const { response, error } = attempt;
+  if (!response) {
+    return { data: null, error, status: 0 };
   }
   if (!response.ok) {
     return { data: null, error: new Error(await readMessage(response)), status: response.status };
@@ -45,6 +42,28 @@ export async function request<T>(
     error: null,
     status: response.status,
   };
+}
+
+type Attempt = { response: Response; error: null } | { response: null; error: Error };
+
+async function send(
+  state: RequestState,
+  path: string,
+  init: RequestInit,
+  token: string | undefined,
+): Promise<Attempt> {
+  const headers = new Headers(init.headers);
+  if (token) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+  if (init.body && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
+  try {
+    return { response: await fetch(`${state.url}${path}`, { ...init, headers }), error: null };
+  } catch (cause) {
+    return { response: null, error: new Error(`Could not reach ${state.url}.`, { cause }) };
+  }
 }
 
 async function readMessage(response: Response): Promise<string> {

@@ -1,5 +1,10 @@
-import { afterEach, beforeEach, expect, test } from "vitest";
-import { createClient, memoryStorage, type SessionStorage } from "../../../sdk/src/index.ts";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import {
+  createClient,
+  memoryStorage,
+  type AuthChangeEvent,
+  type SessionStorage,
+} from "../../../sdk/src/index.ts";
 
 const originalFetch = globalThis.fetch;
 const user = { id: "11111111-1111-4111-8111-111111111111", email: "you@example.com" };
@@ -40,6 +45,7 @@ beforeEach(() => {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  vi.useRealTimers();
 });
 
 test("a signed-in session survives a new client on the same storage", async () => {
@@ -66,12 +72,15 @@ test("nothing is stored when persistence is off", async () => {
     password: "a-long-password",
   });
 
-  expect(createClient("http://api.test", { storage }).auth.getSession()).toBeUndefined();
+  expect(createClient("http://api.test", { storage }).auth.getSession()).toBeNull();
 });
 
 test("an expiring access token refreshes before the next query", async () => {
   serve(10);
-  const client = createClient("http://api.test", { storage: memoryStorage() });
+  const client = createClient("http://api.test", {
+    storage: memoryStorage(),
+    autoRefresh: false,
+  });
   await client.auth.signIn({ email: user.email, password: "a-long-password" });
 
   await client.from("items").select();
@@ -94,12 +103,27 @@ test("a live access token is reused rather than refreshed", async () => {
 
 test("concurrent queries on an expiring token refresh once", async () => {
   serve(10);
-  const client = createClient("http://api.test", { storage: memoryStorage() });
+  const client = createClient("http://api.test", {
+    storage: memoryStorage(),
+    autoRefresh: false,
+  });
   await client.auth.signIn({ email: user.email, password: "a-long-password" });
 
   await Promise.all([client.from("items").select(), client.from("items").select()]);
 
   expect(authCalls).toEqual(["/auth/login", "/auth/refresh"]);
+});
+
+test("the background timer refreshes before the token expires", async () => {
+  vi.useFakeTimers();
+  serve(600);
+  const client = createClient("http://api.test", { storage: memoryStorage() });
+  await client.auth.signIn({ email: user.email, password: "a-long-password" });
+
+  await vi.advanceTimersByTimeAsync(600_000);
+
+  expect(authCalls).toEqual(["/auth/login", "/auth/refresh"]);
+  expect(client.auth.getSession()?.token).toBe("access.2");
 });
 
 test("signing out clears storage and stops sending a token", async () => {
@@ -111,17 +135,17 @@ test("signing out clears storage and stops sending a token", async () => {
   await client.auth.signOut();
   await client.from("items").select();
 
-  expect(client.auth.getSession()).toBeUndefined();
-  expect(createClient("http://api.test", { storage }).auth.getSession()).toBeUndefined();
+  expect(client.auth.getSession()).toBeNull();
+  expect(createClient("http://api.test", { storage }).auth.getSession()).toBeNull();
   expect(bearers).toEqual([null]);
 });
 
-test("subscribers hear about sign in and sign out", async () => {
+test("subscribers hear the session they started with, then sign in and sign out", async () => {
   serve(3600);
   const client = createClient("http://api.test", { storage: memoryStorage() });
-  const seen: (string | undefined)[] = [];
-  const unsubscribe = client.auth.onAuthStateChange((session) => {
-    seen.push(session?.user.email);
+  const seen: [AuthChangeEvent, string | undefined][] = [];
+  const unsubscribe = client.auth.onAuthStateChange((event, session) => {
+    seen.push([event, session?.user.email]);
   });
 
   await client.auth.signIn({ email: user.email, password: "a-long-password" });
@@ -129,5 +153,9 @@ test("subscribers hear about sign in and sign out", async () => {
   unsubscribe();
   await client.auth.signIn({ email: user.email, password: "a-long-password" });
 
-  expect(seen).toEqual([user.email, undefined]);
+  expect(seen).toEqual([
+    ["INITIAL_SESSION", undefined],
+    ["SIGNED_IN", user.email],
+    ["SIGNED_OUT", undefined],
+  ]);
 });
