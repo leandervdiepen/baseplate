@@ -6,6 +6,7 @@ export * from "./types.ts";
 export { OperatorError } from "./http.ts";
 export * from "./auth.ts";
 export * from "./backups.ts";
+export * from "./projects.ts";
 export * from "./schema.ts";
 export * from "./stack.ts";
 export * from "./storage.ts";

@@ -182,3 +182,19 @@ export type CloudAccountSnapshot = {
   sshKeys: { name: string }[];
   zones: { name: string }[];
 };
+
+export type ProjectSummary = {
+  root: string;
+  name: string;
+  lastOpenedAt: string;
+  /** Its stack is the one holding the ports. Only one can be. */
+  running: boolean;
+  baseUrl: string;
+  /** The one this studio is serving. */
+  current: boolean;
+};
+
+export type ProjectList = {
+  current: string;
+  projects: ProjectSummary[];
+};

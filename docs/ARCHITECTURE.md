@@ -91,6 +91,7 @@ They do not read operator keys from `process.env`.
 | A CLI flag or printed line | `src/delivery/cli/` |
 | Localhost JSON for the dashboard | `src/delivery/operator-http/` |
 | A screen or component | `src/delivery/dashboard/` |
+| A setting an operator should never open a file to change | `CONFIG_KEYS` in `src/delivery/operator-http/handle-request.ts`, plus a field in Settings |
 | Operator MCP tool or protocol | `src/delivery/mcp/` |
 | Typed app client | `sdk/src/` (published as the `/client` subpath) |
 | A helper with no business meaning | `src/shared/` |
@@ -114,6 +115,13 @@ It is read-only from an operator's point of view and it changes when they instal
 `baseplate init` creates it; nothing else Baseplate ships is ever written there.
 
 `src/delivery/paths.ts` names both. Code that takes one must not assume the other.
+
+There is one file outside both: `~/.baseplate/projects.json`, the list of project
+directories this operator has opened.
+It exists because a project cannot be the authority on which other projects exist, and the studio
+has to offer them without being told.
+It holds paths and nothing else: no secrets, no config, no state that matters if it is deleted.
+Losing it costs one re-open.
 
 ## Where state lives
 
@@ -148,7 +156,7 @@ Nothing about schema editing is exposed publicly.
 | `ssh/` | Remote `StackRuntime` |
 | `jwt/` | `TokenSigner` |
 | `postgres/` | `SchemaAdmin`, against the operator's database |
-| `fs/` | `StackStateStore` |
+| `fs/` | `StackStateStore`, `ProjectDirectory` |
 | `clock/` | `Clock` |
 
 ## Tests and the layers

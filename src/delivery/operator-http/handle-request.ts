@@ -9,6 +9,7 @@ import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
 import { handleBackupRoute } from "./backups.ts";
 import { handleOverview } from "./overview.ts";
+import { dropProject, listProjects, openProject } from "./projects.ts";
 import { handleStorageRoute } from "./storage.ts";
 import { handleUsersRoute } from "./users.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
@@ -42,6 +43,18 @@ export async function handleOperatorRequest(
     }
     if (path === "/api/hetzner/account" && method === "GET") {
       sendJson(res, 200, await inspectAccount(root));
+      return;
+    }
+    if (path === "/api/projects" && method === "GET") {
+      await listProjects(root, res);
+      return;
+    }
+    if (path === "/api/project" && method === "POST") {
+      await openProject(req, res);
+      return;
+    }
+    if (path === "/api/project" && method === "DELETE") {
+      await dropProject(req, res);
       return;
     }
     if (path === "/api/config" && method === "POST") {

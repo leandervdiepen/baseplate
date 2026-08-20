@@ -13,6 +13,7 @@ export function AppShell({
   baseUrl,
   project,
   leaf,
+  projectControl,
   children,
 }: {
   current: NavId;
@@ -22,6 +23,7 @@ export function AppShell({
   baseUrl: string | null;
   project: { name: string; path: string };
   leaf?: string | null | undefined;
+  projectControl?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -36,6 +38,7 @@ export function AppShell({
         target={target}
         baseUrl={baseUrl}
         project={project}
+        {...(projectControl ? { projectControl } : {})}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar current={current} leaf={leaf} />

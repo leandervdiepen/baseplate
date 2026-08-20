@@ -8,6 +8,7 @@ import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
 import { serveMcp } from "../mcp/serve.ts";
 import { createOperatorFor, siteUrlFromEnv, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
+import { rememberProject } from "../project-directory.ts";
 import { BACKUP_USAGE, runBackupCommand, runRestoreCommand } from "./backup-command.ts";
 import { initProject, portValue } from "./init-command.ts";
 import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
       postgres: portValue(values["postgres-port"], "--postgres-port"),
       dashboard: portValue(values["dashboard-port"], "--dashboard-port"),
     });
+    rememberProject(project);
     console.log(`Wrote ${written}. Run \`baseplate up\` next.`);
     return;
   }

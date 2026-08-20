@@ -3,12 +3,16 @@ import { resolve } from "node:path";
 import { createServer as createViteServer } from "vite";
 import { dashboardPortFor } from "../operator-setup.ts";
 import { packageRootFrom, projectRoot } from "../paths.ts";
+import { currentProject, setCurrentProject } from "./current-project.ts";
 import { handleOperatorRequest } from "./handle-request.ts";
 import { crossSiteReason, isLocalhostHost, isLoopbackAddress } from "./localhost.ts";
+import { rememberProject } from "../project-directory.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
 const PROJECT_ROOT = projectRoot();
-// `--port` beats the project's config, which beats the default.
+// The port belongs to the project the studio was started in. Switching to
+// another from the studio keeps this port: the studio is where you already are,
+// and moving it would mean telling you a new address to go to.
 const PORT = Number(process.env.BASEPLATE_DASHBOARD_PORT) || dashboardPortFor(PROJECT_ROOT);
 
 /**
@@ -19,6 +23,9 @@ const PORT = Number(process.env.BASEPLATE_DASHBOARD_PORT) || dashboardPortFor(PR
 const HMR_PORT = PORT + 10_000;
 
 async function main(): Promise<void> {
+  setCurrentProject(PROJECT_ROOT);
+  rememberProject(PROJECT_ROOT);
+
   const vite = await createViteServer({
     configFile: resolve(PACKAGE_ROOT, "src/delivery/dashboard/vite.config.ts"),
     server: {
@@ -54,7 +61,11 @@ async function main(): Promise<void> {
         );
         return;
       }
-      void handleOperatorRequest({ packageRoot: PACKAGE_ROOT, projectRoot: PROJECT_ROOT }, req, res);
+      void handleOperatorRequest(
+        { packageRoot: PACKAGE_ROOT, projectRoot: currentProject() },
+        req,
+        res,
+      );
       return;
     }
     vite.middlewares(req, res, () => {

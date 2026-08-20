@@ -124,6 +124,15 @@ Every project gets 8080, 5432, and 8788 unless the operator names otherwise, and
 
 Which stack is running is not written down anywhere.
 Docker holds it, in a label on the containers, so nothing has to stay in step with reality.
+A stack whose label does not say where it came from still counts as running: it is holding the
+ports either way, and forgetting it would make the one-at-a-time rule blind to exactly the stacks
+it can explain least.
+
+The studio serves one project and can be pointed at another without being restarted.
+Switching is a change of view: it does not stop one stack or start another, because those take
+minutes and should be asked for.
+The list of projects to switch between is the operator's own, kept in `~/.baseplate/projects.json`,
+and `init` and opening the studio both add to it.
 
 The studio is delivery, not a domain type.
 Operator HTTP is delivery.

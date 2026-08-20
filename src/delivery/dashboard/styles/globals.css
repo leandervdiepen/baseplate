@@ -146,6 +146,12 @@
     animation: reveal var(--duration-move) var(--ease-out) both;
   }
 
+  /* A menu grows from the control that opened it. Never from nothing: an
+     element that appears at no size reads as arriving from somewhere else. */
+  .menu-enter {
+    animation: menu-enter var(--duration-hover) var(--ease-out) both;
+  }
+
   .empty-enter > * {
     animation: empty-enter var(--duration-enter) var(--ease-out) both;
   }
@@ -236,6 +242,18 @@
   to {
     opacity: 1;
     translate: 0 0;
+  }
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
   }
 }
 

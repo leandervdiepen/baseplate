@@ -7,6 +7,7 @@ export type {
 export type { Clock } from "./clock.ts";
 export type { CloudAccount, CloudAccountSnapshot } from "./cloud-account.ts";
 export type { CloudProvider } from "./cloud-provider.ts";
+export type { KnownProject, ProjectDirectory } from "./project-directory.ts";
 export type {
   LiveColumn,
   LiveTable,

@@ -10,6 +10,7 @@ import { TablesPage } from "./features/tables.tsx";
 import { getStatus, provision, type OperatorStatus } from "./lib/api/index.ts";
 import { AppShell, type NavId } from "./patterns/app-shell.tsx";
 import { Button } from "./primitives/button.tsx";
+import { ProjectSwitcher } from "./features/project-switcher.tsx";
 import { LogoMark } from "./primitives/icon.tsx";
 
 export function App() {
@@ -81,6 +82,9 @@ export function App() {
       baseUrl={status.baseUrl}
       project={status.project}
       leaf={nav === "tables" ? table : undefined}
+      projectControl={
+        <ProjectSwitcher name={status.project.name} path={status.project.path} />
+      }
     >
       {nav === "overview" ? (
         <OverviewPage status={status} onNavigate={setNav} onProvision={runProvision} />
