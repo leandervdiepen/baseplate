@@ -20,7 +20,9 @@
     "lint": "eslint src tests sdk/src stack/shared stack/auth/src stack/backup/src stack/migrate/src stack/storage/src",
     "lint:arch": "depcruise src --config dependency-cruiser.cjs",
     "dashboard": "node bin/baseplate-dashboard.js",
-    "baseplate": "node bin/baseplate.js"
+    "baseplate": "node bin/baseplate.js",
+    "build": "tsc -p sdk/tsconfig.build.json",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.12",
@@ -65,7 +67,14 @@
     "access": "public"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./client": "./sdk/src/index.ts"
-  }
+    ".": {
+      "types": "./sdk/dist/index.d.ts",
+      "default": "./sdk/dist/index.js"
+    },
+    "./client": {
+      "types": "./sdk/dist/index.d.ts",
+      "default": "./sdk/dist/index.js"
+    }
+  },
+  "types": "./sdk/dist/index.d.ts"
 }

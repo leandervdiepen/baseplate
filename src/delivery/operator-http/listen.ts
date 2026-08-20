@@ -4,7 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { dashboardPortFor } from "../operator-setup.ts";
 import { packageRootFrom, projectRoot } from "../paths.ts";
 import { handleOperatorRequest } from "./handle-request.ts";
-import { isLocalhostHost, isLoopbackAddress } from "./localhost.ts";
+import { crossSiteReason, isLocalhostHost, isLoopbackAddress } from "./localhost.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
 const PROJECT_ROOT = projectRoot();
@@ -43,6 +43,17 @@ async function main(): Promise<void> {
     }
     const url = req.url ?? "/";
     if (url.startsWith("/api/")) {
+      const reason = crossSiteReason(req);
+      if (reason) {
+        res.writeHead(403, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            code: "operator.cross_site",
+            message: `${reason} The studio only answers itself.`,
+          }),
+        );
+        return;
+      }
       void handleOperatorRequest({ packageRoot: PACKAGE_ROOT, projectRoot: PROJECT_ROOT }, req, res);
       return;
     }
