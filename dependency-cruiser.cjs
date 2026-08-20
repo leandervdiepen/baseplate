@@ -69,6 +69,27 @@ module.exports = {
         pathNot: "^src/shared/index\\.ts$",
       },
     },
+    {
+      name: "studio-patterns-know-no-product",
+      comment: "A studio pattern solves a layout problem, so it cannot reach a feature.",
+      severity: "error",
+      from: { path: "^src/delivery/dashboard/patterns" },
+      to: { path: "^src/delivery/dashboard/features" },
+    },
+    {
+      name: "studio-primitives-know-nothing",
+      comment: "A studio primitive is styled by tokens alone and reaches neither tier above it.",
+      severity: "error",
+      from: { path: "^src/delivery/dashboard/primitives" },
+      to: { path: "^src/delivery/dashboard/(patterns|features)" },
+    },
+    {
+      name: "studio-fetching-lives-in-features",
+      comment: "Only a feature talks to the operator; a pattern or primitive that fetches is product code.",
+      severity: "error",
+      from: { path: "^src/delivery/dashboard/(patterns|primitives)" },
+      to: { path: "^src/delivery/dashboard/lib/api" },
+    },
   ],
   options: {
     doNotFollow: { path: "node_modules" },
