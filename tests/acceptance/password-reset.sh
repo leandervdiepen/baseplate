@@ -20,6 +20,26 @@ post() {
     -d "$3"
 }
 
+# Credential endpoints allow ten calls a minute per IP, and the three scripts
+# before this one arrive from the same address, so a 429 here only means the
+# budget is spent. Wait it out and try again; the limiter says for how long.
+auth_post() {
+  local code
+  for _ in $(seq 1 8); do
+    code="$(curl -sS -o "$2" -D /tmp/baseplate-reset-headers -w "%{http_code}" \
+      -X POST "$BASE$1" \
+      -H "Content-Type: application/json" \
+      -d "$3")"
+    if [[ "$code" != "429" ]]; then
+      echo "$code"
+      return 0
+    fi
+    wait_s="$(sed -n 's/^[Rr]etry-[Aa]fter: *//p' /tmp/baseplate-reset-headers | tr -d '\r' | head -1)"
+    sleep "${wait_s:-5}"
+  done
+  echo "$code"
+}
+
 read_field() {
   node --input-type=module -e '
     import { readFileSync } from "node:fs";
@@ -28,9 +48,12 @@ read_field() {
   ' "$1" "$2"
 }
 
-code="$(post /auth/signup /tmp/baseplate-reset-signup.json \
+code="$(auth_post /auth/signup /tmp/baseplate-reset-signup.json \
   "{\"email\":\"$EMAIL\",\"password\":\"$OLD_PASSWORD\"}")"
-test "$code" = "201"
+if [[ "$code" != "201" ]]; then
+  echo "signup answered HTTP $code: $(cat /tmp/baseplate-reset-signup.json)"
+  exit 1
+fi
 REFRESH="$(read_field /tmp/baseplate-reset-signup.json refreshToken)"
 test -n "$REFRESH"
 
@@ -41,13 +64,15 @@ test "$code" = "200"
 
 # The send is not awaited - waiting on a mail server would time how long the
 # account lookup took - so the mail lands shortly after the 200, not before it.
+# Signup also sends a "Confirm your email" mail to the same address, so the
+# search must name the recovery subject or it can keep finding the wrong mail.
 TOKEN=""
 for _ in $(seq 1 40); do
-  ID="$(curl -sS --get --data-urlencode "query=to:$EMAIL" "$MAILPIT/api/v1/search" |
-    grep -oE '"ID":"[^"]+"' | head -1 | sed 's/.*:"//; s/"$//')"
+  ID="$(curl -sS --get --data-urlencode "query=to:$EMAIL subject:\"Reset your password\"" "$MAILPIT/api/v1/search" |
+    { grep -oE '"ID":"[^"]+"' || true; } | head -1 | sed 's/.*:"//; s/"$//')"
   if [[ -n "$ID" ]]; then
     TOKEN="$(curl -sS "$MAILPIT/api/v1/message/$ID" |
-      grep -oE 'reset-password\?token=[A-Za-z0-9_-]+' | head -1 | sed 's/.*token=//')"
+      { grep -oE 'reset-password\?token=[A-Za-z0-9_-]+' || true; } | head -1 | sed 's/.*token=//')"
   fi
   if [[ -n "$TOKEN" ]]; then
     break
@@ -60,9 +85,12 @@ if [[ -z "$TOKEN" ]]; then
   exit 1
 fi
 
-code="$(post /auth/recover/confirm /tmp/baseplate-reset-confirm.json \
+code="$(auth_post /auth/recover/confirm /tmp/baseplate-reset-confirm.json \
   "{\"token\":\"$TOKEN\",\"password\":\"$NEW_PASSWORD\"}")"
-test "$code" = "200"
+if [[ "$code" != "200" ]]; then
+  echo "recover/confirm answered HTTP $code: $(cat /tmp/baseplate-reset-confirm.json)"
+  exit 1
+fi
 test -n "$(read_field /tmp/baseplate-reset-confirm.json token)"
 
 # Whoever needed a reset may be recovering from someone else holding the old
@@ -73,11 +101,14 @@ if [[ "$code" != "401" ]]; then
   exit 1
 fi
 
-code="$(post /auth/login /tmp/baseplate-reset-new.json \
+code="$(auth_post /auth/login /tmp/baseplate-reset-new.json \
   "{\"email\":\"$EMAIL\",\"password\":\"$NEW_PASSWORD\"}")"
-test "$code" = "200"
+if [[ "$code" != "200" ]]; then
+  echo "login with the new password answered HTTP $code: $(cat /tmp/baseplate-reset-new.json)"
+  exit 1
+fi
 
-code="$(post /auth/login /tmp/baseplate-reset-old.json \
+code="$(auth_post /auth/login /tmp/baseplate-reset-old.json \
   "{\"email\":\"$EMAIL\",\"password\":\"$OLD_PASSWORD\"}")"
 if [[ "$code" != "401" ]]; then
   echo "the old password must not work after a reset, got HTTP $code"

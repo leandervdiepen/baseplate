@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { beforeAll, expect, test } from "vitest";
 import { resolve } from "node:path";
+import { authPost } from "./support/stack.ts";
 
 /**
  * Objects are rows with bytes attached, so the thing worth proving against a
@@ -156,12 +157,14 @@ function upload(token: string, bucket: string, key: string, body: string): Promi
 }
 
 async function signIn(email: string): Promise<string> {
-  const response = await fetch(`${BASE_URL}/auth/signup`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password: PASSWORD }),
-  });
-  return ((await response.json()) as { token: string }).token;
+  // Signup is rate limited per IP; authPost waits out a 429 spent by another
+  // file, and a failed signup must fail here, not as nine 401s later.
+  const response = await authPost("/auth/signup", { email, password: PASSWORD });
+  const text = await response.text();
+  if (response.status !== 201) {
+    throw new Error(`signup ${email} answered ${String(response.status)}: ${text}`);
+  }
+  return (JSON.parse(text) as { token: string }).token;
 }
 
 function cli(args: string[]): Promise<void> {
