@@ -21,6 +21,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  # An operator installs this package; they do not run this checkout. Every path
+  # that is only true here dies in this job rather than in someone's terminal.
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/smoke-install.sh
+
   # The definition of done: a real stack, real HTTP, two callers who cannot see
   # each other. Slower, and the only thing that actually proves the product.
   stack:
