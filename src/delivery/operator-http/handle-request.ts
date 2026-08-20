@@ -47,16 +47,16 @@ export async function handleOperatorRequest(
     }
     if (path === "/api/provision" && method === "POST") {
       const body = (await readJsonBody(req)) as { replace?: boolean };
-      const result = await createOperatorFor(roots, true).provision.execute(stackFromEnv(), {
-        replace: body.replace === true,
-      });
+      const result = await withOperator(roots, (operator) =>
+        operator.provision.execute(stackFromEnv(), { replace: body.replace === true }),
+      );
       sendJson(res, 200, result);
       return;
     }
     if (path === "/api/teardown" && method === "POST") {
       const body = (await readJsonBody(req)) as { destroy?: boolean };
       const destroy = body.destroy === true;
-      await createOperatorFor(roots, true).teardown.execute({ destroy });
+      await withOperator(roots, (operator) => operator.teardown.execute({ destroy }));
       sendJson(res, 200, { ok: true, destroyed: destroy });
       return;
     }
@@ -65,8 +65,9 @@ export async function handleOperatorRequest(
       if (!body.sub) {
         throw new DomainError("cli.sub_required", "mint-token requires sub.");
       }
-      const token = await createOperatorFor(roots, true).mintToken.execute(body.sub);
-      sendJson(res, 200, { token, sub: body.sub });
+      const sub = body.sub;
+      const token = await withOperator(roots, (operator) => operator.mintToken.execute(sub));
+      sendJson(res, 200, { token, sub });
       return;
     }
     if (path === "/api/schema" && method === "GET") {
@@ -77,13 +78,8 @@ export async function handleOperatorRequest(
       const change = createSchemaChange(
         (await readJsonBody(req)) as Parameters<typeof createSchemaChange>[0],
       );
-      const operator = createOperatorFor(roots, true);
-      try {
-        const result = await operator.changeSchema.execute(change);
-        sendJson(res, 200, { statement: result.statement, tables: result.tables });
-      } finally {
-        await operator.admin.close();
-      }
+      const result = await withOperator(roots, (operator) => operator.changeSchema.execute(change));
+      sendJson(res, 200, { statement: result.statement, tables: result.tables });
       return;
     }
     if (path.startsWith("/api/backups")) {
@@ -113,6 +109,25 @@ export async function handleOperatorRequest(
     sendJson(res, 404, { code: "operator.not_found", message: "Unknown operator route." });
   } catch (error) {
     sendError(res, error);
+  }
+}
+
+/**
+ * Every route that opens an operator closes it again, whatever happened. The
+ * pools are lazy, so a missed close leaks nothing today; it is one rule rather
+ * than a habit that holds until someone adds a route that does connect.
+ */
+async function withOperator<T>(
+  roots: OperatorRoots,
+  run: (operator: ReturnType<typeof createOperatorFor>) => Promise<T>,
+): Promise<T> {
+  const operator = createOperatorFor(roots, true);
+  try {
+    return await run(operator);
+  } finally {
+    await operator.admin.close();
+    await operator.storage.close();
+    await operator.backups.close();
   }
 }
 

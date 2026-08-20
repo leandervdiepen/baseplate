@@ -14,6 +14,7 @@ export type AuthDb = {
   findLiveRefreshToken(hash: string): Promise<StoredRefreshToken | undefined>;
   revokeRefreshToken(id: string): Promise<void>;
   revokeAllForUser(userId: string): Promise<void>;
+  pruneRefreshTokens(graceDays: number): Promise<number>;
   close(): Promise<void>;
 };
 
@@ -71,6 +72,23 @@ export function connectAuthDb(config: { authPassword: string }): AuthDb {
     async revokeRefreshToken(id) {
       await sql`update auth.refresh_tokens set revoked_at = now() where id = ${id}`;
     },
+    /**
+     * A revoked or expired refresh token is a row nobody can use and nobody
+     * will read. Without this they accumulate for the life of the project.
+     * Kept for a grace period so a support question can still be answered.
+     */
+    async pruneRefreshTokens(graceDays) {
+      const rows = await sql<{ count: string }[]>`
+        WITH gone AS (
+          DELETE FROM auth.refresh_tokens
+          WHERE (revoked_at IS NOT NULL AND revoked_at < now() - make_interval(days => ${graceDays}))
+             OR expires_at < now() - make_interval(days => ${graceDays})
+          RETURNING 1
+        )
+        SELECT count(*)::text AS count FROM gone`;
+      return Number(rows[0]?.count ?? "0");
+    },
+
     async revokeAllForUser(userId) {
       await sql`update auth.refresh_tokens set revoked_at = now()
         where user_id = ${userId} and revoked_at is null`;

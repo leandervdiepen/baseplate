@@ -122,7 +122,8 @@ export function connectStorageDb(config: { password: string }) {
         const rows = await tx<StorageRow[]>`
           SELECT bucket, key, owner_id, bytes, content_type, created_at, updated_at
           FROM storage.objects
-          WHERE bucket = ${bucket} AND key LIKE ${`${prefix.replaceAll("%", "\\%")}%`}
+          WHERE bucket = ${bucket}
+            AND key LIKE ${`${escapeLike(prefix)}%`} ESCAPE '\\'
           ORDER BY key
           LIMIT ${limit} OFFSET ${offset}`;
         return rows.map(toObject);
@@ -172,6 +173,11 @@ function toObject(row: StorageRow): StoredObject {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
+}
+
+/** `%` and `_` are both wildcards, so a prefix containing either must say so. */
+function escapeLike(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
 }
 
 function isUniqueViolation(error: unknown): boolean {

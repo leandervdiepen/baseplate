@@ -21,6 +21,25 @@ const server = createServer((req, res) => {
   });
 });
 
+const PRUNE_EVERY_MS = 6 * 60 * 60 * 1000;
+const PRUNE_GRACE_DAYS = Number(process.env.REFRESH_TOKEN_GRACE_DAYS ?? "7");
+
+// Housekeeping, not a feature. A failure here is a log line, never a 500.
+setInterval(() => {
+  void db
+    .pruneRefreshTokens(PRUNE_GRACE_DAYS)
+    .then((removed) => {
+      if (removed > 0) {
+        process.stdout.write(`auth: pruned ${String(removed)} spent refresh token(s)\n`);
+      }
+    })
+    .catch((error: unknown) => {
+      process.stderr.write(
+        `auth: prune failed: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+    });
+}, PRUNE_EVERY_MS).unref();
+
 server.listen(port, "0.0.0.0", () => {
   process.stdout.write(
     `auth listening on ${port} (access ${accessTtlSeconds}s, refresh ${refreshTtlSeconds}s)\n`,
