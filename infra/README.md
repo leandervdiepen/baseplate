@@ -42,5 +42,13 @@ BASEPLATE_URL=https://<hostname> npm run test:acceptance
 npx @diepen/baseplate destroy                             # removes the server too
 ```
 
-State lives in `infra/` as local Terraform state (gitignored) plus the project's
-`.baseplate/state.json`.
+## Where state lives
+
+Nothing mutable is written here.
+This directory is read-only package content: it ships with a Baseplate version and an upgrade replaces it.
+
+Terraform runs in the project instead.
+On every run Baseplate copies these files into `<project>/.baseplate/infra/` and works there, so the state, the lock file and the downloaded providers belong to one project and survive an upgrade.
+Two projects on the same machine therefore cannot address each other's server.
+
+`.baseplate/` is gitignored in full, which matters because Terraform state holds the server's details.

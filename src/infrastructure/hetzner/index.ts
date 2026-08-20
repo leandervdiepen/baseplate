@@ -1,2 +1,2 @@
-export { HetznerCloudProvider } from "./provider.ts";
+export { HetznerCloudProvider, syncTerraformDir } from "./provider.ts";
 export { HetznerAccount, type HetznerAccountConfig } from "./account.ts";

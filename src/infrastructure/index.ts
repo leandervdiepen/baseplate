@@ -23,7 +23,7 @@ export {
   runningStacks,
 } from "./docker/index.ts";
 export { FileProjectDirectory, FileStackStateStore } from "./fs/index.ts";
-export { HetznerAccount, HetznerCloudProvider } from "./hetzner/index.ts";
+export { HetznerAccount, HetznerCloudProvider, syncTerraformDir } from "./hetzner/index.ts";
 export { JwtTokenSigner } from "./jwt/index.ts";
 export {
   MemoryClock,
@@ -57,7 +57,10 @@ export type OperatorConfig = {
   postgresPort: number;
   statePath: string;
   httpPort: number;
-  infraDir: string;
+  /** Terraform as shipped, read-only. */
+  infraSourceDir: string;
+  /** Where this project's Terraform state and providers live. */
+  infraWorkDir: string;
   hcloudToken: string;
   hetznerDnsToken: string;
   hetznerDnsZone: string;
@@ -126,7 +129,8 @@ export function createOperator(config: OperatorConfig): Operator {
   }
 
   const cloud = new HetznerCloudProvider({
-    infraDir: config.infraDir,
+    sourceDir: config.infraSourceDir,
+    workDir: config.infraWorkDir,
     token: config.hcloudToken,
     dnsToken: config.hetznerDnsToken,
     dnsZone: config.hetznerDnsZone,

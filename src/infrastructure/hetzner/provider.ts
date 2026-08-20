@@ -1,10 +1,14 @@
 import { spawn } from "node:child_process";
+import { cpSync, mkdirSync } from "node:fs";
 import { createServer, type Server, type Stack } from "#domain";
 import type { CloudProvider } from "#application";
 import { InfraError } from "#shared";
 
 export type HetznerCloudConfig = {
-  infraDir: string;
+  /** The Terraform that ships with this version of Baseplate. Read-only. */
+  sourceDir: string;
+  /** This project's own copy, where state and providers live. */
+  workDir: string;
   token: string;
   dnsToken: string;
   dnsZone: string;
@@ -18,6 +22,7 @@ export class HetznerCloudProvider implements CloudProvider {
   constructor(private readonly config: HetznerCloudConfig) {}
 
   async createServer(_stack: Stack): Promise<Server> {
+    this.prepareWorkDir();
     await this.terraform(["init", "-input=false"]);
     await this.terraform(["apply", "-auto-approve", "-input=false", ...this.tfVars()]);
     const outputs = await this.outputs();
@@ -29,7 +34,28 @@ export class HetznerCloudProvider implements CloudProvider {
   async ensureDns(_stack: Stack, _server: Server): Promise<void> {}
 
   async destroyServer(_serverId: string): Promise<void> {
+    // `init` first, because a project can be restored from a backup or opened
+    // on another machine with its state present and no providers downloaded.
+    // Without this, destroy fails and the operator keeps paying for a server.
+    this.prepareWorkDir();
+    await this.terraform(["init", "-input=false"]);
     await this.terraform(["destroy", "-auto-approve", "-input=false", ...this.tfVars()]);
+  }
+
+  /**
+   * Terraform writes state, a lock file, and a few hundred megabytes of
+   * providers next to the configuration it is given. That configuration ships
+   * with Baseplate, so running there put one mutable directory behind every
+   * project on the machine and inside a directory that an upgrade replaces:
+   * two projects would fight over one state file, and installing a new version
+   * could lose the record of a running server.
+   *
+   * So the configuration is copied into the project on every run and Terraform
+   * works there. The copy overwrites the `.tf` files, which is how an upgrade
+   * reaches an existing project, and leaves everything Terraform itself wrote.
+   */
+  private prepareWorkDir(): void {
+    syncTerraformDir(this.config.sourceDir, this.config.workDir);
   }
 
   private tfVars(): string[] {
@@ -49,14 +75,14 @@ export class HetznerCloudProvider implements CloudProvider {
       HCLOUD_TOKEN: this.config.token,
       HETZNER_DNS_TOKEN: this.config.dnsToken,
     };
-    return run("terraform", args, this.config.infraDir, env);
+    return run("terraform", args, this.config.workDir, env);
   }
 
   private async outputs(): Promise<{ server_id: string; ipv4: string }> {
     const raw = await capture(
       "terraform",
       ["output", "-json"],
-      this.config.infraDir,
+      this.config.workDir,
       {
         ...process.env,
         HCLOUD_TOKEN: this.config.token,
@@ -68,6 +94,17 @@ export class HetznerCloudProvider implements CloudProvider {
     };
     return { server_id: parsed.server_id.value, ipv4: parsed.ipv4.value };
   }
+}
+
+/**
+ * Copy the shipped configuration over whatever is in the project, and touch
+ * nothing else. State, the lock file and the providers were written by
+ * Terraform and are the project's; the `.tf` files are Baseplate's and are
+ * replaced, which is how an upgrade reaches a project that already exists.
+ */
+export function syncTerraformDir(sourceDir: string, workDir: string): void {
+  mkdirSync(workDir, { recursive: true });
+  cpSync(sourceDir, workDir, { recursive: true });
 }
 
 function run(
