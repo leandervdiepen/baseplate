@@ -23,6 +23,13 @@ module.exports = {
       to: { path: "^src/delivery" },
     },
     {
+      name: "shared-no-dependencies",
+      comment: "Shared sits beside the layers and has no domain meaning, so it depends on none of them.",
+      severity: "error",
+      from: { path: "^src/shared" },
+      to: { path: "^src/(domain|application|infrastructure|delivery)" },
+    },
+    {
       name: "domain-via-index",
       comment: "Outside domain, import only src/domain/index.ts (or #domain).",
       severity: "error",
@@ -40,6 +47,26 @@ module.exports = {
       to: {
         path: "^src/application/",
         pathNot: "^src/application/index\\.ts$",
+      },
+    },
+    {
+      name: "infrastructure-via-index",
+      comment: "Outside infrastructure, import only src/infrastructure/index.ts (or #infrastructure).",
+      severity: "error",
+      from: { pathNot: "^src/infrastructure" },
+      to: {
+        path: "^src/infrastructure/",
+        pathNot: "^src/infrastructure/index\\.ts$",
+      },
+    },
+    {
+      name: "shared-via-index",
+      comment: "Outside shared, import only src/shared/index.ts (or #shared).",
+      severity: "error",
+      from: { pathNot: "^src/shared" },
+      to: {
+        path: "^src/shared/",
+        pathNot: "^src/shared/index\\.ts$",
       },
     },
   ],
