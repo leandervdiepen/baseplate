@@ -1,8 +1,12 @@
+import { existsSync, readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { resolve } from "node:path";
 import { createSchemaChange, DomainError } from "#domain";
 import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
 import { createOperatorFor, type OperatorRoots, stackFromEnv } from "../operator-setup.ts";
+import { CONFIG_FILE } from "../paths.ts";
 import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
+import { parseEnvMap } from "./env-file.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
 import { inspectAccount } from "./hetzner-account.ts";
@@ -55,6 +59,10 @@ export async function handleOperatorRequest(
     }
     if (path === "/api/project" && method === "DELETE") {
       await dropProject(req, res);
+      return;
+    }
+    if (path === "/api/config" && method === "GET") {
+      sendJson(res, 200, readConfig(root));
       return;
     }
     if (path === "/api/config" && method === "POST") {
@@ -196,6 +204,10 @@ async function readHistory(roots: OperatorRoots): Promise<unknown> {
   }
 }
 
+/**
+ * What the studio may write into `baseplate.env`. The list is here rather than
+ * open-ended so a request cannot set a key nobody meant to expose.
+ */
 const CONFIG_KEYS = [
   "TARGET",
   "SITE_ADDRESS",
@@ -215,7 +227,30 @@ const CONFIG_KEYS = [
   "SMTP_FROM",
   "SMTP_SECURE",
   "REQUIRE_EMAIL_CONFIRM",
+  "CORS_ORIGIN",
+  "HTTP_PORT",
+  "POSTGRES_PORT",
+  "STORAGE_ENDPOINT",
+  "STORAGE_BUCKET",
+  "STORAGE_REGION",
+  "STORAGE_MAX_BYTES",
+  "BACKUP_EVERY",
+  "DRILL_EVERY",
+  "BACKUP_KEEP",
+  "BACKUP_S3_ENDPOINT",
+  "BACKUP_S3_BUCKET",
+  "BACKUP_S3_REGION",
+  "BACKUP_S3_ACCESS_KEY",
+  "BACKUP_S3_SECRET_KEY",
 ] as const;
+
+/** Written only when a value is given, never cleared by an empty field. */
+const SECRET_KEYS = new Set<string>([
+  "HCLOUD_TOKEN",
+  "HETZNER_DNS_TOKEN",
+  "SMTP_PASS",
+  "BACKUP_S3_SECRET_KEY",
+]);
 
 async function saveConfig(
   root: string,
@@ -223,13 +258,53 @@ async function saveConfig(
   res: ServerResponse,
 ): Promise<void> {
   const body = (await readJsonBody(req)) as Record<string, string | undefined>;
+  writeOperatorEnv(root, configUpdates(body));
+  sendJson(res, 200, { ok: true });
+}
+
+/**
+ * What a save actually changes.
+ *
+ * A secret left blank means "keep the one you have", because the field it came
+ * from shows a placeholder rather than the value. Everything else left blank
+ * means "clear it", which is the only way to stop sending backups off-machine
+ * once you have started. A key nobody put on the list is ignored either way.
+ */
+export function configUpdates(body: Record<string, string | undefined>): Record<string, string> {
   const updates: Record<string, string> = {};
   for (const key of CONFIG_KEYS) {
     const value = body[key];
-    if (typeof value === "string" && value.length > 0) {
+    if (typeof value !== "string") {
+      continue;
+    }
+    if (value.length > 0 || !SECRET_KEYS.has(key)) {
       updates[key] = value;
     }
   }
-  writeOperatorEnv(root, updates);
-  sendJson(res, 200, { ok: true });
+  return updates;
+}
+
+/**
+ * The settings as they stand. Secrets answer whether one is stored, never with
+ * the value: the studio has no reason to hold a token it is not about to send,
+ * and a page that shows one is a page that can leak one.
+ */
+function readConfig(root: string): {
+  values: Record<string, string>;
+  secrets: Record<string, boolean>;
+} {
+  const configPath = resolve(root, CONFIG_FILE);
+  const current = existsSync(configPath)
+    ? parseEnvMap(readFileSync(configPath, "utf8"))
+    : {};
+  const values: Record<string, string> = {};
+  const secrets: Record<string, boolean> = {};
+  for (const key of CONFIG_KEYS) {
+    if (SECRET_KEYS.has(key)) {
+      secrets[key] = (current[key] ?? "").length > 0;
+    } else {
+      values[key] = current[key] ?? "";
+    }
+  }
+  return { values, secrets };
 }

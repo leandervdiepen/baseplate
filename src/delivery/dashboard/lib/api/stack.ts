@@ -7,6 +7,14 @@ export const getOverview = (): Promise<Overview> => get<Overview>("/api/overview
 
 export const firstRunLocal = (): Promise<void> => postNothing("/api/first-run", { target: "local" });
 
+export type ConfigSnapshot = {
+  values: Record<string, string>;
+  /** Whether one is stored, never the value itself. */
+  secrets: Record<string, boolean>;
+};
+
+export const getConfig = (): Promise<ConfigSnapshot> => get<ConfigSnapshot>("/api/config");
+
 export const saveConfig = (updates: Record<string, string>): Promise<void> =>
   postNothing("/api/config", updates);
 
