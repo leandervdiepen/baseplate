@@ -5,48 +5,13 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
+source tests/acceptance/lib.sh
 
-BASE="${BASEPLATE_URL:-http://127.0.0.1:8080}"
 PORT_FROM_ENV="$(sed -n 's/^MAILPIT_UI_PORT=//p' .baseplate/stack.env 2>/dev/null | head -1 || true)"
 MAILPIT="${MAILPIT_URL:-http://127.0.0.1:${PORT_FROM_ENV:-8025}}"
-EMAIL="reset-$RANDOM-$RANDOM@example.com"
+EMAIL="reset-$(unique)@example.com"
 OLD_PASSWORD="correct horse battery staple"
 NEW_PASSWORD="a-different-long-password"
-
-post() {
-  curl -sS -o "$2" -w "%{http_code}" \
-    -X POST "$BASE$1" \
-    -H "Content-Type: application/json" \
-    -d "$3"
-}
-
-# Credential endpoints allow ten calls a minute per IP, and the three scripts
-# before this one arrive from the same address, so a 429 here only means the
-# budget is spent. Wait it out and try again; the limiter says for how long.
-auth_post() {
-  local code
-  for _ in $(seq 1 8); do
-    code="$(curl -sS -o "$2" -D /tmp/baseplate-reset-headers -w "%{http_code}" \
-      -X POST "$BASE$1" \
-      -H "Content-Type: application/json" \
-      -d "$3")"
-    if [[ "$code" != "429" ]]; then
-      echo "$code"
-      return 0
-    fi
-    wait_s="$(sed -n 's/^[Rr]etry-[Aa]fter: *//p' /tmp/baseplate-reset-headers | tr -d '\r' | head -1)"
-    sleep "${wait_s:-5}"
-  done
-  echo "$code"
-}
-
-read_field() {
-  node --input-type=module -e '
-    import { readFileSync } from "node:fs";
-    const [file, field] = process.argv.slice(1);
-    process.stdout.write(String(JSON.parse(readFileSync(file, "utf8"))[field] ?? ""));
-  ' "$1" "$2"
-}
 
 code="$(auth_post /auth/signup /tmp/baseplate-reset-signup.json \
   "{\"email\":\"$EMAIL\",\"password\":\"$OLD_PASSWORD\"}")"
@@ -59,7 +24,7 @@ test -n "$REFRESH"
 
 # Always 200, whether or not the address has an account. Saying otherwise would
 # turn this form into a list of everybody who uses the app.
-code="$(post /auth/recover /tmp/baseplate-reset-ask.json "{\"email\":\"$EMAIL\"}")"
+code="$(auth_post /auth/recover /tmp/baseplate-reset-ask.json "{\"email\":\"$EMAIL\"}")"
 test "$code" = "200"
 
 # The send is not awaited - waiting on a mail server would time how long the
@@ -95,7 +60,7 @@ test -n "$(read_field /tmp/baseplate-reset-confirm.json token)"
 
 # Whoever needed a reset may be recovering from someone else holding the old
 # password, so the sessions that password bought die with it.
-code="$(post /auth/refresh /tmp/baseplate-reset-refresh.json "{\"refreshToken\":\"$REFRESH\"}")"
+code="$(auth_post /auth/refresh /tmp/baseplate-reset-refresh.json "{\"refreshToken\":\"$REFRESH\"}")"
 if [[ "$code" != "401" ]]; then
   echo "the refresh token from before the reset must be dead, got HTTP $code"
   exit 1

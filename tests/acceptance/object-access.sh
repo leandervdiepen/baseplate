@@ -4,27 +4,30 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
+source tests/acceptance/lib.sh
 
-BASE="${BASEPLATE_URL:-http://127.0.0.1:8080}"
-BUCKET="acceptance-$RANDOM"
-EMAIL_A="acc-a-$RANDOM@example.com"
-EMAIL_B="acc-b-$RANDOM@example.com"
+RUN="$(unique)"
+BUCKET="acceptance-$RUN"
+EMAIL_A="acc-a-$RUN@example.com"
+EMAIL_B="acc-b-$RUN@example.com"
 PASSWORD="correct horse battery staple"
-BODY_A="from-a-$RANDOM"
-BODY_B="from-b-$RANDOM"
+BODY_A="from-a-$RUN"
+BODY_B="from-b-$RUN"
 
 # A fresh Baseplate has no buckets. The operator makes them, exactly like tables.
 ./scripts/dev storage add-bucket "$BUCKET" >/dev/null
+# A run that dies halfway should not leave its bucket behind for the next one.
+trap './scripts/dev storage rm-bucket "$BUCKET" >/dev/null 2>&1 || true' EXIT
 
 signup() {
-  curl -sS -X POST "$BASE/auth/signup" \
-    -H "Content-Type: application/json" \
-    -d "{\"email\":\"$1\",\"password\":\"$PASSWORD\"}" |
-    node --input-type=module -e '
-      let raw = "";
-      for await (const chunk of process.stdin) raw += chunk;
-      process.stdout.write(JSON.parse(raw).token);
-    '
+  local code
+  code="$(auth_post /auth/signup /tmp/baseplate-object-auth.json \
+    "{\"email\":\"$1\",\"password\":\"$PASSWORD\"}")"
+  if [[ "$code" != "201" ]]; then
+    echo "signup answered HTTP $code: $(cat /tmp/baseplate-object-auth.json)" >&2
+    exit 1
+  fi
+  read_field /tmp/baseplate-object-auth.json token
 }
 
 put_object() {
@@ -113,7 +116,5 @@ if [[ "$code" -lt 400 ]]; then
   echo "tampered token must get nothing, got HTTP $code"
   exit 1
 fi
-
-./scripts/dev storage rm-bucket "$BUCKET" >/dev/null
 
 echo "acceptance ok: two users, disjoint objects, missing and tampered rejected"

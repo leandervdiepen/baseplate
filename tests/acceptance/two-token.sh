@@ -2,12 +2,13 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
+source tests/acceptance/lib.sh
 
-BASE="${BASEPLATE_URL:-http://127.0.0.1:8080}"
 SUB_A="11111111-1111-4111-8111-111111111111"
 SUB_B="22222222-2222-4222-8222-222222222222"
-BODY_A="from-a-$RANDOM"
-BODY_B="from-b-$RANDOM"
+RUN="$(unique)"
+BODY_A="from-a-$RUN"
+BODY_B="from-b-$RUN"
 
 # A fresh Baseplate has no app tables. The operator makes them; nothing in the
 # repo declares them. Creating it here is part of what this proves.

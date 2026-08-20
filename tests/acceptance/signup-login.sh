@@ -2,23 +2,20 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
+source tests/acceptance/lib.sh
 
-BASE="${BASEPLATE_URL:-http://127.0.0.1:8080}"
-STAMP="$RANDOM"
-EMAIL_A="a-$STAMP@example.com"
-EMAIL_B="b-$STAMP@example.com"
+RUN="$(unique)"
+EMAIL_A="a-$RUN@example.com"
+EMAIL_B="b-$RUN@example.com"
 PASSWORD="a-long-password"
-BODY_A="from-a-$STAMP"
-BODY_B="from-b-$STAMP"
+BODY_A="from-a-$RUN"
+BODY_B="from-b-$RUN"
 
 ./scripts/dev schema add-table items --column body:text >/dev/null 2>&1 || true
 
 signup() {
-  local email="$1"
-  curl -sS -o /tmp/baseplate-auth.json -w "%{http_code}" \
-    -X POST "$BASE/auth/signup" \
-    -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}"
+  auth_post /auth/signup /tmp/baseplate-auth.json \
+    "{\"email\":\"$1\",\"password\":\"$PASSWORD\"}"
 }
 
 post_item() {
@@ -40,12 +37,18 @@ get_items() {
 }
 
 code="$(signup "$EMAIL_A")"
-test "$code" = "201"
-TOKEN_A="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log(JSON.parse(readFileSync("/tmp/baseplate-auth.json","utf8")).token)')"
+if [[ "$code" != "201" ]]; then
+  echo "signup answered HTTP $code: $(cat /tmp/baseplate-auth.json)"
+  exit 1
+fi
+TOKEN_A="$(read_field /tmp/baseplate-auth.json token)"
 
 code="$(signup "$EMAIL_B")"
-test "$code" = "201"
-TOKEN_B="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log(JSON.parse(readFileSync("/tmp/baseplate-auth.json","utf8")).token)')"
+if [[ "$code" != "201" ]]; then
+  echo "signup answered HTTP $code: $(cat /tmp/baseplate-auth.json)"
+  exit 1
+fi
+TOKEN_B="$(read_field /tmp/baseplate-auth.json token)"
 
 code="$(post_item "$TOKEN_A" "$BODY_A")"
 test "$code" = "201"
