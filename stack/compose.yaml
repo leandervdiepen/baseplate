@@ -1,6 +1,14 @@
+# One project's stack runs at a time. These labels are how the operator tool
+# recognises another project's stack and can name the directory that started it.
+x-baseplate-labels: &baseplate-labels
+  baseplate.project-root: "${BASEPLATE_PROJECT_ROOT:-}"
+  baseplate.http-port: "${HTTP_PORT:-8080}"
+
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
+    labels: *baseplate-labels
     environment:
       POSTGRES_DB: app
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -32,6 +40,8 @@ services:
 
   postgrest:
     image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    labels: *baseplate-labels
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,6 +58,8 @@ services:
 
   auth:
     build: ./auth
+    restart: unless-stopped
+    labels: *baseplate-labels
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,6 +89,8 @@ services:
 
   caddy:
     image: caddy:2.8-alpine
+    restart: unless-stopped
+    labels: *baseplate-labels
     depends_on:
       postgrest:
         condition: service_started
@@ -86,6 +100,7 @@ services:
       - "${HTTP_PORT:-8080}:8080"
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

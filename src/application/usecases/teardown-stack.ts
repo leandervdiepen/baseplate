@@ -8,12 +8,23 @@ export type TeardownStackDeps = {
   store: StackStateStore;
 };
 
+export type TeardownOptions = {
+  /**
+   * Stopping and destroying are different things. Stopping keeps the database
+   * and the server; destroying removes the volumes and the server with them.
+   */
+  readonly destroy: boolean;
+};
+
 export class TeardownStack {
   constructor(private readonly deps: TeardownStackDeps) {}
 
-  async execute(): Promise<void> {
+  async execute(options: TeardownOptions = { destroy: false }): Promise<void> {
     const record = await this.deps.store.load();
-    await this.deps.runtime.down(record?.server);
+    await this.deps.runtime.down(record?.server, { volumes: options.destroy });
+    if (!options.destroy) {
+      return;
+    }
     if (record) {
       await this.deps.cloud.destroyServer(record.server.id);
     }

@@ -23,7 +23,14 @@ test("provision creates a server, applies the stack, and stores the URL", async 
   const runtime = new MemoryStackRuntime();
   const store = new MemoryStackStateStore();
   const clock = new MemoryClock();
-  const useCase = new ProvisionStack({ cloud, runtime, store, clock, httpPort: 8080 });
+  const useCase = new ProvisionStack({
+    cloud,
+    runtime,
+    store,
+    clock,
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  });
 
   const result = await useCase.execute(stack);
 
@@ -44,6 +51,7 @@ test("provision fails when the stack never becomes healthy", async () => {
     store: new MemoryStackStateStore(),
     clock: new MemoryClock(),
     httpPort: 8080,
+    projectName: "baseplate-app-1111",
   });
 
   await expect(useCase.execute(stack)).rejects.toMatchObject({
@@ -61,14 +69,36 @@ test("teardown stops the runtime, destroys the server, and clears state", async 
     store,
     clock: new MemoryClock(),
     httpPort: 8080,
+    projectName: "baseplate-app-1111",
   });
   const record = await provision.execute(stack);
 
-  await new TeardownStack({ cloud, runtime, store }).execute();
+  await new TeardownStack({ cloud, runtime, store }).execute({ destroy: true });
 
   expect(runtime.downCalls).toBe(1);
+  expect(runtime.removedVolumes).toBe(true);
   expect(cloud.destroyed).toEqual([record.server.id]);
   expect(store.record).toBeUndefined();
+});
+
+test("down stops the stack but keeps the volumes and the server", async () => {
+  const cloud = new MemoryCloudProvider();
+  const runtime = new MemoryStackRuntime();
+  const store = new MemoryStackStateStore();
+  const record = await new ProvisionStack({
+    cloud,
+    runtime,
+    store,
+    clock: new MemoryClock(),
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  }).execute(stack);
+
+  await new TeardownStack({ cloud, runtime, store }).execute({ destroy: false });
+
+  expect(runtime.removedVolumes).toBe(false);
+  expect(cloud.destroyed).toEqual([]);
+  expect(store.record).toEqual(record);
 });
 
 test("teardown still stops the runtime when nothing was provisioned", async () => {
@@ -77,8 +107,73 @@ test("teardown still stops the runtime when nothing was provisioned", async () =
     cloud: new MemoryCloudProvider(),
     runtime,
     store: new MemoryStackStateStore(),
-  }).execute();
+  }).execute({ destroy: true });
   expect(runtime.downCalls).toBe(1);
+});
+
+test("provision refuses while another project's stack holds the ports", async () => {
+  const runtime = new MemoryStackRuntime();
+  runtime.running = [
+    {
+      projectName: "baseplate-kanban-6666",
+      projectRoot: "/Users/dev/apps/kanban",
+      baseUrl: "http://127.0.0.1:8080",
+    },
+  ];
+  const useCase = new ProvisionStack({
+    cloud: new MemoryCloudProvider(),
+    runtime,
+    store: new MemoryStackStateStore(),
+    clock: new MemoryClock(),
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  });
+
+  await expect(useCase.execute(stack)).rejects.toMatchObject({
+    code: "stack.another_running",
+    message: /'kanban' is already running on http:\/\/127\.0\.0\.1:8080/,
+  });
+  expect(runtime.upCalls).toBe(0);
+});
+
+test("provision with replace stops the other project first", async () => {
+  const runtime = new MemoryStackRuntime();
+  runtime.running = [
+    { projectName: "baseplate-kanban-6666", projectRoot: "/Users/dev/kanban", baseUrl: "" },
+  ];
+  const useCase = new ProvisionStack({
+    cloud: new MemoryCloudProvider(),
+    runtime,
+    store: new MemoryStackStateStore(),
+    clock: new MemoryClock(),
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  });
+
+  await useCase.execute(stack, { replace: true });
+
+  expect(runtime.stopped).toEqual(["baseplate-kanban-6666"]);
+  expect(runtime.upCalls).toBe(1);
+});
+
+test("this project's own stack already running is not another project", async () => {
+  const runtime = new MemoryStackRuntime();
+  runtime.running = [
+    { projectName: "baseplate-app-1111", projectRoot: "/Users/dev/app", baseUrl: "" },
+  ];
+  const useCase = new ProvisionStack({
+    cloud: new MemoryCloudProvider(),
+    runtime,
+    store: new MemoryStackStateStore(),
+    clock: new MemoryClock(),
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  });
+
+  await useCase.execute(stack);
+
+  expect(runtime.stopped).toEqual([]);
+  expect(runtime.upCalls).toBe(1);
 });
 
 test("mint-token signs claims for a caller", async () => {

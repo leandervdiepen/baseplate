@@ -5,9 +5,11 @@ export const USAGE = `Usage: baseplate <command>
 
   init [--port N]          Start a project here: config, secrets, state
                            Also --postgres-port N and --dashboard-port N.
-                           Any port you leave out is picked from what is free.
-  up                       Bring the stack up and print the API URL
-  down                     Stop the stack and destroy its volumes
+                           Defaults are 8080, 5432, and 8788.
+  up [--replace]           Bring the stack up and print the API URL.
+                           One stack runs at a time; --replace stops the other.
+  down                     Stop the stack. Your data stays.
+  destroy [--yes]          Delete the volumes, and any server. Cannot be undone.
   dashboard [--port N]     Open the studio on 127.0.0.1
 
   tables                   List your tables and their columns

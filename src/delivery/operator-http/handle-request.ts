@@ -44,15 +44,18 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/provision" && method === "POST") {
-      const result = await createOperatorFor(roots, true).provision.execute(
-        stackFromEnv(),
-      );
+      const body = (await readJsonBody(req)) as { replace?: boolean };
+      const result = await createOperatorFor(roots, true).provision.execute(stackFromEnv(), {
+        replace: body.replace === true,
+      });
       sendJson(res, 200, result);
       return;
     }
     if (path === "/api/teardown" && method === "POST") {
-      await createOperatorFor(roots, true).teardown.execute();
-      sendJson(res, 200, { ok: true });
+      const body = (await readJsonBody(req)) as { destroy?: boolean };
+      const destroy = body.destroy === true;
+      await createOperatorFor(roots, true).teardown.execute({ destroy });
+      sendJson(res, 200, { ok: true, destroyed: destroy });
       return;
     }
     if (path === "/api/mint-token" && method === "POST") {

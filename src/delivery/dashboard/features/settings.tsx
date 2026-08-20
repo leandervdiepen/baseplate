@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { provision, saveConfig, teardown, type OperatorStatus } from "../lib/operator-client.ts";
+import {
+  OperatorError,
+  provision,
+  saveConfig,
+  teardown,
+  type OperatorStatus,
+} from "../lib/operator-client.ts";
 import { HetznerSettings, type HetznerDraft } from "./hetzner-settings.tsx";
 import { ReadinessList } from "./readiness-list.tsx";
 import { SessionSettings } from "./session-settings.tsx";
@@ -31,6 +37,8 @@ export function SettingsPage({
   });
   const [busy, setBusy] = useState<"save" | "provision" | "teardown" | null>(null);
   const [confirmDown, setConfirmDown] = useState(false);
+  /** Set when another project holds the ports, so we can offer to take them. */
+  const [blockedBy, setBlockedBy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +53,9 @@ export function SettingsPage({
       await run();
       onChanged();
     } catch (cause) {
+      if (cause instanceof OperatorError && cause.code === "stack.another_running") {
+        setBlockedBy(cause.message);
+      }
       setError(cause instanceof Error ? cause.message : "That did not work.");
     } finally {
       setBusy(null);
@@ -148,6 +159,7 @@ export function SettingsPage({
               disabled={blocking > 0}
               onClick={() =>
                 void act("provision", async () => {
+                  setBlockedBy(null);
                   const result = await provision();
                   setMessage(`Stack up at ${result.baseUrl}`);
                 })
@@ -162,15 +174,45 @@ export function SettingsPage({
           <div className="w-full">
             <StatusMessage message={message} />
             <StatusMessage message={error} tone="error" />
+            {blockedBy ? (
+              <Button
+                variant="secondary"
+                className="mt-[var(--space-sm)]"
+                busy={busy === "provision"}
+                onClick={() =>
+                  void act("provision", async () => {
+                    setBlockedBy(null);
+                    const result = await provision(true);
+                    setMessage(`Stack up at ${result.baseUrl}`);
+                  })
+                }
+              >
+                Stop the other stack and start this one
+              </Button>
+            ) : null}
           </div>
         </div>
       </form>
 
-      <div className="mt-[var(--space-lg)] max-w-[var(--container-form)]">
+      <div className="mt-[var(--space-lg)] flex max-w-[var(--container-form)] flex-col items-start gap-[var(--space-sm)]">
+        <Button
+          variant="secondary"
+          busy={busy === "teardown" && !confirmDown}
+          onClick={() =>
+            void act("teardown", async () => {
+              await teardown(false);
+              setMessage("Stopped. Your data is still here; start the stack to bring it back.");
+            })
+          }
+        >
+          Stop the stack
+        </Button>
+
         {confirmDown ? (
-          <div className="rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-4">
+          <div className="w-full rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-4">
             <p className="mb-3 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
-              Stop the stack and destroy its volumes? Every row in this database goes with them.
+              Delete this project's database volume? Every row goes with it, and nothing brings
+              them back.
             </p>
             <div className="flex gap-2">
               <Button
@@ -178,13 +220,13 @@ export function SettingsPage({
                 busy={busy === "teardown"}
                 onClick={() =>
                   void act("teardown", async () => {
-                    await teardown();
+                    await teardown(true);
                     setConfirmDown(false);
-                    setMessage("Stack stopped and its volumes destroyed.");
+                    setMessage("Destroyed: containers, volumes, and any server.");
                   })
                 }
               >
-                Stop and destroy
+                Delete the data
               </Button>
               <Button variant="secondary" onClick={() => setConfirmDown(false)}>
                 Cancel
@@ -193,7 +235,7 @@ export function SettingsPage({
           </div>
         ) : (
           <Button variant="ghost" className="px-2" onClick={() => setConfirmDown(true)}>
-            Stop the stack and destroy its data
+            Destroy this project's data
           </Button>
         )}
       </div>

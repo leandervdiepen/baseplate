@@ -1,9 +1,8 @@
-import { createServer } from "node:net";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { freePortFrom, initProject, portValue } from "../../../src/delivery/cli/init-command.ts";
+import { initProject, portValue } from "../../../src/delivery/cli/init-command.ts";
 import { parseEnvMap } from "../../../src/delivery/operator-http/env-file.ts";
 import { stackEnvText } from "../../../src/delivery/operator-http/stack-env.ts";
 import { composeProjectName } from "../../../src/delivery/project-name.ts";
@@ -13,10 +12,10 @@ function project(): string {
   return mkdtempSync(join(tmpdir(), "baseplate-project-"));
 }
 
-test("init writes a config with secrets generated for this project", async () => {
+test("init writes a config with secrets generated for this project", () => {
   const dir = project();
 
-  await initProject(dir);
+  initProject(dir);
 
   const env = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8"));
   for (const key of [
@@ -30,12 +29,12 @@ test("init writes a config with secrets generated for this project", async () =>
   expect(env.TARGET).toBe("local");
 });
 
-test("two projects never share a secret", async () => {
+test("two projects never share a secret", () => {
   const first = project();
   const second = project();
 
-  await initProject(first);
-  await initProject(second);
+  initProject(first);
+  initProject(second);
 
   const a = parseEnvMap(readFileSync(join(first, "baseplate.env"), "utf8"));
   const b = parseEnvMap(readFileSync(join(second, "baseplate.env"), "utf8"));
@@ -43,19 +42,19 @@ test("two projects never share a secret", async () => {
   expect(a.POSTGRES_PASSWORD).not.toBe(b.POSTGRES_PASSWORD);
 });
 
-test("init keeps state out of the operator's git history", async () => {
+test("init keeps state out of the operator's git history", () => {
   const dir = project();
 
-  await initProject(dir);
+  initProject(dir);
 
   expect(existsSync(join(dir, ".baseplate/.gitignore"))).toBe(true);
 });
 
-test("init refuses to overwrite a project that is already here", async () => {
+test("init refuses to overwrite a project that is already here", () => {
   const dir = project();
-  await initProject(dir);
+  initProject(dir);
 
-  await expect(initProject(dir)).rejects.toThrow(/already here/);
+  expect(() => initProject(dir)).toThrow(/already here/);
 });
 
 test("the stack never receives the operator's cloud credentials", () => {
@@ -88,40 +87,12 @@ test("a compose project name survives an awkward directory name", () => {
   expect(composeProjectName("/tmp/---")).toMatch(/^baseplate-project-[0-9a-f]{8}$/);
 });
 
-test("a port something is already listening on is skipped", async () => {
-  const busy = createServer();
-  const port = await new Promise<number>((done) => {
-    busy.listen(0, () => {
-      const address = busy.address();
-      done(typeof address === "object" && address ? address.port : 0);
-    });
-  });
-  try {
-    expect(await freePortFrom(port)).toBeGreaterThan(port);
-  } finally {
-    busy.close();
-  }
-});
 
-test("a free port is taken as it is", async () => {
-  const probe = createServer();
-  const port = await new Promise<number>((done) => {
-    probe.listen(0, () => {
-      const address = probe.address();
-      done(typeof address === "object" && address ? address.port : 0);
-    });
-  });
-  await new Promise<void>((done) => {
-    probe.close(() => done());
-  });
 
-  expect(await freePortFrom(port)).toBe(port);
-});
-
-test("a project records its own studio port and reads it back", async () => {
+test("a project records its own studio port and reads it back", () => {
   const dir = project();
 
-  await initProject(dir);
+  initProject(dir);
 
   const written = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8")).DASHBOARD_PORT;
   expect(dashboardPortFor(dir)).toBe(Number(written));
@@ -138,10 +109,10 @@ test("a config written before studio ports existed keeps working", () => {
   expect(dashboardPortFor(dir)).toBe(OPERATOR_HTTP_PORT);
 });
 
-test("ports the developer names are the ports they get", async () => {
+test("ports the developer names are the ports they get", () => {
   const dir = project();
 
-  await initProject(dir, { http: 9100, postgres: 5599, dashboard: 9788 });
+  initProject(dir, { http: 9100, postgres: 5599, dashboard: 9788 });
 
   const env = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8"));
   expect(env.HTTP_PORT).toBe("9100");
@@ -150,22 +121,6 @@ test("ports the developer names are the ports they get", async () => {
   expect(dashboardPortFor(dir)).toBe(9788);
 });
 
-test("a named port that is taken stops init rather than moving quietly", async () => {
-  const busy = createServer();
-  const port = await new Promise<number>((done) => {
-    busy.listen(0, "127.0.0.1", () => {
-      const address = busy.address();
-      done(typeof address === "object" && address ? address.port : 0);
-    });
-  });
-  try {
-    await expect(initProject(project(), { http: port })).rejects.toThrow(/already in use/);
-  } finally {
-    await new Promise<void>((done) => {
-      busy.close(() => done());
-    });
-  }
-});
 
 test("a port that is not a port is refused before anything is written", () => {
   expect(() => portValue("abc", "--port")).toThrow(/between 1 and 65535/);

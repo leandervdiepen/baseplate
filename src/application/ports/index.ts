@@ -7,7 +7,7 @@ export type {
   SchemaAdmin,
   SchemaHistoryEntry,
 } from "./schema-admin.ts";
-export type { StackRuntime } from "./stack-runtime.ts";
+export type { DownOptions, RunningStack, StackRuntime } from "./stack-runtime.ts";
 export type {
   ProvisionedStack,
   StackStateStore,

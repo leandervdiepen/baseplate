@@ -1,8 +1,10 @@
 import type {
   Clock,
   CloudProvider,
+  DownOptions,
   LiveTable,
   ProvisionedStack,
+  RunningStack,
   SchemaAdmin,
   SchemaHistoryEntry,
   StackRuntime,
@@ -44,13 +46,27 @@ export class MemoryStackRuntime implements StackRuntime {
   migrateCalls = 0;
   healthy = true;
   migrateError: Error | undefined;
+  /** Volumes removed by the last `down`, so a test can prove data survived. */
+  removedVolumes = false;
+  running: RunningStack[] = [];
+  readonly stopped: string[] = [];
 
   async up(_server: Server): Promise<void> {
     this.upCalls += 1;
   }
 
-  async down(_server: Server | undefined): Promise<void> {
+  async down(_server: Server | undefined, options: DownOptions): Promise<void> {
     this.downCalls += 1;
+    this.removedVolumes = options.volumes;
+  }
+
+  async runningStacks(): Promise<readonly RunningStack[]> {
+    return this.running;
+  }
+
+  async stopProject(projectName: string): Promise<void> {
+    this.stopped.push(projectName);
+    this.running = this.running.filter((stack) => stack.projectName !== projectName);
   }
 
   async migrate(_server: Server | undefined): Promise<void> {

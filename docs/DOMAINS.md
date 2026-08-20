@@ -117,12 +117,24 @@ An operator maintains a running system. They never maintain Baseplate's code.
 An operator's directory: `baseplate.env` and `.baseplate/`.
 Created by `baseplate init`, with secrets generated for it alone.
 
-Two projects on one machine share nothing: not ports, not Docker volumes, not secrets.
-That includes the studio's own port, so an operator can have both projects open at once.
+Two projects on one machine share no secrets and no Docker volumes.
+They do share ports, because **one stack runs at a time**.
+Every project gets 8080, 5432, and 8788 unless the operator names otherwise, and `up` refuses while another project's stack holds them.
+`up --replace` stops that one and takes over.
+
+Which stack is running is not written down anywhere.
+Docker holds it, in a label on the containers, so nothing has to stay in step with reality.
 
 The studio is delivery, not a domain type.
 Operator HTTP is delivery.
 Neither is a hosted control plane.
+
+## Stopping and destroying
+
+Different things, and never the same command.
+
+`down` stops the containers. The volumes, the data, and any server stay.
+`destroy` removes the volumes and the server with them, and asks first.
 
 ## What does not exist yet
 

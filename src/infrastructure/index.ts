@@ -10,7 +10,11 @@ import { PostgresSchemaAdmin } from "./postgres/index.ts";
 import { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
-export { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
+export {
+  DockerComposeRuntime,
+  DockerHostCloudProvider,
+  parseRunningStacks,
+} from "./docker/index.ts";
 export { FileStackStateStore } from "./fs/index.ts";
 export { HetznerAccount, HetznerCloudProvider } from "./hetzner/index.ts";
 export { JwtTokenSigner } from "./jwt/index.ts";
@@ -33,6 +37,8 @@ export type OperatorConfig = {
   stack: Stack;
   stackDir: string;
   projectName: string;
+  /** The operator's own directory, stamped onto containers so it can be named. */
+  projectRoot: string;
   envFile: string;
   postgresPassword: string;
   postgresPort: number;
@@ -75,6 +81,7 @@ export function createOperator(config: OperatorConfig): Operator {
       stackDir: config.stackDir,
       envFile: config.envFile,
       projectName: config.projectName,
+      projectRoot: config.projectRoot,
     });
     return {
       provision: new ProvisionStack({
@@ -83,6 +90,7 @@ export function createOperator(config: OperatorConfig): Operator {
         store,
         clock,
         httpPort: config.httpPort,
+        projectName: config.projectName,
       }),
       teardown: new TeardownStack({ cloud, runtime, store }),
       mintToken,
@@ -115,6 +123,7 @@ export function createOperator(config: OperatorConfig): Operator {
       store,
       clock,
       httpPort: config.httpPort,
+      projectName: config.projectName,
       healthTimeoutMs: 300_000,
     }),
     teardown: new TeardownStack({ cloud, runtime, store }),

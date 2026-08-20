@@ -97,7 +97,7 @@ export async function changeSchema(
     body: JSON.stringify(body),
   });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   return (await response.json()) as { statement: string; tables: LiveTable[] };
 }
@@ -105,24 +105,38 @@ export async function changeSchema(
 export async function getHistory(): Promise<SchemaHistoryEntry[]> {
   const response = await fetch("/api/history");
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   return ((await response.json()) as { entries: SchemaHistoryEntry[] }).entries;
 }
 
-async function parseError(response: Response): Promise<string> {
+/**
+ * Operator HTTP answers with the same stable code the CLI prints. Keeping it on
+ * the error lets a screen offer the way out instead of only naming the problem.
+ */
+export class OperatorError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "OperatorError";
+  }
+}
+
+async function parseError(response: Response): Promise<OperatorError> {
   try {
-    const body = (await response.json()) as { message?: string };
-    return body.message ?? response.statusText;
+    const body = (await response.json()) as { code?: string; message?: string };
+    return new OperatorError(body.code ?? "operator.failed", body.message ?? response.statusText);
   } catch {
-    return response.statusText;
+    return new OperatorError("operator.failed", response.statusText);
   }
 }
 
 export async function getStatus(): Promise<OperatorStatus> {
   const response = await fetch("/api/status");
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   return (await response.json()) as OperatorStatus;
 }
@@ -134,7 +148,7 @@ export async function firstRunLocal(): Promise<void> {
     body: JSON.stringify({ target: "local" }),
   });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
 }
 
@@ -145,22 +159,32 @@ export async function saveConfig(updates: Record<string, string>): Promise<void>
     body: JSON.stringify(updates),
   });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
 }
 
-export async function provision(): Promise<{ baseUrl: string }> {
-  const response = await fetch("/api/provision", { method: "POST" });
+/** One stack runs at a time. `replace` stops whichever other one holds the ports. */
+export async function provision(replace = false): Promise<{ baseUrl: string }> {
+  const response = await fetch("/api/provision", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ replace }),
+  });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   return (await response.json()) as { baseUrl: string };
 }
 
-export async function teardown(): Promise<void> {
-  const response = await fetch("/api/teardown", { method: "POST" });
+/** `destroy: false` stops the stack and keeps the data. True removes both. */
+export async function teardown(destroy: boolean): Promise<void> {
+  const response = await fetch("/api/teardown", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ destroy }),
+  });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
 }
 
@@ -171,7 +195,7 @@ export async function mintToken(sub: string): Promise<{ token: string; sub: stri
     body: JSON.stringify({ sub }),
   });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   return (await response.json()) as { token: string; sub: string };
 }
@@ -196,7 +220,7 @@ async function postAuth(path: string, email: string, password: string): Promise<
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   return (await response.json()) as AuthSession;
 }
@@ -204,7 +228,7 @@ async function postAuth(path: string, email: string, password: string): Promise<
 export async function getLogs(): Promise<string> {
   const response = await fetch("/api/logs");
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   const body = (await response.json()) as { text: string };
   return body.text;
@@ -226,7 +250,7 @@ export type SchemaSnapshot = {
 export async function getSchema(): Promise<SchemaSnapshot> {
   const response = await fetch("/api/schema");
   if (!response.ok) {
-    throw new Error(await parseError(response));
+    throw await parseError(response);
   }
   const body = (await response.json()) as { tables: LiveTable[]; live?: boolean };
   return {

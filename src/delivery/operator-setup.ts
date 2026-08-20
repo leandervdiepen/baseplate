@@ -148,6 +148,7 @@ export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Op
     stack,
     stackDir: resolve(packageRoot, "stack"),
     projectName: composeProjectName(project),
+    projectRoot: project,
     envFile: writeStackEnv(project),
     postgresPassword: requiredEnv("POSTGRES_PASSWORD"),
     postgresPort: Number(process.env.POSTGRES_PORT ?? "5432"),

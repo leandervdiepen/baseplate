@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { StackRuntime } from "#application";
+import type { DownOptions, RunningStack, StackRuntime } from "#application";
 import type { Server } from "#domain";
 import { InfraError } from "#shared";
 
@@ -63,7 +63,7 @@ export class RemoteComposeRuntime implements StackRuntime {
     ]);
   }
 
-  async down(server: Server | undefined): Promise<void> {
+  async down(server: Server | undefined, options: DownOptions): Promise<void> {
     if (!server) {
       return;
     }
@@ -71,9 +71,19 @@ export class RemoteComposeRuntime implements StackRuntime {
     await run("ssh", [
       ...SSH_OPTS,
       host,
-      `cd ${this.config.remoteDir} && ${this.compose} down -v`,
+      `cd ${this.config.remoteDir} && ${this.compose} down${options.volumes ? " -v" : ""}`,
     ]);
   }
+
+  /**
+   * A remote stack has a server to itself and binds none of this machine's
+   * ports, so there is nothing here for another project to collide with.
+   */
+  async runningStacks(): Promise<readonly RunningStack[]> {
+    return [];
+  }
+
+  async stopProject(_projectName: string): Promise<void> {}
 
   async isHealthy(baseUrl: string): Promise<boolean> {
     try {

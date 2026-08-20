@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
+import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
 import { DomainError } from "#domain";
 import { InfraError } from "#shared";
@@ -13,7 +14,15 @@ import { USAGE, version } from "./usage.ts";
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
 
 /** Commands that need a project and a reachable database. */
-const STACK_COMMANDS = new Set(["up", "down", "tables", "types", "schema", "mint-token"]);
+const STACK_COMMANDS = new Set([
+  "up",
+  "down",
+  "destroy",
+  "tables",
+  "types",
+  "schema",
+  "mint-token",
+]);
 
 async function main(): Promise<void> {
   const { positionals, values } = parseArgs({
@@ -26,6 +35,8 @@ async function main(): Promise<void> {
       port: { type: "string" },
       "postgres-port": { type: "string" },
       "dashboard-port": { type: "string" },
+      replace: { type: "boolean" },
+      yes: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -53,7 +64,7 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "init") {
-    const written = await initProject(project, {
+    const written = initProject(project, {
       http: portValue(values.port, "--port"),
       postgres: portValue(values["postgres-port"], "--postgres-port"),
       dashboard: portValue(values["dashboard-port"], "--dashboard-port"),
@@ -74,11 +85,21 @@ async function main(): Promise<void> {
   const operator = createOperatorFor({ packageRoot: PACKAGE_ROOT, projectRoot: project });
   try {
     if (command === "up") {
-      console.log((await operator.provision.execute(stackFromEnv())).baseUrl);
+      const result = await operator.provision.execute(stackFromEnv(), {
+        replace: values.replace === true,
+      });
+      console.log(result.baseUrl);
       return;
     }
     if (command === "down") {
-      await operator.teardown.execute();
+      await operator.teardown.execute({ destroy: false });
+      console.log("Stopped. Your data is still here; `baseplate up` brings it back.");
+      return;
+    }
+    if (command === "destroy") {
+      await confirmDestroy(project, values.yes === true);
+      await operator.teardown.execute({ destroy: true });
+      console.log("Destroyed: containers, volumes, and any server that was provisioned.");
       return;
     }
     if (command === "tables") {
@@ -115,6 +136,32 @@ async function main(): Promise<void> {
     }
   } finally {
     await operator.admin.close();
+  }
+}
+
+/**
+ * The only command that cannot be undone, so it asks first and wants the
+ * project's name typed rather than a keystroke that could be muscle memory.
+ * A pipe has nobody to ask, which is what --yes is for.
+ */
+async function confirmDestroy(project: string, assumeYes: boolean): Promise<void> {
+  if (assumeYes) {
+    return;
+  }
+  const name = basename(project);
+  if (!process.stdin.isTTY) {
+    throw new DomainError(
+      "cli.confirm_required",
+      "destroy deletes the database. Pass --yes when there is nobody to answer a prompt.",
+    );
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(
+    `This deletes the database in ${project}, permanently.\nType '${name}' to confirm: `,
+  );
+  rl.close();
+  if (answer.trim() !== name) {
+    throw new DomainError("cli.not_confirmed", "Nothing was destroyed.");
   }
 }
 
