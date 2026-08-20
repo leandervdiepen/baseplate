@@ -81,6 +81,7 @@ test("the usage names every command it dispatches", () => {
     "restore",
     "users",
     "mint-token",
+    "mcp",
   ]) {
     expect(USAGE).toContain(command);
   }

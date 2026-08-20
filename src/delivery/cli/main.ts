@@ -5,6 +5,7 @@ import { parseArgs } from "node:util";
 import { DomainError } from "#domain";
 import { InfraError } from "#shared";
 import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
+import { serveMcp } from "../mcp/serve.ts";
 import { createOperatorFor, siteUrlFromEnv, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
 import { BACKUP_USAGE, runBackupCommand, runRestoreCommand } from "./backup-command.ts";
@@ -98,6 +99,10 @@ async function main(): Promise<void> {
   }
   if (command === "dashboard") {
     await runDashboard(project, portValue(values.port, "--port"));
+    return;
+  }
+  if (command === "mcp") {
+    await serveMcp({ packageRoot: PACKAGE_ROOT, projectRoot: project });
     return;
   }
 

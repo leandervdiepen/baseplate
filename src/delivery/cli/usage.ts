@@ -11,6 +11,7 @@ export const USAGE = `Usage: baseplate <command>
   down                     Stop the stack. Your data stays.
   destroy [--yes]          Delete the volumes, and any server. Cannot be undone.
   dashboard [--port N]     Open the studio on 127.0.0.1
+  mcp                      Operator tools over stdio, for agents
 
   tables                   List your tables and their columns
   types                    Print TypeScript types for your tables
