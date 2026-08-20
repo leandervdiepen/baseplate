@@ -60,6 +60,30 @@ npx @diepen/baseplate down        # stop. your data stays
 | **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. |
 | **TLS** | Caddy gets a Let's Encrypt certificate for your hostname when you target Hetzner. |
 
+## Agents
+
+`npx @diepen/baseplate mcp` is the operator path for agents.
+Run it from the project directory (where `baseplate.env` lives), or set `BASEPLATE_PROJECT`.
+It speaks stdio JSON-RPC, covers the same actions as the CLI, and never binds a port.
+Destructive tools need `confirm: true`.
+It does not query app rows; apps use the [client](sdk/README.md).
+
+A typical Cursor config, started with that project as cwd:
+
+```json
+{
+  "mcpServers": {
+    "baseplate": {
+      "command": "npx",
+      "args": ["@diepen/baseplate", "mcp"]
+    }
+  }
+}
+```
+
+Agents writing an app against `@diepen/baseplate/client` load [`skills/baseplate-app/SKILL.md`](skills/baseplate-app/SKILL.md) from the package.
+After install it also lives at `node_modules/@diepen/baseplate/skills/baseplate-app`.
+
 ## How row access works
 
 There is no anon key and no public key to hand out. `JWT_SECRET` stays on the server.
@@ -244,8 +268,8 @@ Worth knowing before you trust it with something:
 
 ```
 init      up        down      destroy   dashboard
-tables    types     schema    storage   backup
-restore   mint-token
+mcp       tables    types     schema    storage
+backup    restore   users     mint-token
 ```
 
 Run `npx @diepen/baseplate --help`, or any command with no arguments, for its own list.
@@ -255,6 +279,7 @@ Run `npx @diepen/baseplate --help`, or any command with no arguments, for its ow
 | File | What it is |
 | --- | --- |
 | [`sdk/README.md`](sdk/README.md) | App client: install, auth, typed queries, storage |
+| [`skills/baseplate-app/SKILL.md`](skills/baseplate-app/SKILL.md) | App agents: client, RLS, types, tests |
 | [`docs/PRD.md`](docs/PRD.md) | Product, phases, done criteria |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, dependency rule, where code goes |
 | [`docs/DOMAINS.md`](docs/DOMAINS.md) | Ubiquitous language and per-concept rules |

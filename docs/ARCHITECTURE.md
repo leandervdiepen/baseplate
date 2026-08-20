@@ -5,7 +5,7 @@ Dependencies point inward only.
 Nothing in an inner layer knows an outer layer exists.
 
 ```
-delivery        CLI + dashboard + localhost operator HTTP
+delivery        CLI + dashboard + localhost operator HTTP + MCP
 application     use cases + ports they own
 domain          types and rules
 infrastructure  adapters behind the ports
@@ -34,8 +34,9 @@ They never import a vendor SDK.
 Public surface: `src/application/index.ts`.
 
 The dashboard does not grow a second set of rules.
+MCP follows that same rule.
 Save-config, provision, teardown, mint-token, and (later) logs are use cases.
-The UI calls them.
+The CLI, studio, and MCP call them.
 
 ### Infrastructure
 
@@ -48,13 +49,14 @@ It is the only place concrete types are chosen.
 
 ### Delivery
 
-Three surfaces, same use cases:
+Four surfaces, same use cases:
 
 | Surface | Folder | Job |
 | --- | --- | --- |
 | CLI | `src/delivery/cli/` | Parse argv, print a line, exit |
 | Operator HTTP | `src/delivery/operator-http/` | Bind 127.0.0.1, map HTTP to use cases, write the project config |
 | Dashboard | `src/delivery/dashboard/` | React UI. Typed props. No secrets in `localStorage` |
+| MCP | `src/delivery/mcp/` | Stdio JSON-RPC. Map tools to use cases. Spawned as `baseplate mcp` in the project. Never binds a port. |
 
 The browser talks only to operator HTTP on localhost.
 It never talks to Hetzner.
@@ -89,6 +91,7 @@ They do not read operator keys from `process.env`.
 | A CLI flag or printed line | `src/delivery/cli/` |
 | Localhost JSON for the dashboard | `src/delivery/operator-http/` |
 | A screen or component | `src/delivery/dashboard/` |
+| Operator MCP tool or protocol | `src/delivery/mcp/` |
 | Typed app client | `sdk/src/` (published as the `/client` subpath) |
 | A helper with no business meaning | `src/shared/` |
 | Compose, Caddyfile, platform schema, auth, migrate | `stack/` |

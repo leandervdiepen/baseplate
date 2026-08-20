@@ -30,7 +30,9 @@ Upgrading is installing a different version.
 ## DX bar
 
 Every capability is one command or one primary button.
+Agents get one tool.
 If a step needs a human to read a wiki, it is not done.
+If a step needs an agent to read a wiki, it is not done.
 If a step needs a human to edit a file Baseplate ships, it is a bug.
 
 The studio is local (127.0.0.1).
@@ -61,12 +63,17 @@ The database does the filtering.
 
 ### The services
 
-- **Schema.** Tables, columns, renames, and drops from the studio or the CLI. Each is one transaction: the DDL, the row access policy, the owner trigger, the grants, and a history entry. A table cannot exist unprotected.
+- **Schema.** Tables, columns, renames, and drops from the studio, the CLI, or MCP. Each is one transaction: the DDL, the row access policy, the owner trigger, the grants, and a history entry. A table cannot exist unprotected.
 - **Auth.** Email and password on the stack. Short-lived access tokens with `exp`, single-use refresh tokens that can be revoked, both lifetimes configurable in the studio.
 - **The client.** `@diepen/baseplate/client`. Typed queries with the filters an app needs, sessions that persist and refresh themselves. It never filters rows; the database does.
+  The package publishes `skills/baseplate-app/SKILL.md` for agents writing apps.
 - **Object storage.** Buckets the operator makes, objects an app puts in them. An object is a row with bytes attached and is guarded the same way: private buckets show a caller only their own, public ones are readable by anyone signed in and writable only by the owner. Signed links for what a browser must fetch without a header.
 - **Backups.** A dump on a schedule, sealed with a key from the operator's own config, sent to any S3-compatible bucket they name. On its own schedule it restores one into a scratch database and counts what came back, and the studio leads with that date.
 - **The studio.** Tables with their rows, schema, and row security on one page; storage; backups; auth; logs; settings. On 127.0.0.1.
+- **Operator MCP.** The agent-native operator surface: stdio JSON-RPC, spawned as `baseplate mcp` in the local project, same use cases as the CLI and the studio.
+  It never binds a port.
+  It is not a hosted control plane.
+  App row queries are not MCP tools; apps use `@diepen/baseplate/client`.
 
 ### Still open
 
@@ -113,6 +120,7 @@ Compose mature pieces.
 | Backup destination | Any S3-compatible bucket. Hetzner Object Storage, B2, S3 |
 | App client | `@diepen/baseplate/client` |
 | Studio | React + Tailwind, local only |
+| Operator MCP | Stdio JSON-RPC via `baseplate mcp` in the project. Never binds a port. |
 | Distribution | npm. Installing a version is how you pin one. |
 
 The interesting work is the access model and the operator experience, not reimplementing those pieces.

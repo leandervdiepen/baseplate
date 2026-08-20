@@ -80,6 +80,7 @@ The CLI is not: it runs through tsx on purpose, so there is one source of truth 
 | `docs/DOMAINS.md` | Ubiquitous language and per-concept rules |
 | `docs/CONVENTIONS.md` | Naming, errors, secrets, tests, commits, studio UI |
 | `sdk/README.md` | App client: install, auth, typed queries |
+| `skills/baseplate-app/SKILL.md` | App-agent skill: client, RLS, types, tests |
 
 Docs are current truth. On any major decision, edit the affected doc in place and delete what it replaced.
 Never append a history, an ADR, or a changelog of choices. Git holds the past.
