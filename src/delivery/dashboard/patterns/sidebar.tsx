@@ -11,7 +11,6 @@ import {
   IconSettings,
   IconStorage,
   IconTables,
-  IconUsers,
   LogoMark,
 } from "../primitives/icon.tsx";
 
@@ -20,7 +19,6 @@ const NAV: { id: NavId; label: string; Icon: ComponentType<SVGProps<SVGSVGElemen
   { id: "tables", label: "Tables", Icon: IconTables },
   { id: "storage", label: "Storage", Icon: IconStorage },
   { id: "backups", label: "Backups", Icon: IconBackups },
-  { id: "users", label: "Users", Icon: IconUsers },
   { id: "auth", label: "Auth", Icon: IconAuth },
   { id: "logs", label: "Logs", Icon: IconLogs },
   { id: "settings", label: "Settings", Icon: IconSettings },

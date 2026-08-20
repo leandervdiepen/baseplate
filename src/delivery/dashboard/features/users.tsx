@@ -4,7 +4,6 @@ import { UserCreate } from "./user-create.tsx";
 import { UserDrawer } from "./user-drawer.tsx";
 import { UsersGrid } from "./users-grid.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
-import { PageHeader } from "../patterns/page-header.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { IconUsers } from "../primitives/icon.tsx";
@@ -17,8 +16,9 @@ type Panel = { kind: "create" } | { kind: "manage"; user: OperatorUser } | null;
 /**
  * Everyone who can sign in to this project. The database answers every search
  * and every page, so what is on screen is what the stack actually holds.
+ * A panel, not a page: the Auth view composes it above the token tooling.
  */
-export function UsersPage({
+export function UsersPanel({
   apiUp,
   onProvision,
 }: {
@@ -66,10 +66,6 @@ export function UsersPage({
 
   return (
     <>
-      <PageHeader
-        title="Users"
-        description="Accounts that can sign in with an email and a password. Every one of them sees only their own rows, decided by the same row-level security your app relies on."
-      />
       <StatusMessage message={said} className="mb-4 block" />
       <StatusMessage message={error} tone="error" className="mb-4 block" />
 
