@@ -14,8 +14,12 @@ export function checksum(text: string): string {
 }
 
 /**
- * Plain `.sql` files in filename order, which is what drizzle-kit writes,
- * so `drizzle-kit generate` can target this same directory.
+ * Plain `.sql` files in filename order.
+ *
+ * The only directory this is ever pointed at is `stack/platform/`, Baseplate's
+ * own schema, which ships with the version. An operator's tables are not here
+ * and never will be: they live in their database, and a schema change is a
+ * transaction against it.
  */
 export function readMigrations(dir: string): MigrationFile[] {
   return readdirSync(dir)
