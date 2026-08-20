@@ -4,6 +4,7 @@ import { portLabel } from "../lib/format.ts";
 import type { NavId } from "./nav.ts";
 import {
   IconAuth,
+  IconOverview,
   IconBackups,
   IconLogs,
   IconSettings,
@@ -13,6 +14,7 @@ import {
 } from "../primitives/icon.tsx";
 
 const NAV: { id: NavId; label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
+  { id: "overview", label: "Overview", Icon: IconOverview },
   { id: "tables", label: "Tables", Icon: IconTables },
   { id: "storage", label: "Storage", Icon: IconStorage },
   { id: "backups", label: "Backups", Icon: IconBackups },

@@ -100,6 +100,18 @@ export function IconBackups(props: IconProps) {
   );
 }
 
+/** Four panes: the shape of a page that is a summary of other pages. */
+export function IconOverview(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2" {...stroke} />
+      <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2" {...stroke} />
+      <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2" {...stroke} />
+      <rect x="9" y="9" width="5.5" height="5.5" rx="1.2" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconPlus(props: IconProps) {
   return (
     <Svg {...props}>

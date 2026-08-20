@@ -7,6 +7,7 @@ import { readComposeLogs } from "./logs.ts";
 import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
 import { handleBackupRoute } from "./backups.ts";
+import { handleOverview } from "./overview.ts";
 import { handleStorageRoute } from "./storage.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
@@ -80,6 +81,10 @@ export async function handleOperatorRequest(
       );
       const result = await withOperator(roots, (operator) => operator.changeSchema.execute(change));
       sendJson(res, 200, { statement: result.statement, tables: result.tables });
+      return;
+    }
+    if (path === "/api/overview" && method === "GET") {
+      await handleOverview(roots, res);
       return;
     }
     if (path.startsWith("/api/backups")) {

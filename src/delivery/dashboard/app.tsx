@@ -3,6 +3,7 @@ import { AuthPage } from "./features/auth.tsx";
 import { BackupsPage } from "./features/backups.tsx";
 import { FirstRun } from "./features/first-run.tsx";
 import { LogsPage } from "./features/logs.tsx";
+import { OverviewPage } from "./features/overview.tsx";
 import { SettingsPage } from "./features/settings.tsx";
 import { StoragePage } from "./features/storage.tsx";
 import { TablesPage } from "./features/tables.tsx";
@@ -13,7 +14,7 @@ import { LogoMark } from "./primitives/icon.tsx";
 
 export function App() {
   const [status, setStatus] = useState<OperatorStatus | null>(null);
-  const [nav, setNav] = useState<NavId>("tables");
+  const [nav, setNav] = useState<NavId>("overview");
   const [table, setTable] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +81,9 @@ export function App() {
       project={status.project}
       leaf={nav === "tables" ? table : undefined}
     >
+      {nav === "overview" ? (
+        <OverviewPage status={status} onNavigate={setNav} onProvision={runProvision} />
+      ) : null}
       {nav === "tables" ? (
         <TablesPage
           selected={table}

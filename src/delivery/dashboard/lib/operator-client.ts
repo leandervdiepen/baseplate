@@ -277,6 +277,26 @@ export async function getBucketObjects(bucket: string): Promise<StoredObject[]> 
   return ((await response.json()) as { objects: StoredObject[] }).objects;
 }
 
+export type Overview = {
+  live: boolean;
+  tables: number;
+  rowsTracked: number;
+  buckets: number;
+  objects: number;
+  objectBytes: number;
+  lastChange: { change: string; appliedAt: string } | null;
+  lastBackup: { at: string; bytes: number; destination: string; ok: boolean } | null;
+  lastDrill: { at: string; ok: boolean; tables: number; rows: number; durationMs: number } | null;
+};
+
+export async function getOverview(): Promise<Overview> {
+  const response = await fetch("/api/overview");
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return (await response.json()) as Overview;
+}
+
 export type BackupRecord = {
   id: number;
   key: string;
