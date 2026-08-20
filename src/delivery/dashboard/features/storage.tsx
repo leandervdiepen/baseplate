@@ -1,13 +1,8 @@
-import { useEffect, useState } from "react";
-import {
-  createBucket,
-  dropBucket,
-  getBuckets,
-  setBucketVisibility,
-  type BucketSummary,
-} from "../lib/api/index.ts";
+import { useState } from "react";
+import type { BucketSummary, BucketVisibility } from "../lib/api/index.ts";
 import { formatBytes } from "../lib/format.ts";
 import { BucketObjects } from "./bucket-objects.tsx";
+import { useBuckets } from "./use-buckets.ts";
 import { ConfirmInline } from "../patterns/confirm-inline.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
@@ -18,58 +13,28 @@ import { Field, Hint, Input } from "../primitives/input.tsx";
 import { IconStorage } from "../primitives/icon.tsx";
 import { Segmented } from "../primitives/segmented.tsx";
 
-const VISIBILITIES: { id: "private" | "public"; label: string }[] = [
+const VISIBILITIES: { id: BucketVisibility; label: string }[] = [
   { id: "private", label: "Private" },
   { id: "public", label: "Public" },
 ];
 
 export function StoragePage({ apiUp }: { apiUp: boolean }) {
-  const [buckets, setBuckets] = useState<BucketSummary[] | null>(null);
+  const storage = useBuckets();
   const [name, setName] = useState("");
-  const [visibility, setVisibility] = useState<"private" | "public">("private");
+  const [visibility, setVisibility] = useState<BucketVisibility>("private");
   const [open, setOpen] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  async function load() {
-    try {
-      setBuckets((await getBuckets()).buckets);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to read your buckets.");
-      setBuckets([]);
-    }
-  }
-
-  async function act(run: () => Promise<{ buckets: BucketSummary[] }>, said: string) {
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      setBuckets((await run()).buckets);
-      setMessage(said);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That did not work.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const make = () => {
     const wanted = name.trim();
     if (!wanted) {
-      setError("Give the bucket a name.");
+      storage.refuse("Give the bucket a name.");
       return;
     }
-    void act(async () => {
-      const next = await createBucket(wanted, visibility);
-      setName("");
-      return next;
-    }, `Made '${wanted}'.`);
+    void storage.create(wanted, visibility).then((made) => {
+      if (made) {
+        setName("");
+      }
+    });
   };
 
   return (
@@ -78,8 +43,8 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
         title="Storage"
         description="Buckets hold files. A caller sees only the objects they put there, decided by the same row-level security that decides your rows."
       />
-      <StatusMessage message={message} className="mb-4 block" />
-      <StatusMessage message={error} tone="error" className="mb-4 block" />
+      <StatusMessage message={storage.message} className="mb-4 block" />
+      <StatusMessage message={storage.error} tone="error" className="mb-4 block" />
 
       <div className="max-w-[var(--container-content)] space-y-[var(--space-md)]">
         <Card className="p-[var(--space-lg)]">
@@ -116,7 +81,7 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
                 className="w-[220px]"
               />
             </div>
-            <Button type="submit" busy={busy}>
+            <Button type="submit" busy={storage.busy}>
               Create a bucket
             </Button>
           </form>
@@ -129,7 +94,7 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
           </div>
         </Card>
 
-        {buckets && buckets.length === 0 ? (
+        {storage.buckets && storage.buckets.length === 0 ? (
           <EmptyState
             icon={<IconStorage width={20} height={20} />}
             title="No buckets yet"
@@ -137,7 +102,7 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
           />
         ) : null}
 
-        {(buckets ?? []).map((bucket) => (
+        {(storage.buckets ?? []).map((bucket) => (
           <Card key={bucket.name} className="p-[var(--space-lg)]">
             <div className="flex flex-wrap items-center gap-[var(--space-md)]">
               <div className="min-w-[10rem] flex-1">
@@ -154,12 +119,7 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
                 label={`Who can read ${bucket.name}`}
                 options={VISIBILITIES}
                 value={bucket.visibility}
-                onChange={(next) =>
-                  void act(
-                    () => setBucketVisibility(bucket.name, next),
-                    `'${bucket.name}' is now ${next}.`,
-                  )
-                }
+                onChange={(next) => void storage.show(bucket.name, next)}
               />
               <Button
                 variant="secondary"
@@ -173,11 +133,11 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
               <DropBucket
                 bucket={bucket}
                 onDrop={() =>
-                  void act(async () => {
-                    const next = await dropBucket(bucket.name);
-                    setOpen(null);
-                    return next;
-                  }, `Removed '${bucket.name}'.`)
+                  void storage.drop(bucket.name).then((dropped) => {
+                    if (dropped) {
+                      setOpen(null);
+                    }
+                  })
                 }
               />
             </div>

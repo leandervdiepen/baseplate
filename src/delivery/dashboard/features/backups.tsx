@@ -1,11 +1,6 @@
-import { useEffect, useState } from "react";
-import {
-  getBackups,
-  runBackupJob,
-  type BackupState,
-  type DrillRecord,
-} from "../lib/api/index.ts";
+import type { DrillRecord } from "../lib/api/index.ts";
 import { formatBytes } from "../lib/format.ts";
+import { useBackups } from "./use-backups.ts";
 import { Callout } from "../patterns/callout.tsx";
 import { Cell, DataTable, Row } from "../patterns/table.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
@@ -19,34 +14,7 @@ import { CodeBlock } from "../patterns/code-block.tsx";
 import { IconBackups, IconLock } from "../primitives/icon.tsx";
 
 export function BackupsPage() {
-  const [state, setState] = useState<BackupState | null>(null);
-  const [busy, setBusy] = useState<"backup" | "drill" | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void getBackups()
-      .then(setState)
-      .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : "Unable to read your backups.");
-        setState({ live: false, backups: [], drills: [] });
-      });
-  }, []);
-
-  async function run(kind: "backup" | "drill") {
-    setBusy(kind);
-    setError(null);
-    setMessage(null);
-    try {
-      const next = await runBackupJob(kind);
-      setState(next);
-      setMessage(next.message ?? "Done.");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That did not work.");
-    } finally {
-      setBusy(null);
-    }
-  }
+  const { state, busy, message, error, run } = useBackups();
 
   const lastDrill = state?.drills[0];
   const offMachine = state?.backups[0]?.destination.startsWith("this machine") === false;

@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  getHetznerAccount,
-  type CloudAccountSnapshot,
-  type OperatorStatus,
-} from "../lib/api/index.ts";
+import type { OperatorStatus } from "../lib/api/index.ts";
+import { HostnameField } from "./hostname-field.tsx";
+import { useHetznerAccount } from "./use-hetzner-account.ts";
 import { Section } from "../patterns/section.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
@@ -29,30 +26,7 @@ export function HetznerSettings({
   onChange: (patch: Partial<HetznerDraft>) => void;
   secrets: OperatorStatus["secrets"];
 }) {
-  const [account, setAccount] = useState<CloudAccountSnapshot | null>(null);
-  const [checking, setChecking] = useState(false);
-
-  /**
-   * Reads the account with the tokens already saved on this machine, so the
-   * three names below become a list to pick from rather than three chances to
-   * make a typo that only shows up mid-provision.
-   */
-  const check = useCallback(async () => {
-    setChecking(true);
-    try {
-      setAccount(await getHetznerAccount());
-    } catch {
-      setAccount(null);
-    } finally {
-      setChecking(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (secrets.hcloud || secrets.dnsToken) {
-      void check();
-    }
-  }, [check, secrets.hcloud, secrets.dnsToken]);
+  const { account, checking, check } = useHetznerAccount(secrets);
 
   const known = account?.cloud.ok === true;
   const zonesKnown = account?.dns.ok === true;
@@ -62,7 +36,7 @@ export function HetznerSettings({
       <Section
         title="Hetzner Cloud"
         actions={
-          <Button variant="secondary" busy={checking} onClick={() => void check()}>
+          <Button variant="secondary" busy={checking} onClick={check}>
             Check my account
           </Button>
         }
@@ -186,68 +160,12 @@ export function HetznerSettings({
           <Hint>Save your tokens, then check the account to pick a zone and a key from it.</Hint>
         ) : null}
 
-        <Hostname
+        <HostnameField
           zone={draft.zone}
           hostname={draft.hostname}
           onChange={(hostname) => onChange({ hostname })}
         />
       </Section>
     </>
-  );
-}
-
-/**
- * A hostname has to sit under the zone or Let's Encrypt will not issue for it.
- * Once the zone is known, only the label to the left of it is still a question,
- * so that is all this asks for. Leaving it blank means the zone itself.
- */
-function Hostname({
-  zone,
-  hostname,
-  onChange,
-}: {
-  zone: string;
-  hostname: string;
-  onChange: (hostname: string) => void;
-}) {
-  if (!zone) {
-    return (
-      <Field
-        label="Hostname"
-        hint="Pick a DNS zone first, then this is just the name in front of it."
-      >
-        <Input
-          value={hostname}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="api.example.com"
-          className="font-mono"
-        />
-      </Field>
-    );
-  }
-
-  const suffix = `.${zone}`;
-  const label = hostname === zone ? "" : hostname.endsWith(suffix) ? hostname.slice(0, -suffix.length) : hostname;
-
-  return (
-    <Field
-      label="Hostname"
-      hint="Caddy asks Let's Encrypt for exactly this name. Leave the front blank to use the zone itself."
-    >
-      <div className="flex items-center gap-2">
-        <Input
-          value={label}
-          onChange={(event) => {
-            const next = event.target.value.trim();
-            onChange(next ? `${next}.${zone}` : zone);
-          }}
-          placeholder="api"
-          className="max-w-40 font-mono"
-        />
-        <span className="font-mono text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-          {suffix}
-        </span>
-      </div>
-    </Field>
   );
 }

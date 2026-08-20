@@ -173,7 +173,7 @@
   }
 }
 
-.schema-canvas {
+.node-canvas {
   background-color: var(--color-bg-subtle);
   background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
   background-size: var(--space-md) var(--space-md);

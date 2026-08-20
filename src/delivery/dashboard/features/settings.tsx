@@ -1,21 +1,14 @@
-import { useEffect, useState } from "react";
-import {
-  getConfig,
-  OperatorError,
-  provision,
-  saveConfig,
-  teardown,
-  type OperatorStatus,
-} from "../lib/api/index.ts";
+import { useState } from "react";
+import type { OperatorStatus } from "../lib/api/index.ts";
 import { ApiSettings } from "./api-settings.tsx";
 import { BackupSettings } from "./backup-settings.tsx";
-import type { ConfigDraft } from "./config-field.tsx";
 import { HetznerSettings, type HetznerDraft } from "./hetzner-settings.tsx";
 import { StorageSettings } from "./storage-settings.tsx";
 import { ReadinessList } from "./readiness-list.tsx";
 import { SessionSettings } from "./session-settings.tsx";
+import { StackTeardown } from "./stack-teardown.tsx";
+import { useSettings } from "./use-settings.ts";
 import { Callout } from "../patterns/callout.tsx";
-import { ConfirmInline } from "../patterns/confirm-inline.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { Section } from "../patterns/section.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
@@ -31,6 +24,7 @@ export function SettingsPage({
   status: OperatorStatus;
   onChanged: () => void;
 }) {
+  const settings = useSettings(onChanged);
   const [target, setTarget] = useState(status.target ?? "local");
   const [access, setAccess] = useState(status.accessTokenTtl);
   const [refreshTtl, setRefreshTtl] = useState(status.refreshTokenTtl);
@@ -42,66 +36,24 @@ export function SettingsPage({
     ssh: status.sshKeyName ?? "",
     location: status.serverLocation ?? "nbg1",
   });
-  /** Everything else in baseplate.env, so none of it needs the file opened. */
-  const [config, setConfig] = useState<ConfigDraft>({});
-  const [storedSecrets, setStoredSecrets] = useState<Record<string, boolean>>({});
-  const [busy, setBusy] = useState<"save" | "provision" | "teardown" | null>(null);
-  const [confirmDown, setConfirmDown] = useState(false);
-  /** Set when another project holds the ports, so we can offer to take them. */
-  const [blockedBy, setBlockedBy] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void getConfig()
-      .then((snapshot) => {
-        setConfig(snapshot.values);
-        setStoredSecrets(snapshot.secrets);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  const change = (name: string, value: string) =>
-    setConfig((current) => ({ ...current, [name]: value }));
 
   const cloud = target === "hetzner";
   const blocking = status.readiness.filter((check) => !check.ok).length;
 
-  async function act(kind: "save" | "provision" | "teardown", run: () => Promise<void>) {
-    setBusy(kind);
-    setError(null);
-    setMessage(null);
-    try {
-      await run();
-      onChanged();
-    } catch (cause) {
-      if (cause instanceof OperatorError && cause.code === "stack.another_running") {
-        setBlockedBy(cause.message);
-      }
-      setError(cause instanceof Error ? cause.message : "That did not work.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   const save = () =>
-    act("save", async () => {
-      await saveConfig({
-        ...config,
-        TARGET: target,
-        HETZNER_DNS_ZONE: hetzner.zone,
-        HCLOUD_TOKEN: hetzner.hcloud,
-        HETZNER_DNS_TOKEN: hetzner.dnsToken,
-        SSH_KEY_NAME: hetzner.ssh,
-        SERVER_LOCATION: hetzner.location,
-        ACCESS_TOKEN_TTL: access.trim(),
-        REFRESH_TOKEN_TTL: refreshTtl.trim(),
-        // Caddy asks Let's Encrypt for exactly the stack hostname, so the two
-        // are one field here rather than two that must be kept equal by hand.
-        SITE_ADDRESS: cloud ? hetzner.hostname.trim() : ":8080",
-        BASEPLATE_HOSTNAME: cloud ? hetzner.hostname.trim() : "localhost",
-      });
-      setMessage("Saved to baseplate.env in this project. Start the stack to apply it.");
+    settings.save({
+      TARGET: target,
+      HETZNER_DNS_ZONE: hetzner.zone,
+      HCLOUD_TOKEN: hetzner.hcloud,
+      HETZNER_DNS_TOKEN: hetzner.dnsToken,
+      SSH_KEY_NAME: hetzner.ssh,
+      SERVER_LOCATION: hetzner.location,
+      ACCESS_TOKEN_TTL: access.trim(),
+      REFRESH_TOKEN_TTL: refreshTtl.trim(),
+      // Caddy asks Let's Encrypt for exactly the stack hostname, so the two
+      // are one field here rather than two that must be kept equal by hand.
+      SITE_ADDRESS: cloud ? hetzner.hostname.trim() : ":8080",
+      BASEPLATE_HOSTNAME: cloud ? hetzner.hostname.trim() : "localhost",
     });
 
   return (
@@ -150,12 +102,12 @@ export function SettingsPage({
           onAccess={setAccess}
           onRefresh={setRefreshTtl}
         />
-        <ApiSettings draft={config} onChange={change} />
-        <StorageSettings draft={config} onChange={change} />
+        <ApiSettings draft={settings.config} onChange={settings.change} />
+        <StorageSettings draft={settings.config} onChange={settings.change} />
         <BackupSettings
-          draft={config}
-          secretStored={storedSecrets.BACKUP_S3_SECRET_KEY ?? false}
-          onChange={change}
+          draft={settings.config}
+          secretStored={settings.storedSecrets.BACKUP_S3_SECRET_KEY ?? false}
+          onChange={settings.change}
         />
         {target === (status.target ?? "local") ? (
           <ReadinessList checks={status.readiness} />
@@ -177,37 +129,25 @@ export function SettingsPage({
           <div className="ms-auto flex items-center gap-2.5">
             <Button
               variant="secondary"
-              busy={busy === "provision"}
+              busy={settings.busy === "provision"}
               disabled={blocking > 0}
-              onClick={() =>
-                void act("provision", async () => {
-                  setBlockedBy(null);
-                  const result = await provision();
-                  setMessage(`Stack up at ${result.baseUrl}`);
-                })
-              }
+              onClick={() => void settings.start()}
             >
               Start the stack
             </Button>
-            <Button type="submit" busy={busy === "save"}>
+            <Button type="submit" busy={settings.busy === "save"}>
               Save settings
             </Button>
           </div>
           <div className="w-full">
-            <StatusMessage message={message} />
-            <StatusMessage message={error} tone="error" />
-            {blockedBy ? (
+            <StatusMessage message={settings.message} />
+            <StatusMessage message={settings.error} tone="error" />
+            {settings.blockedBy ? (
               <Button
                 variant="secondary"
                 className="mt-[var(--space-sm)]"
-                busy={busy === "provision"}
-                onClick={() =>
-                  void act("provision", async () => {
-                    setBlockedBy(null);
-                    const result = await provision(true);
-                    setMessage(`Stack up at ${result.baseUrl}`);
-                  })
-                }
+                busy={settings.busy === "provision"}
+                onClick={() => void settings.start(true)}
               >
                 Stop the other stack and start this one
               </Button>
@@ -216,52 +156,11 @@ export function SettingsPage({
         </div>
       </form>
 
-      <Section
-        divided={false}
-        className="max-w-[var(--container-form)] items-start"
-        title="Stopping and starting"
-        description="Stopping keeps everything. Destroying deletes the volume your rows live in, which is the only copy unless a backup has been taken."
-      >
-        <Button
-          variant="secondary"
-          busy={busy === "teardown" && !confirmDown}
-          onClick={() =>
-            void act("teardown", async () => {
-              await teardown(false);
-              setMessage("Stopped. Your data is still here; start the stack to bring it back.");
-            })
-          }
-        >
-          Stop the stack
-        </Button>
-
-        {confirmDown ? (
-          <ConfirmInline
-            className="w-full"
-            confirmLabel="Delete the data"
-            busy={busy === "teardown"}
-            onCancel={() => setConfirmDown(false)}
-            onConfirm={() =>
-              void act("teardown", async () => {
-                await teardown(true);
-                setConfirmDown(false);
-                setMessage("Destroyed: containers, volumes, and any server.");
-              })
-            }
-          >
-            Delete this project&apos;s database volume? Every row goes with it, and nothing brings
-            them back.
-          </ConfirmInline>
-        ) : (
-          <Button
-            variant="quiet-danger"
-            className="self-start px-3"
-            onClick={() => setConfirmDown(true)}
-          >
-            Destroy this project&apos;s data
-          </Button>
-        )}
-      </Section>
+      <StackTeardown
+        busy={settings.busy === "teardown"}
+        onStop={() => void settings.stop()}
+        onDestroy={settings.destroy}
+      />
     </>
   );
 }

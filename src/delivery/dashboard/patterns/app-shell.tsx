@@ -14,6 +14,7 @@ export function AppShell({
   project,
   leaf,
   projectControl,
+  callerControl,
   children,
 }: {
   current: NavId;
@@ -24,6 +25,7 @@ export function AppShell({
   project: { name: string; path: string };
   leaf?: string | null | undefined;
   projectControl?: ReactNode;
+  callerControl?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -41,7 +43,7 @@ export function AppShell({
         {...(projectControl ? { projectControl } : {})}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar current={current} leaf={leaf} />
+        <TopBar current={current} leaf={leaf} {...(callerControl ? { callerControl } : {})} />
         <main
           id="main"
           tabIndex={-1}

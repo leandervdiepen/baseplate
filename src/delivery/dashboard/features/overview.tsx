@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { formatBytes } from "../lib/format.ts";
-import { getOverview, type Overview, type OperatorStatus } from "../lib/api/index.ts";
+import type { OperatorStatus } from "../lib/api/index.ts";
+import { useOverview } from "./use-overview.ts";
 import type { NavId } from "../patterns/nav.ts";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { StatCard } from "../patterns/stat-card.tsx";
@@ -30,17 +31,8 @@ export function OverviewPage({
   onNavigate: (id: NavId) => void;
   onProvision: () => Promise<void>;
 }) {
-  const [overview, setOverview] = useState<Overview | null>(null);
+  const { overview, error } = useOverview(status.apiUp);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void getOverview()
-      .then(setOverview)
-      .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : "Unable to read this project.");
-      });
-  }, [status.apiUp]);
 
   const url = status.baseUrl ?? "http://127.0.0.1:8080";
 

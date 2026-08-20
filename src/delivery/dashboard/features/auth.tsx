@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { getSchema } from "../lib/api/index.ts";
 import { ConnectSnippet } from "./connect-snippet.tsx";
 import { MintPanel } from "./mint-panel.tsx";
+import { useExampleTable } from "./use-example-table.ts";
 import { UserLogin } from "./user-login.tsx";
 import { UsersPanel } from "./users.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
@@ -21,18 +20,7 @@ export function AuthPage({
   apiUp: boolean;
   onProvision: () => Promise<void>;
 }) {
-  const [table, setTable] = useState("notes");
-
-  useEffect(() => {
-    void getSchema()
-      .then((schema) => {
-        const first = schema.tables[0]?.name;
-        if (first) {
-          setTable(first);
-        }
-      })
-      .catch(() => undefined);
-  }, []);
+  const table = useExampleTable("notes");
 
   return (
     <>

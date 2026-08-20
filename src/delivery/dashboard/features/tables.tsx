@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useCaller } from "../lib/caller.ts";
-import { getSchema, type SchemaSnapshot, type SchemaTable } from "../lib/api/index.ts";
-import { TableGrid } from "./table-grid.tsx";
 import { TableList } from "./table-list.tsx";
 import { TablePanels, type Panel } from "./table-panels.tsx";
-import { TableToolbar } from "./table-toolbar.tsx";
+import { TableRows } from "./table-rows.tsx";
 import { TableVisualizer } from "./table-visualizer.tsx";
+import { useSchema } from "./use-schema.ts";
 import { useTableRows } from "./use-table-rows.ts";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
@@ -39,28 +38,20 @@ export function TablesPage({
   onProvision: () => Promise<void>;
 }) {
   const caller = useCaller();
-  const [schema, setSchema] = useState<SchemaSnapshot | null>(null);
   const [view, setView] = useState<View>("data");
   const [panel, setPanel] = useState<Panel>(null);
-  const first = useRef(true);
 
-  const loadSchema = useCallback(() => {
-    void getSchema()
-      .then((next) => {
-        setSchema(next);
-        if (first.current) {
-          first.current = false;
-          if (!selected) {
-            onSelect(next.tables[0]?.name ?? null);
-          }
-        }
-      })
-      .catch(() => setSchema({ live: false, tables: [] }));
-  }, [selected, onSelect]);
+  /** Land on a table rather than on nothing, unless one was already chosen. */
+  const openFirst = useCallback(
+    (first: string | null) => {
+      if (!selected) {
+        onSelect(first);
+      }
+    },
+    [selected, onSelect],
+  );
+  const { schema, tables, reload } = useSchema(openFirst);
 
-  useEffect(loadSchema, [loadSchema]);
-
-  const tables = schema?.tables ?? [];
   const table = tables.find((entry) => entry.name === selected);
   const columns = table?.columns ?? [];
   const primaryKey = columns.find((column) => column.primaryKey)?.name ?? null;
@@ -80,7 +71,7 @@ export function TablesPage({
   function afterSchemaChange(statement: string): void {
     data.say(statement);
     setPanel(null);
-    loadSchema();
+    reload();
   }
 
   if (!apiUp) {
@@ -153,7 +144,7 @@ export function TablesPage({
           <StatusMessage message={data.error} tone="error" className="block" />
 
           {view === "data" ? (
-            <DataView
+            <TableRows
               caller={caller}
               table={table}
               data={data}
@@ -184,71 +175,6 @@ export function TablesPage({
         onClose={() => setPanel(null)}
         onInsert={(values) => void data.insert(values).then(() => setPanel(null))}
         onSchemaChange={afterSchemaChange}
-      />
-    </>
-  );
-}
-
-/** Rows need a caller before they need anything else: they are filtered by who asks. */
-function DataView({
-  caller,
-  table,
-  data,
-  primaryKey,
-  onNeedToken,
-  onPanel,
-}: {
-  caller: ReturnType<typeof useCaller>;
-  table: SchemaTable | undefined;
-  data: ReturnType<typeof useTableRows>;
-  primaryKey: string | null;
-  onNeedToken: () => void;
-  onPanel: (panel: Panel) => void;
-}) {
-  if (!caller) {
-    return (
-      <EmptyState
-        title="No caller yet"
-        description="Rows are filtered by who is asking, so the studio needs a token before it can show you any."
-        action={<Button onClick={onNeedToken}>Issue a token</Button>}
-      />
-    );
-  }
-  if (!table) {
-    return null;
-  }
-  return (
-    <>
-      <TableToolbar
-        table={table.name}
-        ownerColumn={table.ownerColumn}
-        columns={table.columns}
-        filters={data.filters}
-        onFilters={data.filterBy}
-        selectedCount={data.chosen.size}
-        onDelete={data.removeChosen}
-        onRefresh={data.refresh}
-        onInsert={() => onPanel("insert")}
-        onRls={() => onPanel("rls")}
-        onApi={() => onPanel("api")}
-        onEditTable={() => onPanel("edit-table")}
-        busy={data.busy}
-      />
-      <TableGrid
-        table={table.name}
-        columns={table.columns}
-        rows={data.rows}
-        primaryKey={primaryKey}
-        sort={data.sort}
-        onSort={data.sortBy}
-        selected={data.chosen}
-        onSelect={data.setChosen}
-        onEdit={data.edit}
-        total={data.total}
-        offset={data.offset}
-        limit={data.limit}
-        onPage={data.setOffset}
-        filtered={data.filters.length > 0}
       />
     </>
   );

@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { getHistory, type SchemaHistoryEntry, type SchemaSnapshot } from "../lib/api/index.ts";
-import { SchemaGraph } from "../patterns/schema-graph.tsx";
-import { SchemaRelations } from "../patterns/schema-card.tsx";
+import type { SchemaSnapshot } from "../lib/api/index.ts";
+import { SchemaGraph } from "./schema-graph.tsx";
+import { SchemaRelations } from "./schema-card.tsx";
 import { SchemaHistory } from "./schema-history.tsx";
 import { TableActions } from "./table-actions.tsx";
+import { useSchemaHistory } from "./use-schema-history.ts";
 
 /**
  * The shape of the schema rather than what is in it: every table, its columns,
@@ -20,13 +20,7 @@ export function TableVisualizer({
   onOpenRows: (table: string) => void;
   onChanged: (statement: string) => void;
 }) {
-  const [history, setHistory] = useState<SchemaHistoryEntry[]>([]);
-
-  useEffect(() => {
-    void getHistory()
-      .then(setHistory)
-      .catch(() => setHistory([]));
-  }, [tables]);
+  const history = useSchemaHistory(tables);
 
   return (
     <>

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { getLogs } from "../lib/api/index.ts";
+import { useMemo, useState } from "react";
+import { useLogs } from "./use-logs.ts";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
@@ -9,56 +9,13 @@ import { Input } from "../primitives/input.tsx";
 import { TogglePills } from "../primitives/toggle-pills.tsx";
 import { cn } from "../lib/cn.ts";
 
-type LogLine = { service: string; message: string; error: boolean };
-
 const ALL = "all";
 
-/** Compose numbers every replica. One of each is not worth the suffix. */
-function serviceName(raw: string): string {
-  return raw.replace(/-\d+$/, "");
-}
-
-function parseLogs(text: string): LogLine[] {
-  return text
-    .split("\n")
-    .map((line) => {
-      const match = line.match(/^(\S+)\s+\|\s?(.*)$/);
-      const message = (match?.[2] ?? line).trimEnd();
-      return {
-        service: serviceName(match?.[1] ?? "compose"),
-        message,
-        error: /error|fatal|panic|timeout|failed|refused|reset by peer/i.test(message),
-      };
-    })
-    // A service that printed a blank line said nothing. Giving it a row only
-    // pushes the lines that do say something off the screen.
-    .filter((line) => line.message.length > 0);
-}
-
 export function LogsPage({ target }: { target: string }) {
-  const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { lines, busy, error, refresh } = useLogs();
   const [query, setQuery] = useState("");
   const [service, setService] = useState(ALL);
 
-  async function refresh(): Promise<void> {
-    setBusy(true);
-    setError(null);
-    try {
-      setText(await getLogs());
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to read the logs from Docker.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    void refresh();
-  }, []);
-
-  const lines = useMemo(() => parseLogs(text), [text]);
   const services = useMemo(
     () => [ALL, ...Array.from(new Set(lines.map((line) => line.service)))],
     [lines],
@@ -99,7 +56,7 @@ export function LogsPage({ target }: { target: string }) {
             className="ps-9"
           />
         </div>
-        <Button variant="secondary" onClick={() => void refresh()} busy={busy} static>
+        <Button variant="secondary" onClick={refresh} busy={busy} static>
           Refresh
         </Button>
       </div>
@@ -135,7 +92,7 @@ export function LogsPage({ target }: { target: string }) {
                     Clear filters
                   </Button>
                 ) : (
-                  <Button variant="secondary" onClick={() => void refresh()} busy={busy}>
+                  <Button variant="secondary" onClick={refresh} busy={busy}>
                     Refresh
                   </Button>
                 )

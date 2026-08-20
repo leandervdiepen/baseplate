@@ -51,7 +51,7 @@ function ColumnRow({
 }) {
   return (
     <li
-      // Where a foreign key line starts or lands, measured by SchemaGraph.
+      // Where a foreign key line starts or lands, measured by NodeCanvas.
       data-anchor={`${table}.${column.name}`}
       className={cn(
         "flex min-h-10 items-center gap-2 px-3",

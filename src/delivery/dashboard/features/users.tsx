@@ -1,21 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
-import { listUsers, type OperatorUser, type UserPage } from "../lib/api/index.ts";
+import { useState } from "react";
+import type { OperatorUser } from "../lib/api/index.ts";
 import { UserCreate } from "./user-create.tsx";
 import { UserDrawer } from "./user-drawer.tsx";
 import { UsersGrid } from "./users-grid.tsx";
+import { useUsers } from "./use-users.ts";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { IconUsers } from "../primitives/icon.tsx";
 import { Field, Input } from "../primitives/input.tsx";
 
-const PAGE = 25;
-
 type Panel = { kind: "create" } | { kind: "manage"; user: OperatorUser } | null;
 
 /**
- * Everyone who can sign in to this project. The database answers every search
- * and every page, so what is on screen is what the stack actually holds.
+ * Everyone who can sign in to this project, and the ways to add or remove one.
  * A panel, not a page: the Auth view composes it above the token tooling.
  */
 export function UsersPanel({
@@ -25,49 +23,16 @@ export function UsersPanel({
   apiUp: boolean;
   onProvision: () => Promise<void>;
 }) {
-  const [page, setPage] = useState<UserPage | null>(null);
+  const people = useUsers(apiUp);
   const [draft, setDraft] = useState("");
-  const [search, setSearch] = useState("");
-  const [offset, setOffset] = useState(0);
   const [panel, setPanel] = useState<Panel>(null);
-  const [busy, setBusy] = useState(false);
-  const [said, setSaid] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setBusy(true);
-    try {
-      setPage(await listUsers({ search, limit: PAGE, offset }));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to read your users.");
-      setPage({ live: false, total: 0, users: [] });
-    } finally {
-      setBusy(false);
-    }
-  }, [search, offset]);
-
-  useEffect(() => {
-    if (apiUp) {
-      void load();
-    }
-  }, [apiUp, load]);
-
-  /**
-   * A drawer finished something. Say so here, above the list, then re-read the
-   * list: the panel that did the work is already gone by then.
-   */
-  function settled(message: string): void {
-    setError(null);
-    setSaid(message);
-    void load();
-  }
-
-  const down = !apiUp || page?.live === false;
+  const down = !apiUp || people.page?.live === false;
 
   return (
     <>
-      <StatusMessage message={said} className="mb-4 block" />
-      <StatusMessage message={error} tone="error" className="mb-4 block" />
+      <StatusMessage message={people.said} className="mb-4 block" />
+      <StatusMessage message={people.error} tone="error" className="mb-4 block" />
 
       {down ? (
         <EmptyState
@@ -83,8 +48,7 @@ export function UsersPanel({
               className="min-w-[13rem] max-w-[20rem] flex-1"
               onSubmit={(event) => {
                 event.preventDefault();
-                setOffset(0);
-                setSearch(draft.trim());
+                people.searchFor(draft.trim());
               }}
             >
               {/* The database does the searching. Enter asks it. */}
@@ -98,7 +62,7 @@ export function UsersPanel({
                 />
               </Field>
             </form>
-            <Button variant="ghost" busy={busy} onClick={() => void load()}>
+            <Button variant="ghost" busy={people.busy} onClick={people.refresh}>
               Refresh
             </Button>
             <Button className="ms-auto" onClick={() => setPanel({ kind: "create" })}>
@@ -106,14 +70,14 @@ export function UsersPanel({
             </Button>
           </div>
 
-          {page ? (
+          {people.page ? (
             <UsersGrid
-              users={page.users}
-              total={page.total}
-              offset={offset}
-              limit={PAGE}
-              searching={search.length > 0}
-              onPage={setOffset}
+              users={people.page.users}
+              total={people.page.total}
+              offset={people.offset}
+              limit={people.limit}
+              searching={people.searching}
+              onPage={people.setOffset}
               onAdd={() => setPanel({ kind: "create" })}
               onManage={(user) => setPanel({ kind: "manage", user })}
             />
@@ -126,7 +90,7 @@ export function UsersPanel({
           onClose={() => setPanel(null)}
           onCreated={(email) => {
             setPanel(null);
-            settled(`Added ${email}.`);
+            people.settled(`Added ${email}.`);
           }}
         />
       ) : null}
@@ -137,7 +101,7 @@ export function UsersPanel({
           onClose={() => setPanel(null)}
           onDeleted={(email) => {
             setPanel(null);
-            settled(`Deleted ${email}. Their rows are still there.`);
+            people.settled(`Deleted ${email}. Their rows are still there.`);
           }}
         />
       ) : null}
