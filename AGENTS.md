@@ -26,9 +26,8 @@ If a task would have an operator edit, commit, or merge a file in this repo, sto
 
 ## Scope
 
-Local is proven end to end.
+Local is proven end to end: rows, objects, auth, and a restore that has been drilled.
 Hetzner BYOK (`TARGET=hetzner`) is implemented and preflighted in Settings, but has not run live against a real domain.
-Object storage is open. Backups and restore drills are not started.
 Do not build a hosted control plane. If a task feels like one, stop and ask.
 
 Linear: project Baseplate, team diepen (`DPN`).
@@ -66,6 +65,10 @@ A lint rule enforces this.
 
 `stack/platform/` is Baseplate's own schema and ships with the version.
 There is no directory for an operator's tables, by design.
+
+The client is compiled to JS before publishing (`npm run build`, run by `prepare`).
+The CLI is not: it runs through tsx on purpose, so there is one source of truth for it.
+`bin/` must resolve tsx by module id, never by a path into `node_modules`, or the installed CLI cannot start.
 
 ## Docs
 

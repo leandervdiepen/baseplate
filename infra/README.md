@@ -26,16 +26,21 @@ Hetzner bills the operator.
 | `HETZNER_DNS_ZONE` | Zone that owns the hostname |
 | `SSH_KEY_NAME` | Existing Hetzner SSH key name |
 | `SERVER_LOCATION` | Default `nbg1` |
-| `SITE_ADDRESS` | Must equal `stack/stack.json` hostname (Caddy TLS) |
+| `BASEPLATE_HOSTNAME` | An FQDN under that zone, not `localhost` |
+| `SITE_ADDRESS` | What Caddy listens on. The hostname, so it can get a certificate |
 
-Also set `stack/stack.json` `hostname` to an FQDN under that zone (not `localhost`).
+All of them live in the operator's own `baseplate.env`, and the two tokens never
+leave their machine.
+Settings in the studio writes them, checks them, and provisions from the same
+screen.
 
 ## Commands
 
 ```bash
-TARGET=hetzner ./scripts/provision
+npx @diepen/baseplate up                                  # with TARGET=hetzner
 BASEPLATE_URL=https://<hostname> npm run test:acceptance
-./scripts/teardown
+npx @diepen/baseplate destroy                             # removes the server too
 ```
 
-State lives in `infra/` as local Terraform state (gitignored) plus `.baseplate/state.json`.
+State lives in `infra/` as local Terraform state (gitignored) plus the project's
+`.baseplate/state.json`.

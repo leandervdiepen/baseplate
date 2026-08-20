@@ -16,7 +16,8 @@ test("upsertEnv replaces existing keys and keeps comments", () => {
 test("loopback addresses are accepted", () => {
   expect(isLoopbackAddress("127.0.0.1")).toBe(true);
   expect(isLoopbackAddress("::1")).toBe(true);
-  expect(isLoopbackAddress(":ffff:127.0.0.1")).toBe(true);
+  // Two colons. This test used to assert the one-colon typo the code had.
+  expect(isLoopbackAddress("::ffff:127.0.0.1")).toBe(true);
   expect(isLoopbackAddress("8.8.8.8")).toBe(false);
 });
 

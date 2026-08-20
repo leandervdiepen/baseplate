@@ -3,7 +3,7 @@
 The typed client for a Baseplate API. It ships inside `@diepen/baseplate`.
 
 ```json
-{ "dependencies": { "@diepen/baseplate": "^0.4.0" } }
+{ "dependencies": { "@diepen/baseplate": "^0.5.0" } }
 ```
 
 ```ts
@@ -76,6 +76,28 @@ const client = createClient<Database>(url);
 
 Then an unknown table, an unknown column, or a wrong insert shape is a compile error rather than a 400 at runtime.
 Regenerate after a schema change.
+
+## Files
+
+```ts
+await client.storage.from("avatars").upload("me.png", file);
+await client.storage.from("avatars").list({ prefix: "2026/" });
+await client.storage.from("avatars").download("me.png");   // a Blob
+await client.storage.from("avatars").remove("me.png");
+```
+
+A bucket is the operator's to create; an app puts objects in one.
+A caller sees only the objects they put there, decided by the same row-level
+security that decides rows, so knowing someone else's key gets a 404.
+
+```ts
+const { data: url } = await client.storage.from("avatars").createSignedUrl("me.png", 3600);
+```
+
+That is what an `<img src>` can follow, since it cannot send an Authorization
+header. It covers one object and expires.
+
+Every call returns `{ data, error, status }`, like a query.
 
 ## Operator tokens
 

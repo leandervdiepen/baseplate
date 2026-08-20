@@ -30,7 +30,14 @@ Nothing in this repo is an operator's config, and no committed file carries a wo
 
 `.baseplate/stack.env` is derived from `baseplate.env` and holds only what the running stack needs.
 It is the only env file that crosses the wire to a server.
-Cloud credentials are never in it.
+
+`HCLOUD_TOKEN` and `HETZNER_DNS_TOKEN` are never in it.
+They can create and destroy servers, and they stay on the operator's machine.
+
+`BACKUP_KEY` and the `BACKUP_S3_*` credentials **are** in it, deliberately.
+The backup and its restore drill run where the database is, so they need the key there.
+Those credentials reach one bucket; an account token reaches an account.
+That difference is the whole rule, and it is why the exception is written down rather than assumed.
 
 Hetzner is BYOK.
 `HCLOUD_TOKEN`, `HETZNER_DNS_TOKEN`, `HETZNER_DNS_ZONE`, and `SSH_KEY_NAME` are the operator's credentials for their own Hetzner account.
@@ -152,6 +159,11 @@ Placeholders show a format, never a label.
 Keep a submit enabled and validate on submit, with the message next to the field that failed.
 Status and errors go through `StatusMessage`, so they are announced rather than only drawn.
 Tabular numbers on ids, timestamps, and counts.
+
+A control that cannot be off is not a toggle.
+Row security is always on, so it is shown as status and never as a switch.
+
+Anything destructive asks first, in a band next to what it will destroy, and says what goes.
 
 Tailwind compiles `scale-*` to the `scale` property, so a transition has to name `scale`; naming `transform` silently does nothing.
 No `transition: all`.

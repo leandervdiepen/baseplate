@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.5.0
+
+### Files, with the same rule as rows
+
+Buckets you make, objects an app puts in them. An object is a row with bytes
+attached and is guarded the same way: a private bucket shows a caller only their
+own, a public one is readable by anyone signed in and writable only by whoever
+put the object there. Knowing someone else's key gets a 404.
+
+`client.storage.from(bucket)` uploads, lists, downloads, removes, and makes a
+signed link for what a browser must fetch without a header.
+
+The bytes live in a store on the compose network, never published. Point
+`STORAGE_ENDPOINT` at Hetzner Object Storage, B2, or S3 instead and nothing else
+changes.
+
+### Backups that have been restored
+
+A dump on a schedule, sealed with a key from your own config, sent to any
+S3-compatible bucket you name. On its own schedule it fetches the newest one,
+opens it, restores it into a database of its own, and counts the tables and rows
+that came back. The studio leads with that date.
+
+`baseplate backup now | list | drill | drills`, and `baseplate restore <id>`,
+which replaces the live database and asks you to type the project name first.
+
+### One stack at a time
+
+Ports are the same well-known numbers in every project again. `up` refuses while
+another project's stack holds them, names the directory it is in, and
+`up --replace` stops it and takes over.
+
+### One page for a table
+
+Tables, Schema, and Policies were three destinations for one subject. Now one:
+rows in an editable grid, a Data / Schema toggle for the visualizer, and row
+security as a pill that opens the policy beside the data it governs.
+
+### Fixed
+
+- `down` ran `docker compose down -v`, so the command that reads like "stop"
+  destroyed the database. It stops now; `destroy` removes volumes and asks first.
+- The installed CLI never ran: it looked for tsx at a path that only exists in a
+  checkout, so every command died before printing anything.
+- `@diepen/baseplate/client` could not be imported outside a bundler.
+- The studio answered cross-site requests, so a page you visited could have
+  posted `{"destroy":true}` to it.
+- Caddy matched `/auth*`, so a table named `authors` was answered by the auth
+  service and 404'd.
+- `CORS_ORIGIN` was read by the Caddyfile but never passed to the container, so
+  setting it did nothing.
+- No service had a restart policy, so a reboot left the stack down.
+
 ## 0.4.0
 
 Baseplate is a package you install, not a repo you clone.

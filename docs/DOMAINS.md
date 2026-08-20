@@ -136,8 +136,43 @@ Different things, and never the same command.
 `down` stops the containers. The volumes, the data, and any server stay.
 `destroy` removes the volumes and the server with them, and asks first.
 
-## What does not exist yet
+## Bucket
 
-Backup and restore-drill entities are not started.
-Do not add them to `src/domain/` before that work is in progress.
-Object storage is the same.
+A named place for objects, made by the operator like a table is.
+An app never makes one.
+
+`private` means a caller sees only the objects they put there.
+`public` means anyone holding a token may read, and still only the owner may
+write over an object or remove it.
+
+A bucket is one flat namespace: a key is taken or it is not, whoever took it.
+Someone who is refused a key learns that it exists, and nothing else.
+
+## Object
+
+Bytes at a key in a bucket, with a row in `storage.objects` that says who owns
+them.
+
+The row is claimed before a byte is written, so being refused a key cannot
+destroy what was behind it.
+A blob with no row is unreachable, and is swept.
+
+Invariant: an object key never climbs out of its bucket. No `..`, no leading
+slash, no control characters.
+
+## Backup
+
+A dump of the operator's database, sealed, with a record of when it was taken,
+how big it was, and where it went.
+
+The record lives in the database next to the schema history.
+The bytes live wherever the operator said, and if they said nowhere, on the same
+machine, which is stated plainly rather than counted as safety.
+
+## Restore drill
+
+Proof that a backup restores. Not a check that a file exists: the whole chain
+backwards, from the destination, through the seal, into a database of its own,
+counting the tables and rows that came back.
+
+A backup nobody has restored is a hope.

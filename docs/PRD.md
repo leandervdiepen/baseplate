@@ -64,13 +64,14 @@ The database does the filtering.
 - **Schema.** Tables, columns, renames, and drops from the studio or the CLI. Each is one transaction: the DDL, the row access policy, the owner trigger, the grants, and a history entry. A table cannot exist unprotected.
 - **Auth.** Email and password on the stack. Short-lived access tokens with `exp`, single-use refresh tokens that can be revoked, both lifetimes configurable in the studio.
 - **The client.** `@diepen/baseplate/client`. Typed queries with the filters an app needs, sessions that persist and refresh themselves. It never filters rows; the database does.
-- **The studio.** Tables, schema editing, policies, schema history, auth, logs, and settings, on 127.0.0.1.
+- **Object storage.** Buckets the operator makes, objects an app puts in them. An object is a row with bytes attached and is guarded the same way: private buckets show a caller only their own, public ones are readable by anyone signed in and writable only by the owner. Signed links for what a browser must fetch without a header.
+- **Backups.** A dump on a schedule, sealed with a key from the operator's own config, sent to any S3-compatible bucket they name. On its own schedule it restores one into a scratch database and counts what came back, and the studio leads with that date.
+- **The studio.** Tables with their rows, schema, and row security on one page; storage; backups; auth; logs; settings. On 127.0.0.1.
 
 ### Still open
 
-- Object storage with owner-scoped rules
-- Encrypted backups to a second provider, and a restore drill on a schedule
 - A live Hetzner provision against a real domain
+- Rate limiting, password reset, and email verification on auth
 
 ## Out
 
@@ -108,6 +109,8 @@ Compose mature pieces.
 | Tokens PostgREST trusts | JWT HS256, `sub` is the user id, `role` is the database role |
 | User login | `stack/auth/`, public `/auth/*`, no anon or public key |
 | Schema and access state | The operator's database, in schema `baseplate` |
+| Object bytes | SeaweedFS on the compose network, or any S3 the operator points at |
+| Backup destination | Any S3-compatible bucket. Hetzner Object Storage, B2, S3 |
 | App client | `@diepen/baseplate/client` |
 | Studio | React + Tailwind, local only |
 | Distribution | npm. Installing a version is how you pin one. |

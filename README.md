@@ -20,15 +20,20 @@ npx @diepen/baseplate up
 ```
 
 `init` writes `baseplate.env` with secrets generated for this project alone.
-`up` starts Postgres, PostgREST, auth, and Caddy, then prints the API URL your app talks to (locally `http://127.0.0.1:8080`).
+`up` starts Postgres, the API, auth, object storage, backups, and Caddy, then prints the API URL your app talks to (locally `http://127.0.0.1:8080`).
 
 That directory holds your config, your secrets, and your state.
 It is yours, and Baseplate never writes anything else into it.
 
-Two projects on one machine share nothing: not ports, not volumes, not secrets.
-`init` picks free ports for the API, Postgres, and the studio, so a second project comes up beside the first and both studios can be open at once.
-Name them yourself when you care which: `init --port 9100 --postgres-port 5599 --dashboard-port 9788`.
-A port you name is used or the command stops; only a port you left out is allowed to move.
+Two projects on one machine share no secrets and no volumes. They do share
+ports, because one stack runs at a time: `up` refuses while another project's
+stack holds them and names the directory it is in, and `up --replace` stops that
+one and takes over.
+
+Name the ports yourself if you would rather: `init --port 9100 --postgres-port 5599 --dashboard-port 9788`.
+
+`down` stops the stack and keeps your data. `destroy` deletes it, and asks you
+to type the project's name first.
 
 ## Make a table
 
@@ -117,6 +122,49 @@ Give every table an `owner_id uuid not null` column and adopt it after each push
 
 [`examples/kanban`](examples/kanban) is a working board built this way: drizzle for the schema, Baseplate for login and row access.
 
+## Store files
+
+A bucket is yours to make, like a table. An app puts objects in one and only
+ever sees its own, decided by the same row-level security that decides rows.
+
+```bash
+npx @diepen/baseplate storage add-bucket avatars
+```
+
+```ts
+await client.storage.from("avatars").upload("me.png", file);
+await client.storage.from("avatars").list();
+const { data: url } = await client.storage.from("avatars").createSignedUrl("me.png", 3600);
+```
+
+A signed link is what an `<img src>` can follow, since it cannot send a header.
+It covers one object and expires.
+
+`add-bucket --public` makes a bucket anyone signed in can read, where only the
+caller who put an object there can replace or remove it.
+
+The bytes sit in a store on the compose network, never published. Point
+`STORAGE_ENDPOINT` at Hetzner Object Storage, B2, or S3 and nothing else changes.
+
+## Back it up
+
+A dump runs on a schedule, sealed with a key generated for your project, and
+goes wherever you point `BACKUP_S3_*`. Name nothing and it stays on the same
+machine as the database, which is better than nothing and is not a backup.
+
+```bash
+npx @diepen/baseplate backup now
+npx @diepen/baseplate backup drills
+npx @diepen/baseplate restore <id>
+```
+
+On its own schedule it restores the newest backup into a scratch database and
+counts what came back, because a backup nobody has restored is a hope. The
+studio leads with that date rather than with a list of files.
+
+Restoring replaces the live database, so it is a command and it asks you to type
+the project's name first.
+
 ## Go to a server
 
 Set the target to Hetzner in the studio's Settings and Baseplate creates a VM, a firewall, a DNS record, and a TLS certificate in **your** account, from your own API tokens.
@@ -133,8 +181,10 @@ This is not required to work locally, and local needs no domain and no cloud acc
 - Email and password login on `POST /auth/signup`, `/auth/login`, `/auth/refresh`, `/auth/logout`
 - An HTTP API over your tables (PostgREST and auth behind Caddy)
 - A typed client with the queries an app needs
-- A local studio for tables, schema, policies, auth, logs, and settings
-- `init`, `up`, `down`, `dashboard`, `schema`, `tables`, `types`, `mint-token`
+- Object storage with the same per-caller rules, and signed links
+- Scheduled encrypted backups, and a drill that proves one restores
+- A local studio: tables with their rows, schema and row security on one page, storage, backups, auth, logs, settings
+- `init`, `up`, `down`, `destroy`, `dashboard`, `schema`, `storage`, `backup`, `restore`, `tables`, `types`, `mint-token`
 
 Run `npx @diepen/baseplate --help` for the whole list.
 
@@ -147,10 +197,14 @@ Run `npx @diepen/baseplate --help` for the whole list.
 | `docs/ARCHITECTURE.md` | Layers, dependency rule, where code goes |
 | `docs/DOMAINS.md` | Ubiquitous language and per-concept rules |
 | `docs/CONVENTIONS.md` | Naming, errors, secrets, tests, commits, studio UI |
+| `CONTRIBUTING.md` | How to run it, and the rules a change is held to |
+| `SECURITY.md` | What counts as a vulnerability, and where to send one |
 | `AGENTS.md` | Short rules for the next agent |
 
 ## Status
 
-The local path is proven end to end: install, init, up, make a table, sign up two users, and each sees only their own rows.
+The local path is proven end to end: install, init, up, make a table, sign up two users, and each sees only their own rows and their own files. `npm run test:acceptance` is that proof, and it runs in CI.
+
 Hetzner is implemented and preflighted in the studio, but has not been run live against a real domain yet.
-Object storage is still open.
+
+Not built: rate limiting, password reset, and email verification on auth. One node, so a restore is minutes of downtime rather than seconds. No metrics and no alert when a backup fails.
