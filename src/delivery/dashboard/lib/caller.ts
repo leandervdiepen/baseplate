@@ -68,6 +68,21 @@ export function loadCaller(): CallerSession | undefined {
   return readCaller();
 }
 
+/**
+ * Stop being anybody. Impersonating is easy to start and was impossible to
+ * end, which left an expired token in the tab with nothing saying so.
+ */
+export function clearCaller(): void {
+  load();
+  caller = undefined;
+  issued = [];
+  sessionStorage.removeItem(KEY);
+  sessionStorage.removeItem(RECENTS_KEY);
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
 export function saveCaller(session: CallerSession): void {
   load();
   caller = session;

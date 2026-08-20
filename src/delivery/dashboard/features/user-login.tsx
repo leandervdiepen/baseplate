@@ -16,6 +16,7 @@ export function UserLogin() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
   const [busy, setBusy] = useState<Kind | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -36,6 +37,7 @@ export function UserLogin() {
 
   async function submit(kind: Kind): Promise<void> {
     setError(null);
+    setSaid(null);
     if (invalid()) {
       return;
     }
@@ -43,6 +45,7 @@ export function UserLogin() {
     try {
       const session = kind === "signup" ? await signUp(email, password) : await signIn(email, password);
       saveCaller({ sub: session.user.id, token: session.token, role: peekJwt(session.token).role });
+      setSaid(`Signed in as ${session.user.email}. Tables now answers as this caller.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to sign in. Check the email and password.");
     } finally {
@@ -79,6 +82,7 @@ export function UserLogin() {
             onChange={(event) => setPassword(event.target.value)}
           />
         </Field>
+        <StatusMessage message={said} />
         <StatusMessage message={error} tone="error" />
         <div className="flex flex-wrap gap-[var(--space-sm)]">
           <Button onClick={() => void submit("signup")} busy={busy === "signup"}>

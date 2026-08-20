@@ -1,6 +1,8 @@
 export type JwtPeek = {
   sub?: string | undefined;
   role?: string | undefined;
+  /** Seconds since the epoch, as JWT counts them. Absent on older tokens. */
+  exp?: number | undefined;
 };
 
 /**
@@ -16,7 +18,7 @@ export function peekJwt(token: string): JwtPeek {
     const padded = encoded.replaceAll("-", "+").replaceAll("_", "/");
     const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
     const payload = JSON.parse(atob(padded + pad)) as JwtPeek;
-    return { sub: payload.sub, role: payload.role };
+    return { sub: payload.sub, role: payload.role, exp: payload.exp };
   } catch {
     return {};
   }

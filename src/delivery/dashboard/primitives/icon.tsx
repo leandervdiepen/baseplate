@@ -70,6 +70,21 @@ export function IconAuth(props: IconProps) {
   );
 }
 
+/**
+ * Two figures, the second half-drawn behind the first: a list of people rather
+ * than one account. Same 16 grid, so it sits level with IconAuth beside it.
+ */
+export function IconUsers(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="6" cy="5.3" r="2.6" {...stroke} />
+      <path d="M1.5 13.8C1.5 11.4 3.5 10 6 10s4.5 1.4 4.5 3.8" {...stroke} />
+      <path d="M10.6 3.1a2.6 2.6 0 0 1 0 4.4" {...stroke} />
+      <path d="M11.9 10.2c1.7.4 2.6 1.6 2.6 3.6" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconLogs(props: IconProps) {
   return (
     <Svg {...props}>

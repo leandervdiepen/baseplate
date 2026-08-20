@@ -30,6 +30,6 @@
     "stack/storage/src"
   ],
   "exclude": [
-    "src/delivery/dashboard/**/*.tsx"
+    "src/delivery/dashboard"
   ]
 }

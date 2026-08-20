@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { saveCaller, useCaller, useIssued } from "../lib/caller.ts";
+import { clearCaller, saveCaller, useCaller, useIssued } from "../lib/caller.ts";
 import { shortId } from "../lib/format.ts";
 import { peekJwt } from "../lib/jwt.ts";
 import { mintToken } from "../lib/api/index.ts";
@@ -15,6 +15,18 @@ import { Field, Hint, Input } from "../primitives/input.tsx";
 
 const SAMPLE = "11111111-1111-4111-8111-111111111111";
 
+/**
+ * Minted tokens expire now, so the card says when. Read at render rather than
+ * counted down: a ticking clock would redraw the page to tell you nothing.
+ */
+function expiryLabel(exp: number | undefined): string | null {
+  if (exp === undefined) {
+    return null;
+  }
+  const minutes = Math.ceil((exp * 1000 - Date.now()) / 60000);
+  return minutes <= 0 ? "expired" : `expires in ${String(minutes)}m`;
+}
+
 export function MintPanel() {
   const caller = useCaller();
   const recents = useIssued();
@@ -25,6 +37,7 @@ export function MintPanel() {
   const token = caller?.token ?? "";
   const peek = token ? peekJwt(token) : {};
   const role = peek.role ?? caller?.role ?? "app_user";
+  const expiry = expiryLabel(peek.exp);
 
   async function issue(): Promise<void> {
     setBusy(true);
@@ -82,8 +95,16 @@ export function MintPanel() {
               <div className="flex flex-wrap gap-[var(--space-sm)]">
                 <MonoChip>sub {shortId(peek.sub ?? sub)}</MonoChip>
                 <MonoChip>role {role}</MonoChip>
+                {expiry ? <MonoChip>{expiry}</MonoChip> : null}
               </div>
-              <CopyButton value={token} label="Copy token" />
+              <div className="flex flex-wrap gap-[var(--space-sm)]">
+                <CopyButton value={token} label="Copy token" />
+                {/* The way to stop impersonating. Without it the tab keeps
+                    answering as somebody until it is closed. */}
+                <Button variant="ghost" onClick={clearCaller}>
+                  Clear
+                </Button>
+              </div>
             </>
           ) : (
             <p className="text-[length:var(--text-sm)] text-[var(--color-text-muted)]">

@@ -7,6 +7,7 @@ import { OverviewPage } from "./features/overview.tsx";
 import { SettingsPage } from "./features/settings.tsx";
 import { StoragePage } from "./features/storage.tsx";
 import { TablesPage } from "./features/tables.tsx";
+import { UsersPage } from "./features/users.tsx";
 import { getStatus, provision, type OperatorStatus } from "./lib/api/index.ts";
 import { AppShell, type NavId } from "./patterns/app-shell.tsx";
 import { Button } from "./primitives/button.tsx";
@@ -96,6 +97,9 @@ export function App() {
       ) : null}
       {nav === "storage" ? <StoragePage apiUp={status.apiUp} /> : null}
       {nav === "backups" ? <BackupsPage /> : null}
+      {nav === "users" ? (
+        <UsersPage apiUp={status.apiUp} onProvision={runProvision} />
+      ) : null}
       {nav === "logs" ? <LogsPage target={status.target ?? "local"} /> : null}
       {nav === "auth" ? <AuthPage baseUrl={status.baseUrl} /> : null}
       {nav === "settings" ? <SettingsPage status={status} onChanged={refresh} /> : null}

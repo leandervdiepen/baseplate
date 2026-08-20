@@ -9,3 +9,4 @@ export * from "./backups.ts";
 export * from "./schema.ts";
 export * from "./stack.ts";
 export * from "./storage.ts";
+export * from "./users.ts";
