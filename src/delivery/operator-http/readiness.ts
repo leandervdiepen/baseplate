@@ -1,6 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
 
 export type ReadinessCheck = {
   id: string;
@@ -77,27 +75,6 @@ export function readReadiness(input: ReadinessInput): ReadinessCheck[] {
   ];
 }
 
-/**
- * The migration files this repo carries. Whether each is applied lives in the
- * database, which the dashboard cannot reach, so the UI offers to run them
- * rather than claiming to know. Running them again is a no-op.
- */
-export function migrationFiles(root: string): string[] {
-  const dirs: [string, string][] = [
-    ["platform", resolve(root, "stack/platform")],
-    ["app", resolve(root, "stack/migrations")],
-  ];
-  const files: string[] = [];
-  for (const [label, dir] of dirs) {
-    if (!existsSync(dir)) {
-      continue;
-    }
-    for (const file of readdirSync(dir).filter((name) => name.endsWith(".sql")).sort()) {
-      files.push(`${label}/${file}`);
-    }
-  }
-  return files;
-}
 
 function hasCommand(command: string, args: string[]): boolean {
   try {

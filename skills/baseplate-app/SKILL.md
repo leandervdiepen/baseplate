@@ -10,7 +10,7 @@ Not for developing the Baseplate package itself.
 
 ## Install
 
-`{ "dependencies": { "@diepen/baseplate": "^0.5.0" } }`
+`{ "dependencies": { "@diepen/baseplate": "^0.6.0" } }`
 
 ```ts
 import { createClient } from "@diepen/baseplate/client";
@@ -116,8 +116,9 @@ Do not invent migration files inside `node_modules/@diepen/baseplate`.
 Do not fork Baseplate.
 
 If you are also the operator, `npx @diepen/baseplate schema add-table notes --column title:text`.
-When drizzle owns the schema, `drizzle-kit push` then `npx @diepen/baseplate schema adopt-table boards`.
-Give every table an `owner_id uuid not null` column and adopt it after each push, then regenerate types.
+That is the path to use. It needs no file and no second tool.
+
+Only if the project already keeps a drizzle schema: `drizzle-kit push`, then `npx @diepen/baseplate schema adopt-table boards` for each table, giving every one an `owner_id uuid not null` column. Adopt after each push, then regenerate types.
 
 ## Tests
 
@@ -135,7 +136,8 @@ expect(await get("/notes", alice.token)).toHaveLength(1);
 expect(await get("/notes", bob.token)).toHaveLength(0);
 ```
 
-`baseplate up` belongs in Playwright `globalSetup` (`execFileSync("npx", ["@diepen/baseplate", "up"], { stdio: "inherit" })`), not `webServer`.
+`baseplate init` runs once in the test project directory and refuses to run again over an existing `baseplate.env`, so it is a setup step and never part of a test run.
+`baseplate up` is the repeatable half: it belongs in Playwright `globalSetup` (`execFileSync("npx", ["@diepen/baseplate", "up"], { stdio: "inherit" })`), not `webServer`.
 Running it against a stack that is already up is a no-op.
 
 Skip the login form by writing the session into `localStorage` before the page loads:

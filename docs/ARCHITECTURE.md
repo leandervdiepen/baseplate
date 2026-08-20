@@ -126,7 +126,9 @@ Losing it costs one re-open.
 ## Where state lives
 
 `stack/` is what runs: Postgres, PostgREST, Caddy, the auth service, and the migrate service.
-`stack/platform/` is Baseplate's own schema, versioned with the package.
+`stack/platform/` is Baseplate's own schema, versioned with the package: the auth tables, the refresh tokens, the schema registry, and the storage and backup bookkeeping, with the grants the stack needs.
+The migrate service applies those numbered files on every start.
+Nothing an operator creates belongs there, and there is no directory that is meant to hold it: resetting their own tables must never cost them their users.
 `infra/` is the server: Terraform that uses the operator's Hetzner token.
 `src/` is the operator tool that brings those to life.
 
@@ -148,16 +150,17 @@ Nothing about schema editing is exposed publicly.
 
 ## Current adapters
 
-| Folder | Port it implements |
+| Folder | What it implements |
 | --- | --- |
-| `memory/` | In-memory fakes of every port, for unit tests |
+| `memory/` | In-memory fakes for unit tests |
 | `docker/` | Local `CloudProvider` and `StackRuntime` |
 | `hetzner/` | `CloudProvider` against the operator's Hetzner account (BYOK) |
 | `ssh/` | Remote `StackRuntime` |
 | `jwt/` | `TokenSigner` |
-| `postgres/` | `SchemaAdmin`, against the operator's database |
+| `postgres/` | `SchemaAdmin`, `StorageAdmin`, `BackupAdmin`, `UserAdmin`, against the operator's database |
 | `fs/` | `StackStateStore`, `ProjectDirectory` |
 | `clock/` | `Clock` |
+| `crypto/` | Password hashing for the user adapters. Not a port |
 
 ## Tests and the layers
 

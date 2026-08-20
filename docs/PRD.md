@@ -101,7 +101,7 @@ An operator who has never read a wiki can:
 3. Sign up two users from an app and watch each see only their own rows.
 4. Save Hetzner keys when they have a domain, pass the readiness checks, and provision to their account from the same screen.
 
-`two-token.sh` and `signup-login.sh` still pass.
+`npm run test:acceptance` still passes.
 The studio does not filter rows in the browser. RLS stays the gate.
 
 ## How it is built

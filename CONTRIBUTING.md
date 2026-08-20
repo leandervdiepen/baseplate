@@ -50,7 +50,7 @@ deeper.
 Fix the doc in the same change and delete what it replaced. Never append a
 history or an ADR; git holds the past.
 
-The rest — naming, errors, secrets, tests, commit messages, studio UI — is in
+The rest - naming, errors, secrets, tests, commit messages, studio UI - is in
 [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md).
 
 ## Commits

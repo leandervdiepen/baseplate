@@ -72,14 +72,15 @@ Named by behaviour, not as a mirror of `src/`.
 A handful of tests.
 
 **Acceptance** (`tests/acceptance/`, `npm run test:acceptance`).
-Runs `tests/acceptance/two-token.sh` and `tests/acceptance/signup-login.sh`.
-Those scripts are the definition of done.
-Plain HTTP.
+Shell scripts over plain HTTP against a running stack.
+Each one proves a promise the product makes to a user end to end: what they can do, and what the database refuses them.
+The `test:acceptance` script in `package.json` is the list of which ones run, so a new proof is a script named there and not a line here.
+Together they are the definition of done.
 Needs a running stack (`./scripts/dev init` then `./scripts/dev up`).
 They make the table they need, the way an operator would, because nothing in this repo declares it.
 Few.
 
-The acceptance script is the end-to-end proof of row access.
+The acceptance suite is the end-to-end proof of row access.
 Dashboard work does not replace it.
 The studio is checked by driving a real browser against a running stack, not by a snapshot suite.
 

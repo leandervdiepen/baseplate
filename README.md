@@ -108,11 +108,11 @@ npx @diepen/baseplate tables    # what you have
 npx @diepen/baseplate schema    # every change your database has taken
 ```
 
-## Schema as code
+## If you already keep a schema file
 
-Point drizzle-kit at the database like any other Postgres. `drizzle-kit pull` reads what is there, `drizzle-kit push` applies changes.
+`schema add-table` above is the product: a schema change is a transaction against your running database, recorded there, with no file to commit and no migration to merge.
 
-Baseplate did not create those tables, so hand each one over once:
+If you already run drizzle-kit, you do not have to give it up. This is an ordinary Postgres, so `drizzle-kit pull` reads what is there and `drizzle-kit push` applies your schema file. Baseplate did not create those tables, so hand each one over once:
 
 ```bash
 npx @diepen/baseplate schema adopt-table boards
@@ -120,7 +120,7 @@ npx @diepen/baseplate schema adopt-table boards
 
 That records the table, writes its policy, adds the owner trigger, and grants the app role, in one transaction. Give every table an `owner_id uuid not null` column and adopt it after each push.
 
-[`examples/kanban`](examples/kanban) is a working board built this way: drizzle for the schema, Baseplate for login, row access, and card attachments.
+[`examples/kanban`](examples/kanban) is a working board: `schema add-table` for the tables, Baseplate for login, row access, and card attachments. It used to keep a drizzle schema file and adopt it, which is why `adopt-table` exists and is tested; it does not need one.
 
 ## Files
 
@@ -152,88 +152,25 @@ On its own schedule the stack restores the newest backup into a scratch database
 
 ## Testing with Playwright
 
-Your app's end-to-end tests can run against a real stack instead of a mocked backend, which means they exercise real row-level security. Users are cheap to create over HTTP.
+Your app's end-to-end tests can run against a real stack instead of a mocked backend, so they exercise the real access rules rather than a mock's idea of them. Users are cheap: one HTTP call each, so every test can make its own and share state with nobody.
 
-```bash
-npm i -D @playwright/test
-npx playwright install chromium
-```
+The test worth writing first is two callers against one endpoint:
 
 ```ts
-// tests/e2e/rls.spec.ts
-import { expect, test } from "@playwright/test";
-import { randomUUID } from "node:crypto";
-
-const API = process.env.BASEPLATE_URL ?? "http://127.0.0.1:8080";
-
-async function signUp() {
-  const response = await fetch(`${API}/auth/signup`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email: `e2e-${randomUUID()}@example.test`, password: "a-good-password" }),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  return (await response.json()) as { token: string; user: { id: string } };
-}
-
 test("each caller sees only their own rows", async () => {
   const alice = await signUp();
   const bob = await signUp();
 
-  await fetch(`${API}/notes`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${alice.token}`, "content-type": "application/json" },
-    body: JSON.stringify({ title: "alice only" }),
-  });
+  await post("/notes", alice.token, { title: "alice only" });
 
-  const mine = await (await fetch(`${API}/notes`, {
-    headers: { authorization: `Bearer ${alice.token}` },
-  })).json();
-  const theirs = await (await fetch(`${API}/notes`, {
-    headers: { authorization: `Bearer ${bob.token}` },
-  })).json();
-
-  expect(mine).toHaveLength(1);
-  expect(theirs).toHaveLength(0);
+  expect(await get("/notes", alice.token)).toHaveLength(1);
+  expect(await get("/notes", bob.token)).toHaveLength(0);
 });
 ```
 
-To start a signed-in browser without going through your login form, write the session into `localStorage` before the page loads. The client reads it from there on startup.
+Nothing there filters by user, and nothing in your app does either. Bob gets an empty array because Postgres decided that.
 
-```ts
-import { SESSION_KEY } from "@diepen/baseplate/client";
-
-const session = await signUp();
-await page.addInitScript(
-  ([key, value]) => window.localStorage.setItem(key, value),
-  [SESSION_KEY, JSON.stringify({ ...session, expiresAt: Date.now() + session.expiresIn * 1000 })],
-);
-await page.goto("/");
-```
-
-Have Playwright bring the stack up itself, so `npx playwright test` works from a clean checkout. `up` returns once the stack is healthy rather than staying in the foreground, so it belongs in `globalSetup` rather than in `webServer`:
-
-```ts
-// playwright.config.ts
-import { defineConfig } from "@playwright/test";
-
-export default defineConfig({
-  globalSetup: "./tests/e2e/stack.ts",
-  webServer: { command: "npm run dev", url: "http://127.0.0.1:5173", reuseExistingServer: true },
-  use: { baseURL: "http://127.0.0.1:5173" },
-});
-```
-
-```ts
-// tests/e2e/stack.ts
-import { execFileSync } from "node:child_process";
-
-export default function globalSetup() {
-  execFileSync("npx", ["@diepen/baseplate", "up"], { stdio: "inherit" });
-}
-```
-
-Running `up` against a stack that is already up is a no-op, so this is safe to repeat. One stack runs at a time, so give CI one project directory rather than one per suite.
+[`sdk/README.md`](sdk/README.md#testing) has the working version: the `signUp`, `post`, and `get` helpers, the Playwright config that brings the stack up in `globalSetup` after a one-time `init`, signing a browser in without driving the login form, and a fixture that does it for every test.
 
 ## Going to production
 
@@ -303,10 +240,10 @@ cd baseplate && npm install
 
 npm run lint && npm run lint:arch && npm run typecheck && npm test
 npm run test:integration    # boots the real stack
-npm run test:acceptance     # two callers, one endpoint, disjoint rows
+npm run test:acceptance     # the definition of done
 ```
 
-`npm run test:acceptance` is the definition of done. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+All of them pass before a pull request. Read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## License
 
