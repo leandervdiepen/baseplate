@@ -28,7 +28,7 @@ async function withSession<T>(
   roots: OperatorRoots,
   run: (session: ToolSession) => Promise<T>,
 ): Promise<T> {
-  const operator = createOperatorFor(roots);
+  const operator = await createOperatorFor(roots);
   try {
     return await run({
       operator,

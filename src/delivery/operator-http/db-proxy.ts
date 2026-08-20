@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { apiBaseFor } from "./api-base.ts";
 import { parseEnvMap } from "./env-file.ts";
 import { CONFIG_FILE } from "../paths.ts";
 import { sendJson } from "./json.ts";
@@ -10,7 +11,7 @@ export async function proxyPostgrest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  await proxyLocalStack(root, req, res, (url) => url.replace(/^\/api\/db/, "") || "/");
+  await proxyStack(root, req, res, (url) => url.replace(/^\/api\/db/, "") || "/");
 }
 
 export async function proxyAuth(
@@ -18,13 +19,13 @@ export async function proxyAuth(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  await proxyLocalStack(root, req, res, (url) => {
+  await proxyStack(root, req, res, (url) => {
     const rest = url.replace(/^\/api\/auth/, "");
     return `/auth${rest || ""}`;
   });
 }
 
-async function proxyLocalStack(
+async function proxyStack(
   root: string,
   req: IncomingMessage,
   res: ServerResponse,
@@ -32,9 +33,8 @@ async function proxyLocalStack(
 ): Promise<void> {
   const envPath = resolve(root, CONFIG_FILE);
   const env = parseEnvMap(readFileSync(envPath, "utf8"));
-  const port = env.HTTP_PORT || "8080";
   const rest = rewrite(req.url ?? "/");
-  const target = `http://127.0.0.1:${port}${rest}`;
+  const target = `${apiBaseFor(env)}${rest}`;
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
@@ -78,9 +78,11 @@ async function proxyLocalStack(
     });
     res.end(body);
   } catch {
+    // Naming the address matters once a project can point somewhere else: an
+    // operator whose server is down should not read this as their laptop.
     sendJson(res, 503, {
       code: "operator.api_down",
-      message: "API is down. Provision the stack from Settings.",
+      message: `No answer from ${apiBaseFor(env)}. Start the stack, or check Settings.`,
     });
   }
 }

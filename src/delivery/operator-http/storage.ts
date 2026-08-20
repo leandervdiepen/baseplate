@@ -27,7 +27,7 @@ export async function handleStorageRoute(
   // throw at someone who only opened the page.
   let operator;
   try {
-    operator = createOperatorFor(roots, true);
+    operator = await createOperatorFor(roots, true);
   } catch {
     sendJson(res, 200, { live: false, buckets: [] });
     return;

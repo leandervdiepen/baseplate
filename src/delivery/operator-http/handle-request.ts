@@ -9,6 +9,7 @@ import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
 import { parseEnvMap } from "./env-file.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
+import { type Problem, problemFrom } from "./problem.ts";
 import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
 import { handleBackupRoute } from "./backups.ts";
@@ -154,9 +155,9 @@ export async function handleOperatorRequest(
  */
 async function withOperator<T>(
   roots: OperatorRoots,
-  run: (operator: ReturnType<typeof createOperatorFor>) => Promise<T>,
+  run: (operator: Awaited<ReturnType<typeof createOperatorFor>>) => Promise<T>,
 ): Promise<T> {
-  const operator = createOperatorFor(roots, true);
+  const operator = await createOperatorFor(roots, true);
   try {
     return await run(operator);
   } finally {
@@ -172,33 +173,37 @@ async function withOperator<T>(
  * the target may be set to one whose keys are not filled in yet; neither is an
  * error the operator needs thrown at them while they are looking at Settings.
  */
-async function readTables(roots: OperatorRoots): Promise<unknown> {
+async function readTables(
+  roots: OperatorRoots,
+): Promise<{ tables: unknown[]; live: boolean; problem?: Problem }> {
   let operator;
   try {
-    operator = createOperatorFor(roots, true);
-  } catch {
-    return { tables: [], live: false };
+    operator = await createOperatorFor(roots, true);
+  } catch (error) {
+    return { tables: [], live: false, problem: problemFrom(error) };
   }
   try {
     return { tables: await operator.admin.listTables(), live: true };
-  } catch {
-    return { tables: [], live: false };
+  } catch (error) {
+    return { tables: [], live: false, problem: problemFrom(error) };
   } finally {
     await operator.admin.close();
   }
 }
 
-async function readHistory(roots: OperatorRoots): Promise<unknown> {
+async function readHistory(
+  roots: OperatorRoots,
+): Promise<{ entries: unknown[]; problem?: Problem }> {
   let operator;
   try {
-    operator = createOperatorFor(roots, true);
-  } catch {
-    return { entries: [] };
+    operator = await createOperatorFor(roots, true);
+  } catch (error) {
+    return { entries: [], problem: problemFrom(error) };
   }
   try {
     return { entries: await operator.admin.history(50) };
-  } catch {
-    return { entries: [] };
+  } catch (error) {
+    return { entries: [], problem: problemFrom(error) };
   } finally {
     await operator.admin.close();
   }

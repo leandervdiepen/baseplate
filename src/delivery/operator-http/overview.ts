@@ -1,9 +1,12 @@
 import type { ServerResponse } from "node:http";
 import { createOperatorFor, type OperatorRoots } from "../operator-setup.ts";
 import { sendJson } from "./json.ts";
+import { type Problem, problemFrom } from "./problem.ts";
 
 export type Overview = {
   live: boolean;
+  /** Why it is not live, when it is not. */
+  problem?: Problem;
   tables: number;
   rowsTracked: number;
   buckets: number;
@@ -34,9 +37,9 @@ const EMPTY: Overview = {
 export async function handleOverview(roots: OperatorRoots, res: ServerResponse): Promise<void> {
   let operator;
   try {
-    operator = createOperatorFor(roots, true);
-  } catch {
-    sendJson(res, 200, EMPTY);
+    operator = await createOperatorFor(roots, true);
+  } catch (error) {
+    sendJson(res, 200, { ...EMPTY, problem: problemFrom(error) });
     return;
   }
   try {
@@ -77,8 +80,8 @@ export async function handleOverview(roots: OperatorRoots, res: ServerResponse):
           }
         : null,
     } satisfies Overview);
-  } catch {
-    sendJson(res, 200, EMPTY);
+  } catch (error) {
+    sendJson(res, 200, { ...EMPTY, problem: problemFrom(error) });
   } finally {
     await operator.admin.close();
     await operator.storage.close();

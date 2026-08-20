@@ -15,7 +15,7 @@ export async function handleBackupRoute(
 ): Promise<void> {
   let operator;
   try {
-    operator = createOperatorFor(roots, true);
+    operator = await createOperatorFor(roots, true);
   } catch {
     sendJson(res, 200, { live: false, backups: [], drills: [] });
     return;

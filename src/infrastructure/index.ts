@@ -1,18 +1,26 @@
 import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
-import type { BackupAdmin, SchemaAdmin, StorageAdmin, UserAdmin } from "#application";
+import type {
+  BackupAdmin,
+  SchemaAdmin,
+  StackStateStore,
+  StorageAdmin,
+  UserAdmin,
+} from "#application";
 import type { Stack } from "#domain";
+import { InfraError } from "#shared";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
 import { FileStackStateStore } from "./fs/index.ts";
 import { HetznerCloudProvider } from "./hetzner/index.ts";
 import { JwtTokenSigner } from "./jwt/index.ts";
+import type { PostgresAdminConfig } from "./postgres/index.ts";
 import {
   PostgresBackupAdmin,
   PostgresSchemaAdmin,
   PostgresStorageAdmin,
   PostgresUserAdmin,
 } from "./postgres/index.ts";
-import { RemoteComposeRuntime } from "./ssh/index.ts";
+import { openTunnel, RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
 export { assertPassword, hashPassword } from "./crypto/index.ts";
@@ -40,9 +48,52 @@ export {
   PostgresStorageAdmin,
   PostgresUserAdmin,
 } from "./postgres/index.ts";
-export { RemoteComposeRuntime } from "./ssh/index.ts";
+export { closeTunnels, RemoteComposeRuntime, tunnelArgs } from "./ssh/index.ts";
 
 export type OperatorTarget = "local" | "hetzner";
+
+/**
+ * Where the operator's database actually is.
+ *
+ * This used to be `127.0.0.1` whatever the target, which meant that pointing a
+ * project at Hetzner and then applying a schema change, listing tables, or
+ * reading history could reach a local stack that happened to be on the same
+ * port. The operator would be told they were managing their server while they
+ * were editing their laptop.
+ *
+ * On a remote target the stack publishes Postgres on the server's loopback and
+ * the firewall opens 22, 80 and 443, so the only way in is the SSH access
+ * provisioning already set up.
+ */
+async function databaseEndpoint(
+  config: OperatorConfig,
+  store: StackStateStore,
+): Promise<PostgresAdminConfig> {
+  const database = {
+    database: config.stack.databaseName,
+    password: config.postgresPassword,
+  };
+  if (config.target === "local") {
+    return { ...database, host: "127.0.0.1", port: config.postgresPort };
+  }
+  const record = await store.load();
+  if (!record) {
+    throw new InfraError(
+      "stack.not_provisioned",
+      "This project targets Hetzner and has no server yet. Provision it from Settings.",
+    );
+  }
+  return {
+    ...database,
+    host: "127.0.0.1",
+    port: await openTunnel({
+      host: record.server.ipv4,
+      user: "root",
+      remoteHost: "127.0.0.1",
+      remotePort: config.postgresPort,
+    }),
+  };
+}
 
 export type OperatorConfig = {
   target: OperatorTarget;
@@ -81,7 +132,7 @@ export type Operator = {
   users: UserAdmin;
 };
 
-export function createOperator(config: OperatorConfig): Operator {
+export async function createOperator(config: OperatorConfig): Promise<Operator> {
   const signer = new JwtTokenSigner(config.jwtSecret);
   const store = new FileStackStateStore(config.statePath);
   const clock = new SystemClock();
@@ -90,12 +141,7 @@ export function createOperator(config: OperatorConfig): Operator {
     callerRole: config.stack.callerRole,
     defaultTtlSeconds: config.accessTtlSeconds,
   });
-  const database = {
-    host: "127.0.0.1",
-    port: config.postgresPort,
-    database: config.stack.databaseName,
-    password: config.postgresPassword,
-  };
+  const database = await databaseEndpoint(config, store);
   const admin = new PostgresSchemaAdmin(database);
   const storage = new PostgresStorageAdmin(database);
   const backups = new PostgresBackupAdmin(database);

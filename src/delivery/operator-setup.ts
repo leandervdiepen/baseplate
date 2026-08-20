@@ -143,7 +143,7 @@ export type OperatorRoots = {
   projectRoot: string;
 };
 
-export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Operator {
+export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Promise<Operator> {
   const { packageRoot, projectRoot: project } = roots;
   ensureOperatorSecrets(project);
   loadEnvFile(resolve(project, CONFIG_FILE), overrideEnv);
