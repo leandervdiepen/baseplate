@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { cn } from "../lib/cn.ts";
 import { Checkbox } from "../primitives/checkbox.tsx";
+import { HeadCell, TableFrame } from "./table.tsx";
 
 export type GridColumn = {
   key: string;
@@ -16,10 +16,9 @@ export type GridColumn = {
 export type SortState = { column: string; direction: "asc" | "desc" } | null;
 
 /**
- * A real table of real cells, so a screen reader pairs every value with its
- * column, and so sorting can be announced through `aria-sort` rather than by an
- * arrow nobody can read. It knows nothing about tables in a database: what a
- * cell contains is the caller's business.
+ * A table you can sort and select in. Sorting is announced through `aria-sort`
+ * rather than by an arrow nobody can read. It knows nothing about tables in a
+ * database: what a cell contains is the caller's business.
  */
 export function DataGrid({
   caption,
@@ -41,37 +40,35 @@ export function DataGrid({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg)] shadow-[var(--shadow-raised)]">
-      <table className="w-full border-collapse">
-        <caption className="sr-only">{caption}</caption>
-        <thead>
-          <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
-            {selection ? (
-              <th scope="col" className="w-12 px-1">
-                <Checkbox
-                  checked={selection.allChecked}
-                  indeterminate={!selection.allChecked && selection.someChecked}
-                  label="Select every row on this page"
-                  onChange={selection.onToggleAll}
-                />
-              </th>
-            ) : null}
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                style={column.width ? { width: column.width } : undefined}
-                aria-sort={ariaSort(sort, column.key)}
-                className="px-[var(--space-md)] py-1.5 text-start align-bottom"
-              >
-                <HeaderLabel column={column} sort={sort} onSort={onSort} />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <TableFrame
+      caption={caption}
+      head={
+        <>
+          {selection ? (
+            <th scope="col" className="w-12 px-1">
+              <Checkbox
+                checked={selection.allChecked}
+                indeterminate={!selection.allChecked && selection.someChecked}
+                label="Select every row on this page"
+                onChange={selection.onToggleAll}
+              />
+            </th>
+          ) : null}
+          {columns.map((column) => (
+            <HeadCell
+              key={column.key}
+              {...(column.width ? { width: column.width } : {})}
+              {...(column.sortable ? { sorted: ariaSort(sort, column.key) } : {})}
+              className="py-1.5 align-bottom"
+            >
+              <HeaderLabel column={column} sort={sort} onSort={onSort} />
+            </HeadCell>
+          ))}
+        </>
+      }
+    >
+      {children}
+    </TableFrame>
   );
 }
 
@@ -91,11 +88,7 @@ function HeaderLabel({
           {column.label}
         </span>
         {column.marks}
-        {sort?.column === column.key ? (
-          <span aria-hidden="true" className="text-[var(--color-accent)]">
-            {sort.direction === "asc" ? "↑" : "↓"}
-          </span>
-        ) : null}
+        <SortMark active={sort?.column === column.key} direction={sort?.direction ?? "asc"} />
       </span>
       {column.meta ? (
         <span className="block truncate font-mono text-[length:var(--text-2xs)] font-normal text-[var(--color-text-muted)]">
@@ -120,45 +113,19 @@ function HeaderLabel({
   );
 }
 
-export function GridRow({ children, selected }: { children: ReactNode; selected?: boolean }) {
+/**
+ * The arrow keeps its space whether or not it is showing, so turning sorting on
+ * does not shove the column name sideways.
+ */
+function SortMark({ active, direction }: { active: boolean; direction: "asc" | "desc" }) {
   return (
-    <tr
-      className={cn(
-        "border-b border-[var(--color-border)] last:border-b-0",
-        selected && "bg-[var(--color-accent-subtle)]",
-      )}
+    <span
+      aria-hidden="true"
+      className="inline-flex w-3 shrink-0 justify-center text-[var(--color-accent)] transition-[opacity,rotate] duration-[var(--duration-move)] ease-[var(--ease-in-out)]"
+      style={{ opacity: active ? 1 : 0, rotate: active && direction === "desc" ? "180deg" : "0deg" }}
     >
-      {children}
-    </tr>
-  );
-}
-
-export function GridCell({
-  children,
-  width,
-  muted,
-  mono,
-  padded = true,
-}: {
-  children: ReactNode;
-  width?: string;
-  muted?: boolean;
-  mono?: boolean;
-  /** Off when the cell holds its own full-height control. */
-  padded?: boolean;
-}) {
-  return (
-    <td
-      style={width ? { width } : undefined}
-      className={cn(
-        "h-10 max-w-0 truncate text-[length:var(--text-sm)] leading-[var(--leading-chip)]",
-        padded && "px-[var(--space-md)]",
-        muted && "text-[var(--color-text-muted)]",
-        mono && "font-mono tabular-nums",
-      )}
-    >
-      {children}
-    </td>
+      ↑
+    </span>
   );
 }
 

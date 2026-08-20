@@ -1,5 +1,6 @@
-import type { SchemaHistoryEntry } from "../lib/operator-client.ts";
+import type { SchemaHistoryEntry } from "../lib/api/index.ts";
 import { CodeBlock } from "../patterns/code-block.tsx";
+import { Title } from "../primitives/heading.tsx";
 
 export function SchemaHistory({ entries }: { entries: SchemaHistoryEntry[] }) {
   if (entries.length === 0) {
@@ -7,10 +8,8 @@ export function SchemaHistory({ entries }: { entries: SchemaHistoryEntry[] }) {
   }
   return (
     <section className="mt-[var(--space-xl)] max-w-[var(--container-content)]">
-      <h2 className="mb-1 text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-        Schema history
-      </h2>
-      <p className="mb-[var(--space-md)] text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+      <Title>Schema history</Title>
+      <p className="mt-1 mb-[var(--space-md)] text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
         Every change this database has taken, recorded by the database itself.
       </p>
       <ol className="space-y-2">

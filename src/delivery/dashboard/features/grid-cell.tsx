@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { shortId } from "../lib/format.ts";
-import type { SchemaColumn } from "../lib/operator-client.ts";
+import type { SchemaColumn } from "../lib/api/index.ts";
 import { coerce } from "../lib/row-values.ts";
 import { Field, Input } from "../primitives/input.tsx";
 import { Select } from "../primitives/select.tsx";
@@ -19,7 +19,7 @@ export function display(value: unknown): string {
  * database sets the owner from the caller's token, so a field pretending
  * otherwise would be a field whose every save is refused.
  */
-export function GridCell({
+export function EditableCell({
   column,
   value,
   rowLabel,
@@ -54,7 +54,8 @@ export function GridCell({
           setDraft(shown);
           setEditing(true);
         }}
-        className="block h-10 w-full truncate px-[var(--space-md)] text-start text-[length:var(--text-sm)] transition-[background-color] duration-[var(--duration-hover)] ease-[var(--ease-out)] hover:bg-[var(--color-bg-subtle)]"
+        title={shown}
+        className="block h-10 w-full cursor-text truncate px-[var(--space-md)] text-start text-[length:var(--text-sm)] transition-[background-color] duration-[var(--duration-hover)] ease-[var(--ease-out)] hover:bg-[var(--color-bg-subtle)]"
       >
         {shown === "" ? (
           <span className="text-[var(--color-text-muted)]">null</span>

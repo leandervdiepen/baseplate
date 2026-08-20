@@ -1,26 +1,15 @@
 import { useState } from "react";
-import { changeSchema, COLUMN_TYPES, type ColumnType } from "../lib/operator-client.ts";
+import { changeSchema, type ColumnType } from "../lib/api/index.ts";
+import { ColumnTypeSelect } from "./column-type-select.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
-import { Card, CardTitle } from "../primitives/card.tsx";
+import { Card } from "../primitives/card.tsx";
+import { Title } from "../primitives/heading.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
-import { Select } from "../primitives/select.tsx";
 
 type Draft = { name: string; type: ColumnType; nullable: boolean };
 
 const EMPTY: Draft = { name: "", type: "text", nullable: false };
-
-export function TypeOptions() {
-  return (
-    <>
-      {COLUMN_TYPES.map((type) => (
-        <option key={type} value={type}>
-          {type}
-        </option>
-      ))}
-    </>
-  );
-}
 
 export function NewTableForm({
   onDone,
@@ -67,11 +56,11 @@ export function NewTableForm({
         }}
       >
         <div>
-          <CardTitle>New table</CardTitle>
+          <Title>New table</Title>
           <div className="mt-1">
             <Hint>
-              Every table gets an <code className="font-mono">id</code> and an{" "}
-              <code className="font-mono">owner_id</code>. The owner column is what row access
+              Every table gets an <code>id</code> and an{" "}
+              <code>owner_id</code>. The owner column is what row access
               matches against, so a caller only ever sees their own rows.
             </Hint>
           </div>
@@ -134,14 +123,12 @@ function ColumnRows({
             placeholder="title"
             className="min-w-0 flex-1 font-mono"
           />
-          <Select
-            aria-label={`Column ${index + 1} type`}
+          <ColumnTypeSelect
+            label={`Column ${String(index + 1)} type`}
             className="w-32 shrink-0"
             value={column.type}
-            onChange={(event) => update(index, { type: event.target.value as ColumnType })}
-          >
-            <TypeOptions />
-          </Select>
+            onChange={(type) => update(index, { type })}
+          />
           <label className="flex min-h-10 w-20 shrink-0 cursor-pointer items-center justify-center">
             <span className="sr-only">Column {index + 1} is optional</span>
             <input

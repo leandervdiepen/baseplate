@@ -17,6 +17,10 @@ const buttonStyles = cva(
         danger:
           "bg-[var(--color-danger)] text-[var(--color-on-accent)] shadow-[var(--shadow-control)] hover:bg-[var(--color-danger-strong)]",
         ghost: "text-[var(--color-accent)] hover:bg-[var(--color-accent-subtle)]",
+        /* Destructive, but not the loudest thing on the screen. Still red,
+           because green is what the safe actions are wearing. */
+        "quiet-danger":
+          "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-subtle)] hover:text-[var(--color-danger)]",
       },
     },
     defaultVariants: { variant: "primary" },

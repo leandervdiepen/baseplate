@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { getLogs } from "../lib/operator-client.ts";
+import { getLogs } from "../lib/api/index.ts";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { IconLogs, IconSearch } from "../primitives/icon.tsx";
 import { Input } from "../primitives/input.tsx";
+import { TogglePills } from "../primitives/toggle-pills.tsx";
 import { cn } from "../lib/cn.ts";
 
 type LogLine = { service: string; message: string; error: boolean };
@@ -26,7 +27,7 @@ function parseLogs(text: string): LogLine[] {
       return {
         service: serviceName(match?.[1] ?? "compose"),
         message,
-        error: /error|fatal|panic|timeout|reset by peer/i.test(message),
+        error: /error|fatal|panic|timeout|failed|refused|reset by peer/i.test(message),
       };
     })
     // A service that printed a blank line said nothing. Giving it a row only
@@ -75,27 +76,15 @@ export function LogsPage({ target }: { target: string }) {
         description={`Compose, Caddy, PostgREST, auth and Postgres in one stream, from the ${target} stack.`}
       />
       <div className="mb-[var(--space-md)] flex flex-wrap items-center gap-[var(--space-md)]">
-        <div role="group" aria-label="Filter by service" className="flex flex-wrap gap-1.5">
-          {services.map((name) => {
-            const selected = service === name;
-            return (
-              <button
-                key={name}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setService(name)}
-                className={cn(
-                  "min-h-10 rounded-[var(--radius-md)] px-3 text-[length:var(--text-sm)] font-medium transition-[background-color,color,box-shadow] duration-[var(--duration-hover)] ease-[var(--ease-out)]",
-                  selected
-                    ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent-strong)] shadow-[var(--shadow-control)]"
-                    : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)]",
-                )}
-              >
-                {name === ALL ? "All services" : name}
-              </button>
-            );
-          })}
-        </div>
+        <TogglePills
+          label="Filter by service"
+          value={service}
+          onChange={setService}
+          options={services.map((name) => ({
+            id: name,
+            label: name === ALL ? "All services" : name,
+          }))}
+        />
         <div className="relative ms-auto min-w-[12rem] flex-1 sm:max-w-64">
           <IconSearch
             aria-hidden="true"

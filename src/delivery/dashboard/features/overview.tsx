@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { formatBytes } from "../lib/format.ts";
-import { getOverview, type Overview, type OperatorStatus } from "../lib/operator-client.ts";
+import { getOverview, type Overview, type OperatorStatus } from "../lib/api/index.ts";
 import type { NavId } from "../patterns/nav.ts";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { StatCard } from "../patterns/stat-card.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { CopyButton } from "../primitives/copy-button.tsx";
+import { StatusDot } from "../primitives/status-dot.tsx";
 import {
   IconBackups,
   IconLock,
@@ -51,7 +52,7 @@ export function OverviewPage({
         actions={
           status.apiUp ? (
             <div className="flex items-center gap-[var(--space-sm)]">
-              <code className="truncate rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2.5 py-1.5 font-mono text-[length:var(--text-sm)]">
+              <code className="truncate rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2.5 py-1.5 text-[length:var(--text-sm)]">
                 {url}
               </code>
               <CopyButton value={url} label="Copy the API URL" />
@@ -74,7 +75,7 @@ export function OverviewPage({
 
       <div className="grid max-w-[var(--container-content)] gap-[var(--space-md)] sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          icon={<span className={status.apiUp ? "text-[var(--color-accent)]" : ""}>●</span>}
+          icon={<StatusDot ok={status.apiUp} />}
           label="Status"
           value={status.apiUp ? "Up" : "Not running"}
           tone={status.apiUp ? "good" : "bad"}
@@ -102,7 +103,7 @@ export function OverviewPage({
         <StatCard
           icon={<IconTables />}
           label="Tables"
-          value={overview ? String(overview.tables) : "—"}
+          value={overview ? String(overview.tables) : "-"}
           detail={
             overview && overview.tables > 0
               ? `${count(overview.rowsTracked, "column")}, every table under row security`
@@ -117,7 +118,7 @@ export function OverviewPage({
         <StatCard
           icon={<IconStorage />}
           label="Storage"
-          value={overview ? `${String(overview.objects)} objects` : "—"}
+          value={overview ? `${String(overview.objects)} objects` : "-"}
           detail={
             overview && overview.buckets > 0
               ? `${count(overview.buckets, "bucket")}, ${formatBytes(overview.objectBytes)}`
@@ -181,7 +182,7 @@ function count(value: number, noun: string): string {
 /** Recent time reads better as an interval; older reads better as a date. */
 function when(iso: string): string {
   if (!iso) {
-    return "—";
+    return "-";
   }
   const at = new Date(iso);
   const minutes = Math.round((Date.now() - at.getTime()) / 60_000);

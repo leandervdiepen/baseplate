@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { changeSchema, type ColumnType, type SchemaColumn } from "../lib/operator-client.ts";
-import { TypeOptions } from "./table-editor.tsx";
+import { changeSchema, type ColumnType } from "../lib/api/index.ts";
+import { ColumnTypeSelect } from "./column-type-select.tsx";
+import { ConfirmInline } from "../patterns/confirm-inline.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Field, Input } from "../primitives/input.tsx";
-import { Select } from "../primitives/select.tsx";
 
 type Pending = "add-column" | "rename" | "drop" | null;
 
@@ -103,12 +103,7 @@ export function TableActions({
             />
           </Field>
           <Field label="Column type">
-            <Select
-              value={columnType}
-              onChange={(event) => setColumnType(event.target.value as ColumnType)}
-            >
-              <TypeOptions />
-            </Select>
+            <ColumnTypeSelect value={columnType} onChange={setColumnType} />
           </Field>
           <Actions confirm="Add column" busy={busy} onCancel={close} />
         </form>
@@ -144,24 +139,15 @@ export function TableActions({
       ) : null}
 
       {open === "drop" ? (
-        <div className="rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-3">
-          <p className="mb-3 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
-            Drop <span className="font-mono">{table}</span> and every row in it? This runs against
-            your database now and cannot be undone.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="danger"
-              busy={busy}
-              onClick={() => void run(() => changeSchema({ kind: "drop-table", table }))}
-            >
-              Drop table
-            </Button>
-            <Button variant="secondary" onClick={close}>
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <ConfirmInline
+          confirmLabel="Drop table"
+          busy={busy}
+          onCancel={close}
+          onConfirm={() => void run(() => changeSchema({ kind: "drop-table", table }))}
+        >
+          Drop <code>{table}</code> and every row in it? This runs against your database now and
+          cannot be undone.
+        </ConfirmInline>
       ) : null}
 
       <StatusMessage message={error} tone="error" className="mt-2 block" />

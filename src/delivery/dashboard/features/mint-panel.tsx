@@ -2,11 +2,13 @@ import { useState } from "react";
 import { saveCaller, useCaller, useIssued } from "../lib/caller.ts";
 import { shortId } from "../lib/format.ts";
 import { peekJwt } from "../lib/jwt.ts";
-import { mintToken } from "../lib/operator-client.ts";
-import { DataCell, DataRow, DataTable } from "../patterns/data-table.tsx";
+import { mintToken } from "../lib/api/index.ts";
+import { Cell, DataTable, Row } from "../patterns/table.tsx";
+import { Section } from "../patterns/section.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
-import { Card, CardTitle } from "../primitives/card.tsx";
+import { Card } from "../primitives/card.tsx";
+import { Title } from "../primitives/heading.tsx";
 import { MonoChip, StatusPill } from "../primitives/chip.tsx";
 import { CopyButton } from "../primitives/copy-button.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
@@ -48,7 +50,7 @@ export function MintPanel() {
               void issue();
             }}
           >
-            <CardTitle>Impersonate a caller</CardTitle>
+            <Title>Impersonate a caller</Title>
             <Field
               label="Subject"
               hint="The user id the token speaks for. For tests and scripts; apps sign up with an email."
@@ -65,13 +67,13 @@ export function MintPanel() {
             </Button>
             <Hint>
               The same from a terminal:{" "}
-              <code className="font-mono">baseplate mint-token --sub UUID</code>
+              <code>baseplate mint-token --sub UUID</code>
             </Hint>
           </form>
         </Card>
 
         <Card className="flex flex-col gap-3.5 p-5">
-          <CardTitle>Latest token</CardTitle>
+          <Title>Latest token</Title>
           {token ? (
             <>
               <p className="break-all rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-[var(--space-md)] py-3.5 font-mono text-[length:var(--text-xs)] leading-[var(--leading-token)]">
@@ -92,8 +94,7 @@ export function MintPanel() {
       </div>
 
       {recents.length > 0 ? (
-        <section>
-          <h2 className="mb-3 text-[length:var(--text-sm)] font-medium">Issued this session</h2>
+        <Section divided={false} title="Issued this session">
           <DataTable
             caption="Tokens issued in this browser session"
             columns={[
@@ -104,23 +105,23 @@ export function MintPanel() {
             ]}
           >
             {recents.map((item, index) => (
-              <DataRow key={item.token}>
-                <DataCell mono>{shortId(item.token)}</DataCell>
-                <DataCell width="var(--size-col-id)" mono muted>
+              <Row key={item.token}>
+                <Cell mono>{shortId(item.token)}</Cell>
+                <Cell width="var(--size-col-id)" mono muted>
                   {shortId(item.sub)}
-                </DataCell>
-                <DataCell width="120px" mono>
+                </Cell>
+                <Cell width="120px" mono>
                   {item.role ?? peekJwt(item.token).role ?? "app_user"}
-                </DataCell>
-                <DataCell width="96px">
+                </Cell>
+                <Cell width="96px">
                   <StatusPill tone={index === 0 ? "accent" : "muted"}>
                     {index === 0 ? "in use" : "replaced"}
                   </StatusPill>
-                </DataCell>
-              </DataRow>
+                </Cell>
+              </Row>
             ))}
           </DataTable>
-        </section>
+        </Section>
       ) : null}
     </div>
   );

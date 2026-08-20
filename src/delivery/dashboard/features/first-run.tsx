@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { firstRunLocal, provision } from "../lib/operator-client.ts";
+import { firstRunLocal, provision } from "../lib/api/index.ts";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { LogoMark } from "../primitives/icon.tsx";

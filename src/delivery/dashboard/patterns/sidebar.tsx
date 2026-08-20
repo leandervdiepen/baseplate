@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from "react";
 import { cn } from "../lib/cn.ts";
 import { portLabel } from "../lib/format.ts";
+import { StatusDot } from "../primitives/status-dot.tsx";
 import type { NavId } from "./nav.ts";
 import {
   IconAuth,
@@ -74,15 +75,17 @@ export function Sidebar({
                 type="button"
                 aria-current={active ? "page" : undefined}
                 onClick={() => onNavigate(item.id)}
+                title={item.label}
                 className={cn(
-                  "nav-item flex min-h-[var(--size-nav)] items-center justify-center gap-2.5 rounded-[var(--radius-md)] text-start text-[length:var(--text-sm)] leading-[var(--leading-chip)] transition-[background-color,color,box-shadow] duration-[var(--duration-hover)] ease-[var(--ease-out)] lg:justify-start lg:px-2.5",
+                  "flex min-h-[var(--size-nav)] items-center justify-center gap-2.5 rounded-[var(--radius-md)] text-start text-[length:var(--text-sm)] leading-[var(--leading-chip)] transition-[background-color,color,box-shadow,scale] duration-[var(--duration-hover)] ease-[var(--ease-out)] active:scale-[var(--press-scale)] lg:justify-start lg:px-2.5",
                   active
                     ? "bg-[var(--color-bg)] font-semibold text-[var(--color-text)] shadow-[var(--shadow-control)]"
-                    : "font-medium text-[var(--color-text-muted)]",
+                    : "font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]",
                 )}
               >
                 <span className="flex w-[var(--size-icon-slot)] shrink-0 items-center justify-center">
-                  <item.Icon width={16} height={16} />
+                  {/* The icon carries the weight of the label beside it. */}
+                  <item.Icon width={16} height={16} strokeWidth={active ? 1.85 : 1.5} />
                 </span>
                 <span className="sr-only lg:not-sr-only">{item.label}</span>
               </button>
@@ -92,12 +95,7 @@ export function Sidebar({
       </div>
       <div className="flex flex-col gap-2.5 border-t border-[var(--color-border)] pt-3 lg:px-2.5">
         <div className="flex flex-col items-center gap-[var(--space-sm)] lg:flex-row">
-          <span
-            className={cn(
-              "inline-block size-[var(--size-dot)] shrink-0 rounded-[var(--radius-pill)]",
-              apiUp ? "bg-[var(--color-accent)]" : "bg-[var(--color-danger)]",
-            )}
-          />
+          <StatusDot ok={apiUp} />
           <span className="sr-only text-[length:var(--text-sm)] font-medium leading-[var(--leading-chip)] lg:not-sr-only">
             {target}
           </span>

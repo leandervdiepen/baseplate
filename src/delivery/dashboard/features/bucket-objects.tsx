@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getBucketObjects, type StoredObject } from "../lib/operator-client.ts";
+import { getBucketObjects, type StoredObject } from "../lib/api/index.ts";
 import { formatBytes, shortId } from "../lib/format.ts";
-import { DataCell, DataRow, DataTable } from "../patterns/data-table.tsx";
+import { Cell, DataTable, Row } from "../patterns/table.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 
 /**
@@ -51,21 +51,21 @@ export function BucketObjects({ bucket, apiUp }: { bucket: string; apiUp: boolea
           ]}
         >
           {objects.map((object) => (
-            <DataRow key={object.key}>
-              <DataCell mono>{object.key}</DataCell>
-              <DataCell mono width="6rem">
+            <Row key={object.key}>
+              <Cell mono>{object.key}</Cell>
+              <Cell mono width="6rem">
                 {formatBytes(object.bytes)}
-              </DataCell>
-              <DataCell muted width="10rem">
+              </Cell>
+              <Cell muted width="10rem">
                 {object.contentType}
-              </DataCell>
-              <DataCell mono muted width="8rem">
+              </Cell>
+              <Cell mono muted width="8rem">
                 <span title={object.ownerId}>{shortId(object.ownerId)}</span>
-              </DataCell>
-              <DataCell mono muted width="12rem">
+              </Cell>
+              <Cell mono muted width="12rem">
                 {new Date(object.createdAt).toLocaleString()}
-              </DataCell>
-            </DataRow>
+              </Cell>
+            </Row>
           ))}
         </DataTable>
       ) : null}

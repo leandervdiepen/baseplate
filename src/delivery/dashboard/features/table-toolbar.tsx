@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SchemaColumn } from "../lib/operator-client.ts";
+import type { SchemaColumn } from "../lib/api/index.ts";
 import {
   describeFilter,
   FILTER_LABELS,
@@ -7,6 +7,7 @@ import {
   type FilterClause,
   type FilterOperator,
 } from "../lib/postgrest-query.ts";
+import { ConfirmInline } from "../patterns/confirm-inline.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Field, Input } from "../primitives/input.tsx";
 import { Select } from "../primitives/select.tsx";
@@ -45,7 +46,8 @@ export function TableToolbar({
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
-      <div className="flex flex-wrap items-center gap-x-1 gap-y-2 p-1.5">
+      {/* 12 outside, 4 of padding, 8 inside. */}
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-2 p-[var(--space-xs)]">
         {selectedCount > 0 ? (
           <>
             <span className="ps-2 text-[length:var(--text-sm)] tabular-nums">
@@ -94,32 +96,21 @@ export function TableToolbar({
       </div>
 
       {confirming ? (
-        <div className="border-t border-[var(--color-border)] bg-[var(--color-danger-subtle)] p-3">
-          <p className="mb-2.5 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
-            Delete {selectedCount} {selectedCount === 1 ? "row" : "rows"} from{" "}
-            <span className="font-mono">{table}</span>? This runs against your database now and
-            cannot be undone.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              onClick={() => {
-                setConfirming(false);
-                onDelete();
-              }}
-            >
-              Delete
-            </Button>
-            <Button variant="secondary" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <ConfirmInline
+          className="rounded-t-none border-t border-[var(--color-border)]"
+          confirmLabel="Delete"
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false);
+            onDelete();
+          }}
+        >
+          Delete {selectedCount} {selectedCount === 1 ? "row" : "rows"} from <code>{table}</code>?
+          This runs against your database now and cannot be undone.
+        </ConfirmInline>
       ) : null}
 
-      {open ? (
-        <FilterBuilder columns={columns} filters={filters} onFilters={onFilters} />
-      ) : null}
+      {open ? <FilterBuilder columns={columns} filters={filters} onFilters={onFilters} /> : null}
 
       {filters.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--color-border)] px-2 py-1.5">
@@ -132,7 +123,7 @@ export function TableToolbar({
               <button
                 type="button"
                 onClick={() => onFilters(filters.filter((_, at) => at !== index))}
-                className="inline-flex size-10 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-muted)] transition-[color] duration-[var(--duration-hover)] ease-[var(--ease-out)] hover:text-[var(--color-danger)]"
+                className="inline-flex size-10 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-muted)] transition-[color,scale] duration-[var(--duration-press)] ease-[var(--ease-out)] hover:text-[var(--color-danger)] active:scale-[var(--press-scale)]"
               >
                 <span aria-hidden="true">×</span>
                 <span className="sr-only">Remove filter {describeFilter(clause)}</span>
@@ -170,7 +161,7 @@ function FilterBuilder({
 
   return (
     <form
-      className="flex flex-wrap items-end gap-2 border-t border-[var(--color-border)] p-2"
+      className="reveal flex flex-wrap items-end gap-2 border-t border-[var(--color-border)] p-2"
       onSubmit={(event) => {
         event.preventDefault();
         add();

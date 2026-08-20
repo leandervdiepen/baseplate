@@ -4,15 +4,17 @@ import {
   runBackupJob,
   type BackupState,
   type DrillRecord,
-} from "../lib/operator-client.ts";
+} from "../lib/api/index.ts";
 import { formatBytes } from "../lib/format.ts";
 import { Callout } from "../patterns/callout.tsx";
-import { DataCell, DataRow, DataTable } from "../patterns/data-table.tsx";
+import { Cell, DataTable, Row } from "../patterns/table.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
+import { Stat } from "../patterns/stat-card.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Card } from "../primitives/card.tsx";
+import { Title } from "../primitives/heading.tsx";
 import { CodeBlock } from "../patterns/code-block.tsx";
 import { IconBackups, IconLock } from "../primitives/icon.tsx";
 
@@ -98,15 +100,15 @@ export function BackupsPage() {
             ]}
           >
             {state.backups.map((backup) => (
-              <DataRow key={backup.id}>
-                <DataCell mono width="13rem">
+              <Row key={backup.id}>
+                <Cell mono width="13rem">
                   {backup.finishedAt ? new Date(backup.finishedAt).toLocaleString() : "running…"}
-                </DataCell>
-                <DataCell mono width="7rem">
+                </Cell>
+                <Cell mono width="7rem">
                   {formatBytes(backup.bytes)}
-                </DataCell>
-                <DataCell muted>{backup.destination}</DataCell>
-                <DataCell width="7rem">
+                </Cell>
+                <Cell muted>{backup.destination}</Cell>
+                <Cell width="7rem">
                   <span
                     className={
                       backup.ok ? "text-[var(--color-text-muted)]" : "text-[var(--color-danger)]"
@@ -114,16 +116,14 @@ export function BackupsPage() {
                   >
                     {backup.ok ? "sealed" : "failed"}
                   </span>
-                </DataCell>
-              </DataRow>
+                </Cell>
+              </Row>
             ))}
           </DataTable>
         ) : null}
 
         <Card className="p-[var(--space-lg)]">
-          <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-            Putting one back
-          </h2>
+          <Title>Putting one back</Title>
           <p className="mt-1 mb-[var(--space-md)] text-[length:var(--text-sm)] leading-[var(--leading-snug)] text-[var(--color-text-muted)]">
             Restoring replaces the live database and loses everything since that backup, so it is a
             command rather than a button, and it asks you to type this project&apos;s name first.
@@ -142,36 +142,25 @@ export function BackupsPage() {
 function DrillVerdict({ drill }: { drill: DrillRecord | undefined }) {
   if (!drill) {
     return (
-      <div>
-        <p className="text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-          Last verified restore
-        </p>
-        <p className="mt-1 text-[length:var(--text-lg)] font-semibold">Not yet</p>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-          A drill downloads the newest backup, opens it, restores it into a database of its own,
-          and counts what came back.
-        </p>
-      </div>
+      <Stat
+        label="Last verified restore"
+        value="Not yet"
+        tone="warn"
+        detail="A drill downloads the newest backup, opens it, restores it into a database of its own, and counts what came back."
+      />
     );
   }
   return (
-    <div>
-      <p className="text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-        Last verified restore
-      </p>
-      <p
-        className={`mt-1 text-[length:var(--text-lg)] font-semibold ${
-          drill.ok ? "" : "text-[var(--color-danger)]"
-        }`}
-      >
-        {drill.ok ? new Date(drill.ranAt).toLocaleString() : "Failed"}
-      </p>
-      <p className="mt-1 text-[length:var(--text-sm)] leading-[var(--leading-snug)] text-[var(--color-text-muted)] tabular-nums">
-        {drill.ok
+    <Stat
+      label="Last verified restore"
+      tone={drill.ok ? "good" : "bad"}
+      value={drill.ok ? new Date(drill.ranAt).toLocaleString() : "Failed"}
+      detail={
+        drill.ok
           ? `${String(drill.tables)} table${drill.tables === 1 ? "" : "s"}, ${String(drill.rows)} row${drill.rows === 1 ? "" : "s"}, restored and counted in ${String(drill.durationMs)}ms.`
-          : (drill.message ?? "The drill did not finish.")}
-      </p>
-    </div>
+          : (drill.message ?? "The drill did not finish.")
+      }
+    />
   );
 }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "../lib/cn.ts";
-import type { SchemaSnapshot } from "../lib/operator-client.ts";
+import type { SchemaSnapshot } from "../lib/api/index.ts";
 import { Button } from "../primitives/button.tsx";
 import { Field, Input } from "../primitives/input.tsx";
 

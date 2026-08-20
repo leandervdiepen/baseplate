@@ -17,7 +17,9 @@ export function PageHeader({
           {title}
         </h1>
         {description ? (
-          <p className="mt-1.5 truncate text-[length:var(--text-sm)] leading-[var(--leading-chip)] text-[var(--color-text-muted)]">
+          /* It wraps. A sentence cut off at the width of the window says less
+             than the sentence, and the reader cannot get the rest of it. */
+          <p className="mt-1.5 max-w-[var(--container-content)] text-[length:var(--text-sm)] leading-[var(--leading-snug)] text-[var(--color-text-muted)]">
             {description}
           </p>
         ) : null}

@@ -5,7 +5,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ["dist/**", "node_modules/**", "src/delivery/dashboard/**"],
+    ignores: ["dist/**", "node_modules/**", "**/dist/**"],
   },
   {
     rules: {

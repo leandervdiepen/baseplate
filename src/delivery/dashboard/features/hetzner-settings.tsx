@@ -3,7 +3,8 @@ import {
   getHetznerAccount,
   type CloudAccountSnapshot,
   type OperatorStatus,
-} from "../lib/operator-client.ts";
+} from "../lib/api/index.ts";
+import { Section } from "../patterns/section.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
@@ -58,20 +59,14 @@ export function HetznerSettings({
 
   return (
     <>
-      <section className="flex flex-col gap-[var(--space-md)] border-b border-[var(--color-border)] py-[var(--space-lg)]">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-            Hetzner Cloud
-          </h2>
-          <Button
-            variant="secondary"
-            className="ms-auto"
-            busy={checking}
-            onClick={() => void check()}
-          >
+      <Section
+        title="Hetzner Cloud"
+        actions={
+          <Button variant="secondary" busy={checking} onClick={() => void check()}>
             Check my account
           </Button>
-        </div>
+        }
+      >
         <SecretField
           label="Cloud API token"
           value={draft.hcloud}
@@ -94,7 +89,7 @@ export function HetznerSettings({
             >
               {account?.locations.map((location) => (
                 <option key={location.name} value={location.name}>
-                  {location.name} — {location.description}
+                  {location.name} · {location.description}
                 </option>
               ))}
             </Select>
@@ -109,12 +104,9 @@ export function HetznerSettings({
             />
           </Field>
         )}
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-[var(--space-md)] border-b border-[var(--color-border)] py-[var(--space-lg)]">
-        <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-          DNS and SSH
-        </h2>
+      <Section title="DNS and SSH">
         <SecretField
           label="DNS API token"
           value={draft.dnsToken}
@@ -199,7 +191,7 @@ export function HetznerSettings({
           hostname={draft.hostname}
           onChange={(hostname) => onChange({ hostname })}
         />
-      </section>
+      </Section>
     </>
   );
 }

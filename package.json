@@ -50,6 +50,26 @@
     "vitest": "^4.1.10"
   },
   "description": "A Postgres backend with per-user row access, run on your own Hetzner account.",
+  "keywords": [
+    "postgres",
+    "backend",
+    "row-level-security",
+    "rls",
+    "postgrest",
+    "self-hosted",
+    "supabase-alternative",
+    "baas",
+    "hetzner",
+    "docker"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leandervdiepen/baseplate.git"
+  },
+  "homepage": "https://github.com/leandervdiepen/baseplate#readme",
+  "bugs": {
+    "url": "https://github.com/leandervdiepen/baseplate/issues"
+  },
   "license": "MIT",
   "bin": {
     "baseplate": "./bin/baseplate.js"

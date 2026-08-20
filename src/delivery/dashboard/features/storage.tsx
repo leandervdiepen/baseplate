@@ -5,9 +5,10 @@ import {
   getBuckets,
   setBucketVisibility,
   type BucketSummary,
-} from "../lib/operator-client.ts";
+} from "../lib/api/index.ts";
 import { formatBytes } from "../lib/format.ts";
 import { BucketObjects } from "./bucket-objects.tsx";
+import { ConfirmInline } from "../patterns/confirm-inline.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
@@ -122,7 +123,7 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
           <div className="mt-[var(--space-md)]">
             <Hint>
               {visibility === "public"
-              ? "Anyone signed in can read every object in a public bucket. Only whoever put one there can replace or remove it."
+                ? "Anyone signed in can read every object in a public bucket. Only whoever put one there can replace or remove it."
                 : "Each caller sees only their own objects, and nobody else's, even knowing the key."}
             </Hint>
           </div>
@@ -139,8 +140,8 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
         {(buckets ?? []).map((bucket) => (
           <Card key={bucket.name} className="p-[var(--space-lg)]">
             <div className="flex flex-wrap items-center gap-[var(--space-md)]">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-mono text-[length:var(--text-md)] font-semibold">
+              <div className="min-w-[10rem] flex-1">
+                <h3 className="truncate font-mono text-[length:var(--text-lg)] font-semibold">
                   {bucket.name}
                 </h3>
                 <p className="mt-0.5 text-[length:var(--text-sm)] text-[var(--color-text-muted)] tabular-nums">
@@ -163,24 +164,30 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
               <Button
                 variant="secondary"
                 className="w-[8.5rem]"
+                aria-expanded={open === bucket.name}
+                aria-controls={`objects-${bucket.name}`}
                 onClick={() => setOpen(open === bucket.name ? null : bucket.name)}
               >
                 {open === bucket.name ? "Hide objects" : "Show objects"}
               </Button>
+              <DropBucket
+                bucket={bucket}
+                onDrop={() =>
+                  void act(async () => {
+                    const next = await dropBucket(bucket.name);
+                    setOpen(null);
+                    return next;
+                  }, `Removed '${bucket.name}'.`)
+                }
+              />
             </div>
 
-            {open === bucket.name ? <BucketObjects bucket={bucket.name} apiUp={apiUp} /> : null}
+            {open === bucket.name ? (
+              <div id={`objects-${bucket.name}`} className="reveal">
+                <BucketObjects bucket={bucket.name} apiUp={apiUp} />
+              </div>
+            ) : null}
 
-            <DropBucket
-              bucket={bucket}
-              onDrop={() =>
-                void act(async () => {
-                  const next = await dropBucket(bucket.name);
-                  setOpen(null);
-                  return next;
-                }, `Removed '${bucket.name}'.`)
-              }
-            />
           </Card>
         ))}
       </div>
@@ -190,31 +197,30 @@ export function StoragePage({ apiUp }: { apiUp: boolean }) {
 
 function DropBucket({ bucket, onDrop }: { bucket: BucketSummary; onDrop: () => void }) {
   const [confirming, setConfirming] = useState(false);
-  if (!confirming) {
-    return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="mt-[var(--space-md)] -mb-1 -ms-1 inline-flex min-h-10 items-center rounded-[var(--radius-sm)] px-1 text-[length:var(--text-sm)] text-[var(--color-text-muted)] transition-[color] duration-[var(--duration-hover)] ease-[var(--ease-out)] hover:text-[var(--color-danger)]"
-      >
-        Delete this bucket
-      </button>
-    );
-  }
   return (
-    <div className="mt-[var(--space-sm)] rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-4">
-      <p className="mb-3 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
-        Delete <span className="font-mono">{bucket.name}</span> and its {bucket.objects} object
-        {bucket.objects === 1 ? "" : "s"}? The files go too, and nothing brings them back.
-      </p>
-      <div className="flex gap-2">
-        <Button variant="danger" onClick={onDrop}>
-          Delete the bucket
-        </Button>
-        <Button variant="secondary" onClick={() => setConfirming(false)}>
-          Cancel
-        </Button>
-      </div>
-    </div>
+    <>
+      {/* Kept in place while the question is open, so the row does not reflow
+          around the answer. */}
+      <Button
+        variant="quiet-danger"
+        className="px-3"
+        aria-expanded={confirming}
+        aria-label={`Delete the bucket ${bucket.name}`}
+        onClick={() => setConfirming(true)}
+      >
+        Delete
+      </Button>
+      {confirming ? (
+        <ConfirmInline
+          className="mt-[var(--space-md)] w-full"
+          confirmLabel="Delete the bucket"
+          onConfirm={onDrop}
+          onCancel={() => setConfirming(false)}
+        >
+          Delete <code>{bucket.name}</code> and its {bucket.objects} object
+          {bucket.objects === 1 ? "" : "s"}? The files go too, and nothing brings them back.
+        </ConfirmInline>
+      ) : null}
+    </>
   );
 }

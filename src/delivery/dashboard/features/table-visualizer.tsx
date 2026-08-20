@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getHistory, type SchemaHistoryEntry, type SchemaSnapshot } from "../lib/operator-client.ts";
+import { getHistory, type SchemaHistoryEntry, type SchemaSnapshot } from "../lib/api/index.ts";
 import { SchemaGraph } from "../patterns/schema-graph.tsx";
 import { SchemaRelations } from "../patterns/schema-card.tsx";
 import { SchemaHistory } from "./schema-history.tsx";

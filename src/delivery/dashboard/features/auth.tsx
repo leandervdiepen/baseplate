@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getSchema } from "../lib/operator-client.ts";
+import { getSchema } from "../lib/api/index.ts";
 import { ConnectSnippet } from "./connect-snippet.tsx";
 import { MintPanel } from "./mint-panel.tsx";
 import { UserLogin } from "./user-login.tsx";

@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { saveCaller } from "../lib/caller.ts";
 import { peekJwt } from "../lib/jwt.ts";
-import { signIn, signUp } from "../lib/operator-client.ts";
+import { signIn, signUp } from "../lib/api/index.ts";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
-import { Card, CardTitle } from "../primitives/card.tsx";
+import { Card } from "../primitives/card.tsx";
+import { Title } from "../primitives/heading.tsx";
 import { Field, Hint, Input } from "../primitives/input.tsx";
 
 type Kind = "signup" | "login";
@@ -58,7 +59,7 @@ export function UserLogin() {
           void submit("login");
         }}
       >
-        <CardTitle>Sign up or log in</CardTitle>
+        <Title>Sign up or log in</Title>
         <Field label="Email" error={emailError}>
           <Input
             ref={emailRef}
@@ -88,8 +89,8 @@ export function UserLogin() {
           </Button>
         </div>
         <Hint>
-          This signs in against the stack at <code className="font-mono">/auth</code>, not against
-          operator mint. The JWT <code className="font-mono">sub</code> is the user id.
+          This signs in against the stack at <code>/auth</code>, not against
+          operator mint. The JWT <code>sub</code> is the user id.
         </Hint>
       </form>
     </Card>

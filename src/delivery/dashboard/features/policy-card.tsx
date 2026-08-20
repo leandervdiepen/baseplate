@@ -25,8 +25,8 @@ export function PolicyCard({ table, ownerColumn }: { table: string; ownerColumn:
             Rule
           </h3>
           <p className="mt-2 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
-            A caller sees rows where <code className="font-mono">{ownerColumn}</code> matches the{" "}
-            <code className="font-mono">sub</code> of their token. New rows are stamped with that
+            A caller sees rows where <code>{ownerColumn}</code> matches the{" "}
+            <code>sub</code> of their token. New rows are stamped with that
             sub on insert.
           </p>
         </section>

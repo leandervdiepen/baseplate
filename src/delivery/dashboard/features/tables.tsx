@@ -5,7 +5,7 @@ import {
   getSchema,
   type SchemaColumn,
   type SchemaSnapshot,
-} from "../lib/operator-client.ts";
+} from "../lib/api/index.ts";
 import { toQuery, totalFromRange, type FilterClause } from "../lib/postgrest-query.ts";
 import { ConnectSnippet } from "./connect-snippet.tsx";
 import { RlsPanel } from "./rls-panel.tsx";

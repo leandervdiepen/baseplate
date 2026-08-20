@@ -7,7 +7,7 @@ import { OverviewPage } from "./features/overview.tsx";
 import { SettingsPage } from "./features/settings.tsx";
 import { StoragePage } from "./features/storage.tsx";
 import { TablesPage } from "./features/tables.tsx";
-import { getStatus, provision, type OperatorStatus } from "./lib/operator-client.ts";
+import { getStatus, provision, type OperatorStatus } from "./lib/api/index.ts";
 import { AppShell, type NavId } from "./patterns/app-shell.tsx";
 import { Button } from "./primitives/button.tsx";
 import { LogoMark } from "./primitives/icon.tsx";
@@ -49,7 +49,7 @@ export function App() {
         </h1>
         <p className="max-w-[380px] text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
           The studio talks to a small server on this machine. Start it with{" "}
-          <code className="font-mono">baseplate dashboard</code>, then try again.
+          <code>baseplate dashboard</code>, then try again.
         </p>
         <p className="font-mono text-[length:var(--text-xs)] text-[var(--color-danger)]">{error}</p>
         <Button onClick={refresh}>Try again</Button>
@@ -59,6 +59,7 @@ export function App() {
   if (!status) {
     return (
       <main
+        role="status"
         aria-busy="true"
         className="flex min-h-screen items-center justify-center gap-2.5 text-[var(--color-text-muted)]"
       >

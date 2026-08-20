@@ -23,8 +23,8 @@ export function RlsPanel({
       <PolicyCard table={table} ownerColumn={ownerColumn} />
       {callerSub ? (
         <p className="text-[length:var(--text-sm)] leading-[var(--leading-snug)] text-[var(--color-text-muted)]">
-          You are browsing as <code className="font-mono">{callerSub}</code>, so this page shows
-          rows whose <code className="font-mono">{ownerColumn}</code> is that.
+          You are browsing as <code>{callerSub}</code>, so this page shows
+          rows whose <code>{ownerColumn}</code> is that.
         </p>
       ) : null}
       <Callout icon={<IconLock width={16} height={16} />}>

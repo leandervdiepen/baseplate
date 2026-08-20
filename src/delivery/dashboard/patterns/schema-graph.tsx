@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { columnsOfCards, edgesBetween, layoutTables } from "../lib/schema-layout.ts";
-import type { SchemaSnapshot } from "../lib/operator-client.ts";
+import type { SchemaSnapshot } from "../lib/api/types.ts";
 import { SchemaCard } from "./schema-card.tsx";
 
 type Line = { id: string; from: DOMRect; to: DOMRect };

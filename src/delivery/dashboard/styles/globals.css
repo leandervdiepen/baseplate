@@ -1,48 +1,90 @@
 @import "./tokens.css";
 @import "tailwindcss";
 
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-}
-
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
-
-p,
-li {
-  text-wrap: pretty;
-}
-
 /**
- * One focus ring for the whole studio, drawn outside the control. Individual
- * components must not remove it: a border colour change alone is invisible to
- * anyone who cannot see the difference between two greys.
+ * Everything here is in `base` on purpose. An unlayered rule outranks every
+ * Tailwind utility, so a bare `p { text-wrap: pretty }` silently defeats
+ * `truncate` on every paragraph in the studio, and a bare `:focus-visible`
+ * radius reshapes whatever it lands on.
  */
-:focus-visible {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: var(--focus-offset);
-  border-radius: var(--radius-sm);
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  /* Literal text is monospaced because of what it is, not because a class
+     was remembered at every one of the places it appears. */
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /**
+   * One focus ring for the whole studio, drawn outside the control. Individual
+   * components must not remove it: a border colour change alone is invisible to
+   * anyone who cannot see the difference between two greys. The outline follows
+   * the element's own corners, so it must not set a radius of its own.
+   */
+  :focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  /**
+   * The pointer says what a thing is before it is touched. Tailwind's reset
+   * leaves buttons on the arrow, which reads as decoration rather than control,
+   * so every interactive element states its own cursor here rather than in a
+   * class somebody has to remember.
+   */
+  button,
+  select,
+  summary,
+  [role="button"],
+  label:has(> input[type="checkbox"]:not(:disabled)) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Work in flight is neither available nor refused. */
+  [aria-busy="true"],
+  button[aria-busy="true"] {
+    cursor: progress;
+  }
 }
 
 .skip-link {
   position: absolute;
   left: var(--space-sm);
   top: var(--space-sm);
-  z-index: 10;
+  z-index: 60;
   transform: translateY(-200%);
   border-radius: var(--radius-md);
   background: var(--color-accent);
@@ -79,9 +121,29 @@ li {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* A panel arrives from the edge it lives on. */
+  /* A panel arrives from the edge it lives on, and leaves the same way. The
+     exit is shorter and travels less: an entrance introduces something, an
+     exit only has to get out of the way. */
   .drawer-enter {
     animation: drawer-enter var(--duration-enter) var(--ease-out) both;
+  }
+
+  .drawer-leave {
+    animation: drawer-leave var(--duration-exit) var(--ease-out) both;
+  }
+
+  .scrim-enter {
+    animation: fade-in var(--duration-enter) var(--ease-out) both;
+  }
+
+  .scrim-leave {
+    animation: fade-out var(--duration-exit) var(--ease-out) both;
+  }
+
+  /* Something opening in place: it comes from where it will be, not from off
+     the edge, because it was already part of this page. */
+  .reveal {
+    animation: reveal var(--duration-move) var(--ease-out) both;
   }
 
   .empty-enter > * {
@@ -115,7 +177,6 @@ li {
   animation: spin 640ms linear infinite;
 }
 
-
 @keyframes spin {
   to {
     rotate: 360deg;
@@ -126,6 +187,50 @@ li {
   from {
     opacity: 0;
     translate: 16px 0;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes drawer-leave {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  to {
+    opacity: 0;
+    translate: 8px 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
   }
 
   to {

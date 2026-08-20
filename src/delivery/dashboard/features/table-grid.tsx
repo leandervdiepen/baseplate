@@ -1,11 +1,12 @@
 import { shortId } from "../lib/format.ts";
-import type { SchemaColumn } from "../lib/operator-client.ts";
-import { DataGrid, GridCell, GridRow, type SortState } from "../patterns/data-grid.tsx";
+import type { SchemaColumn } from "../lib/api/index.ts";
+import { DataGrid, type SortState } from "../patterns/data-grid.tsx";
+import { Cell, Row } from "../patterns/table.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Checkbox } from "../primitives/checkbox.tsx";
 import { StatusPill } from "../primitives/chip.tsx";
-import { GridCell as EditableCell } from "./grid-cell.tsx";
+import { EditableCell } from "./grid-cell.tsx";
 
 export type Row = Record<string, unknown>;
 
@@ -100,9 +101,9 @@ export function TableGrid({
           const key = keyOf(row, index);
           const label = primaryKey ? `row ${shortId(key)}` : `row ${String(index + 1)}`;
           return (
-            <GridRow key={key} selected={selected.has(key)}>
+            <Row key={key} selected={selected.has(key)}>
               {primaryKey ? (
-                <GridCell width="3rem" padded={false}>
+                <Cell width="3rem" padded={false}>
                   <span className="flex justify-center">
                     <Checkbox
                       checked={selected.has(key)}
@@ -118,10 +119,10 @@ export function TableGrid({
                       }}
                     />
                   </span>
-                </GridCell>
+                </Cell>
               ) : null}
               {columns.map((column) => (
-                <GridCell
+                <Cell
                   key={column.name}
                   padded={false}
                   {...(column.primaryKey || column.owner
@@ -134,9 +135,9 @@ export function TableGrid({
                     rowLabel={label}
                     onCommit={(value) => onEdit(row, column, value)}
                   />
-                </GridCell>
+                </Cell>
               ))}
-            </GridRow>
+            </Row>
           );
         })}
       </DataGrid>

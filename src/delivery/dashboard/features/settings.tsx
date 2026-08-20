@@ -5,15 +5,17 @@ import {
   saveConfig,
   teardown,
   type OperatorStatus,
-} from "../lib/operator-client.ts";
+} from "../lib/api/index.ts";
 import { HetznerSettings, type HetznerDraft } from "./hetzner-settings.tsx";
 import { ReadinessList } from "./readiness-list.tsx";
 import { SessionSettings } from "./session-settings.tsx";
 import { Callout } from "../patterns/callout.tsx";
+import { ConfirmInline } from "../patterns/confirm-inline.tsx";
 import { PageHeader } from "../patterns/page-header.tsx";
+import { Section } from "../patterns/section.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
-import { Field, Hint, Input } from "../primitives/input.tsx";
+import { Hint } from "../primitives/input.tsx";
 import { IconLock } from "../primitives/icon.tsx";
 import { Segmented } from "../primitives/segmented.tsx";
 
@@ -95,10 +97,7 @@ export function SettingsPage({
           void save();
         }}
       >
-        <section className="flex flex-col gap-[var(--space-md)] border-b border-[var(--color-border)] pb-[var(--space-lg)]">
-          <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-            Target
-          </h2>
+        <Section title="Target" className="pt-0">
           <Segmented
             label="Where the stack runs"
             value={target}
@@ -114,7 +113,7 @@ export function SettingsPage({
               certificate.
             </Hint>
           )}
-        </section>
+        </Section>
 
         {cloud ? (
           <HetznerSettings
@@ -135,15 +134,10 @@ export function SettingsPage({
         ) : (
           /* The checks came back for the saved target. Showing them next to an
              unsaved one would vouch for something nobody has looked at. */
-          <section className="border-b border-[var(--color-border)] py-[var(--space-lg)]">
-            <h2 className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)]">
-              Before you start the stack
-            </h2>
-            <p className="mt-1 text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
-              Save these settings to check what {target === "hetzner" ? "Hetzner" : "this machine"}{" "}
-              still needs.
-            </p>
-          </section>
+          <Section
+            title="Before you start the stack"
+            description={`Save these settings to check what ${target === "hetzner" ? "Hetzner" : "this machine"} still needs.`}
+          />
         )}
 
         <div className="flex flex-wrap items-center gap-[var(--space-md)] pt-[var(--space-lg)]">
@@ -194,7 +188,12 @@ export function SettingsPage({
         </div>
       </form>
 
-      <div className="mt-[var(--space-lg)] flex max-w-[var(--container-form)] flex-col items-start gap-[var(--space-sm)]">
+      <Section
+        divided={false}
+        className="max-w-[var(--container-form)] items-start"
+        title="Stopping and starting"
+        description="Stopping keeps everything. Destroying deletes the volume your rows live in, which is the only copy unless a backup has been taken."
+      >
         <Button
           variant="secondary"
           busy={busy === "teardown" && !confirmDown}
@@ -209,36 +208,32 @@ export function SettingsPage({
         </Button>
 
         {confirmDown ? (
-          <div className="w-full rounded-[var(--radius-md)] bg-[var(--color-danger-subtle)] p-4">
-            <p className="mb-3 text-[length:var(--text-sm)] leading-[var(--leading-snug)]">
-              Delete this project's database volume? Every row goes with it, and nothing brings
-              them back.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="danger"
-                busy={busy === "teardown"}
-                onClick={() =>
-                  void act("teardown", async () => {
-                    await teardown(true);
-                    setConfirmDown(false);
-                    setMessage("Destroyed: containers, volumes, and any server.");
-                  })
-                }
-              >
-                Delete the data
-              </Button>
-              <Button variant="secondary" onClick={() => setConfirmDown(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
+          <ConfirmInline
+            className="w-full"
+            confirmLabel="Delete the data"
+            busy={busy === "teardown"}
+            onCancel={() => setConfirmDown(false)}
+            onConfirm={() =>
+              void act("teardown", async () => {
+                await teardown(true);
+                setConfirmDown(false);
+                setMessage("Destroyed: containers, volumes, and any server.");
+              })
+            }
+          >
+            Delete this project&apos;s database volume? Every row goes with it, and nothing brings
+            them back.
+          </ConfirmInline>
         ) : (
-          <Button variant="ghost" className="px-2" onClick={() => setConfirmDown(true)}>
-            Destroy this project's data
+          <Button
+            variant="quiet-danger"
+            className="self-start px-3"
+            onClick={() => setConfirmDown(true)}
+          >
+            Destroy this project&apos;s data
           </Button>
         )}
-      </div>
+      </Section>
     </>
   );
 }

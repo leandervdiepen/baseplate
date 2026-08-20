@@ -15,7 +15,9 @@ export function Callout({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-[var(--space-sm)] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] py-1.5 ps-3.5 pe-1.5",
+        // 12 outside, 4 of padding, 8 inside: the action's corners sit parallel
+        // to the box's own rather than cutting across them.
+        "flex flex-wrap items-center gap-[var(--space-sm)] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] py-[var(--space-xs)] ps-3.5 pe-[var(--space-xs)]",
         className,
       )}
     >

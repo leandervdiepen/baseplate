@@ -1,4 +1,4 @@
-import type { SchemaSnapshot } from "./operator-client.ts";
+import type { SchemaSnapshot } from "./api/types.ts";
 
 export type LaidOutTable = {
   name: string;

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
 import { Card } from "../primitives/card.tsx";
 import { StatusPill } from "../primitives/chip.tsx";
-import type { SchemaColumn, SchemaSnapshot } from "../lib/operator-client.ts";
+import type { SchemaColumn, SchemaSnapshot } from "../lib/api/types.ts";
 
 /**
  * One card, one border. The actions live in this card's footer rather than in a

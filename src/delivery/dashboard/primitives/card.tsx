@@ -14,14 +14,3 @@ export function Card({ children, className }: { children: ReactNode; className?:
     </section>
   );
 }
-
-export function CardTitle({ children, id }: { children: ReactNode; id?: string }) {
-  return (
-    <h2
-      id={id}
-      className="text-[length:var(--text-lg)] font-semibold tracking-[var(--tracking-brand)] leading-[var(--leading-snug)]"
-    >
-      {children}
-    </h2>
-  );
-}

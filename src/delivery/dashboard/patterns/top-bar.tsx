@@ -1,6 +1,7 @@
 import { useCaller } from "../lib/caller.ts";
 import { peekJwt } from "../lib/jwt.ts";
 import { shortId } from "../lib/format.ts";
+import { StatusDot } from "../primitives/status-dot.tsx";
 import { CRUMBS, type NavId } from "./nav.ts";
 
 export function TopBar({ current, leaf }: { current: NavId; leaf?: string | null | undefined }) {
@@ -25,10 +26,7 @@ export function TopBar({ current, leaf }: { current: NavId; leaf?: string | null
       </nav>
       {sub ? (
         <div className="flex h-[30px] shrink-0 items-center gap-[var(--space-sm)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3">
-          <span
-            aria-hidden="true"
-            className="size-[var(--size-dot-sm)] shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-accent)]"
-          />
+          <StatusDot ok small />
           <span className="text-[length:var(--text-xs)] leading-[var(--leading-chip)] text-[var(--color-text-muted)]">
             caller
           </span>

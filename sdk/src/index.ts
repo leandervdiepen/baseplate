@@ -9,7 +9,7 @@ export {
 export { QueryBuilder, type OrderOptions } from "./builder.ts";
 export type { Filter, FilterOperator, FilterValue } from "./filters.ts";
 export type { QueryResult } from "./request.ts";
-export { memoryStorage, type SessionStorage } from "./session-storage.ts";
+export { memoryStorage, SESSION_KEY, type SessionStorage } from "./session-storage.ts";
 export type {
   BucketClient,
   ListOptions,

@@ -5,10 +5,23 @@ type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 /**
  * Every icon is drawn on the same 16 grid at the same stroke weight. Mixing
  * grids makes two icons of equal nominal size read as different weights.
+ *
+ * The weight lives on the root so it is inherited by every path, which lets a
+ * caller thicken an icon to match the text beside it: 1.5 next to regular,
+ * nearer 2 next to semibold. A hairline icon beside bold text reads as a
+ * different icon set.
  */
 function Svg({ size = 16, children, ...props }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      strokeWidth={1.5}
+      aria-hidden="true"
+      {...props}
+    >
       {children}
     </svg>
   );
@@ -16,7 +29,6 @@ function Svg({ size = 16, children, ...props }: IconProps) {
 
 const stroke = {
   stroke: "currentColor",
-  strokeWidth: 1.5,
   strokeLinecap: "round",
   strokeLinejoin: "round",
 } as const;

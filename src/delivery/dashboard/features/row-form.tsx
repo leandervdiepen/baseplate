@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SchemaColumn } from "../lib/operator-client.ts";
+import type { SchemaColumn } from "../lib/api/index.ts";
 import { coerce, editableColumns } from "../lib/row-values.ts";
 import { Button } from "../primitives/button.tsx";
 import { IconPlus } from "../primitives/icon.tsx";
