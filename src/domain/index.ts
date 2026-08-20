@@ -13,6 +13,7 @@ export {
   type Bucket,
   type BucketVisibility,
 } from "./bucket.ts";
+export { createEmail, type Email } from "./email.ts";
 export { DomainError } from "./errors.ts";
 export { isLocalHostname, parseHostname, type Hostname } from "./hostname.ts";
 export {

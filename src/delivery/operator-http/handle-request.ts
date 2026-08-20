@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createSchemaChange, DomainError } from "#domain";
+import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
 import { createOperatorFor, type OperatorRoots, stackFromEnv } from "../operator-setup.ts";
 import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
@@ -9,6 +10,7 @@ import { readStatus } from "./status.ts";
 import { handleBackupRoute } from "./backups.ts";
 import { handleOverview } from "./overview.ts";
 import { handleStorageRoute } from "./storage.ts";
+import { handleUsersRoute } from "./users.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
 export async function handleOperatorRequest(
@@ -62,12 +64,13 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/mint-token" && method === "POST") {
-      const body = (await readJsonBody(req)) as { sub?: string };
+      const body = (await readJsonBody(req)) as { sub?: string; ttl?: string };
       if (!body.sub) {
         throw new DomainError("cli.sub_required", "mint-token requires sub.");
       }
       const sub = body.sub;
-      const token = await withOperator(roots, (operator) => operator.mintToken.execute(sub));
+      const ttl = body.ttl ? parseTtl(body.ttl, DEFAULT_ACCESS_TTL) : undefined;
+      const token = await withOperator(roots, (operator) => operator.mintToken.execute(sub, ttl));
       sendJson(res, 200, { token, sub });
       return;
     }
@@ -93,6 +96,12 @@ export async function handleOperatorRequest(
     }
     if (path.startsWith("/api/storage")) {
       await handleStorageRoute(roots, path, method, url, req, res);
+      return;
+    }
+    // Before the /api/auth proxy: these are the operator's own routes, not the
+    // app's auth service, and /api/users is not under /api/auth by accident.
+    if (path.startsWith("/api/users")) {
+      await handleUsersRoute(roots, path, method, url, req, res);
       return;
     }
     if (path === "/api/history" && method === "GET") {
@@ -133,6 +142,7 @@ async function withOperator<T>(
     await operator.admin.close();
     await operator.storage.close();
     await operator.backups.close();
+    await operator.users.close();
   }
 }
 
@@ -184,6 +194,14 @@ const CONFIG_KEYS = [
   "BASEPLATE_HOSTNAME",
   "ACCESS_TOKEN_TTL",
   "REFRESH_TOKEN_TTL",
+  "SITE_URL",
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "SMTP_FROM",
+  "SMTP_SECURE",
+  "REQUIRE_EMAIL_CONFIRM",
 ] as const;
 
 async function saveConfig(

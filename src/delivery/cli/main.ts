@@ -4,13 +4,15 @@ import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
 import { DomainError } from "#domain";
 import { InfraError } from "#shared";
-import { createOperatorFor, stackFromEnv } from "../operator-setup.ts";
+import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
+import { createOperatorFor, siteUrlFromEnv, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
 import { BACKUP_USAGE, runBackupCommand, runRestoreCommand } from "./backup-command.ts";
 import { initProject, portValue } from "./init-command.ts";
 import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
 import { runStorageCommand, STORAGE_USAGE } from "./storage-command.ts";
 import { renderTypes } from "./types-command.ts";
+import { runUsersCommand, USERS_USAGE } from "./users-command.ts";
 import { USAGE, version } from "./usage.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
@@ -26,6 +28,7 @@ const STACK_COMMANDS = new Set([
   "storage",
   "backup",
   "restore",
+  "users",
   "mint-token",
 ]);
 
@@ -35,6 +38,9 @@ async function main(): Promise<void> {
     options: {
       sub: { type: "string" },
       to: { type: "string" },
+      email: { type: "string" },
+      password: { type: "string" },
+      ttl: { type: "string" },
       column: { type: "string", multiple: true },
       "owner-column": { type: "string" },
       port: { type: "string" },
@@ -75,6 +81,10 @@ async function main(): Promise<void> {
   }
   if (command === "backup" && positionals[1] === undefined) {
     console.log(BACKUP_USAGE);
+    return;
+  }
+  if (command === "users" && positionals[1] === undefined) {
+    console.log(USERS_USAGE);
     return;
   }
   if (command === "init") {
@@ -170,17 +180,36 @@ async function main(): Promise<void> {
       );
       return;
     }
+    if (command === "users") {
+      await runUsersCommand(
+        operator.users,
+        positionals[1],
+        positionals.slice(2),
+        {
+          ...(values.email === undefined ? {} : { email: values.email }),
+          ...(values.password === undefined ? {} : { password: values.password }),
+          yes: values.yes === true,
+          siteUrl: siteUrlFromEnv(),
+        },
+        (line) => {
+          console.log(line);
+        },
+      );
+      return;
+    }
     if (command === "mint-token") {
       if (!values.sub) {
         throw new DomainError("cli.sub_required", "mint-token requires --sub <uuid>.");
       }
-      console.log(await operator.mintToken.execute(values.sub));
+      const ttl = values.ttl ? parseTtl(values.ttl, DEFAULT_ACCESS_TTL) : undefined;
+      console.log(await operator.mintToken.execute(values.sub, ttl));
       return;
     }
   } finally {
     await operator.admin.close();
     await operator.storage.close();
     await operator.backups.close();
+    await operator.users.close();
   }
 }
 

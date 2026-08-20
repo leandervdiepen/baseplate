@@ -38,6 +38,15 @@ export const STACK_ENV_KEYS = [
   "CORS_ORIGIN",
   "ACCESS_TOKEN_TTL",
   "REFRESH_TOKEN_TTL",
+  "SITE_URL",
+  "SMTP_HOST",
+  "SMTP_PORT",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "SMTP_FROM",
+  "SMTP_SECURE",
+  "MAILPIT_UI_PORT",
+  "REQUIRE_EMAIL_CONFIRM",
 ] as const;
 
 export function stackEnvText(operatorEnv: Record<string, string>): string {

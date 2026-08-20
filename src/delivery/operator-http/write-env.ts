@@ -35,6 +35,25 @@ STORAGE_REGION=us-east-1
 ACCESS_TOKEN_TTL=1h
 REFRESH_TOKEN_TTL=30d
 
+# Where your app is served. Password reset and email confirmation links point
+# here, so it has to be an address the person clicking one can actually reach.
+SITE_URL=http://localhost:3000
+# Mail. Leave SMTP_HOST blank and mail goes to the Mailpit inbox that runs
+# beside the stack locally, so a reset link is readable without a mail account.
+# Fill these in from your provider before anyone outside your machine signs up.
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+# none, starttls, or tls. Providers usually want starttls on 587, tls on 465.
+SMTP_SECURE=none
+# Where to read the local inbox, on 127.0.0.1 only.
+MAILPIT_UI_PORT=8025
+# Whether a new account has to click the link before it can sign in. Off, so
+# your first app works the minute it is written; turn it on before real users.
+REQUIRE_EMAIL_CONFIRM=false
+
 # Backups. BACKUP_KEY seals them and is the only thing that opens them again:
 # lose it and the backups are noise. It is generated for this project and it
 # does go to the server, because the restore drill has to run where the

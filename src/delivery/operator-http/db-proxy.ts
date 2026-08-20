@@ -52,6 +52,12 @@ async function proxyLocalStack(
   if (typeof prefer === "string") {
     headers.set("prefer", prefer);
   }
+  // The stack sees every studio call arriving from Caddy, so without this a
+  // rate limiter on the auth service would count them all as one client.
+  const origin = req.socket.remoteAddress;
+  if (origin) {
+    headers.set("x-forwarded-for", origin);
+  }
   const init: RequestInit = {
     method: req.method ?? "GET",
     headers,

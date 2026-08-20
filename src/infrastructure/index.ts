@@ -1,5 +1,5 @@
 import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
-import type { BackupAdmin, SchemaAdmin, StorageAdmin } from "#application";
+import type { BackupAdmin, SchemaAdmin, StorageAdmin, UserAdmin } from "#application";
 import type { Stack } from "#domain";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
@@ -10,10 +10,12 @@ import {
   PostgresBackupAdmin,
   PostgresSchemaAdmin,
   PostgresStorageAdmin,
+  PostgresUserAdmin,
 } from "./postgres/index.ts";
 import { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
+export { assertPassword, hashPassword } from "./crypto/index.ts";
 export {
   DockerComposeRuntime,
   DockerHostCloudProvider,
@@ -29,11 +31,13 @@ export {
   MemoryStackRuntime,
   MemoryStackStateStore,
   MemoryTokenSigner,
+  MemoryUserAdmin,
 } from "./memory/index.ts";
 export {
   PostgresBackupAdmin,
   PostgresSchemaAdmin,
   PostgresStorageAdmin,
+  PostgresUserAdmin,
 } from "./postgres/index.ts";
 export { RemoteComposeRuntime } from "./ssh/index.ts";
 
@@ -58,6 +62,8 @@ export type OperatorConfig = {
   hetznerDnsZone: string;
   sshKeyName: string;
   serverLocation: string;
+  /** What a minted caller token is good for, from ACCESS_TOKEN_TTL. */
+  accessTtlSeconds: number;
 };
 
 export type Operator = {
@@ -68,6 +74,7 @@ export type Operator = {
   admin: SchemaAdmin;
   storage: StorageAdmin;
   backups: BackupAdmin;
+  users: UserAdmin;
 };
 
 export function createOperator(config: OperatorConfig): Operator {
@@ -77,6 +84,7 @@ export function createOperator(config: OperatorConfig): Operator {
   const mintToken = new MintToken({
     signer,
     callerRole: config.stack.callerRole,
+    defaultTtlSeconds: config.accessTtlSeconds,
   });
   const database = {
     host: "127.0.0.1",
@@ -87,6 +95,7 @@ export function createOperator(config: OperatorConfig): Operator {
   const admin = new PostgresSchemaAdmin(database);
   const storage = new PostgresStorageAdmin(database);
   const backups = new PostgresBackupAdmin(database);
+  const users = new PostgresUserAdmin(database);
 
   if (config.target === "local") {
     const cloud = new DockerHostCloudProvider();
@@ -111,6 +120,7 @@ export function createOperator(config: OperatorConfig): Operator {
       admin,
       storage,
       backups,
+      users,
     };
   }
 
@@ -147,5 +157,6 @@ export function createOperator(config: OperatorConfig): Operator {
     admin,
     storage,
     backups,
+    users,
   };
 }

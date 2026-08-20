@@ -6,6 +6,7 @@ import {
   type Operator,
   type OperatorTarget,
 } from "#infrastructure";
+import { DEFAULT_ACCESS_TTL, parseTtl } from "../../stack/shared/ttl.ts";
 import { ensureOperatorSecrets } from "./operator-http/write-env.ts";
 import { writeStackEnv } from "./operator-http/stack-env.ts";
 import { CONFIG_FILE, STATE_DIR } from "./paths.ts";
@@ -74,6 +75,14 @@ export function requiredEnv(name: string): string {
     throw new DomainError("cli.missing_env", `Missing ${name} in ${CONFIG_FILE}.`);
   }
   return value;
+}
+
+/**
+ * Where a recovery or confirmation link points. The app dev serves that page,
+ * not Baseplate, so the default is where a dev server usually sits.
+ */
+export function siteUrlFromEnv(): string {
+  return process.env.SITE_URL || "http://localhost:3000";
 }
 
 export function assertHetznerKeys(target: OperatorTarget): void {
@@ -160,5 +169,8 @@ export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Op
     hetznerDnsZone: process.env.HETZNER_DNS_ZONE ?? "",
     sshKeyName: process.env.SSH_KEY_NAME ?? "",
     serverLocation: process.env.SERVER_LOCATION ?? "nbg1",
+    // The same knob the auth service reads, parsed by the same function, so a
+    // minted token lasts exactly as long as a signed-in one.
+    accessTtlSeconds: parseTtl(process.env.ACCESS_TOKEN_TTL ?? "", DEFAULT_ACCESS_TTL),
   });
 }

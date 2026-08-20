@@ -50,6 +50,13 @@ test("schema with no change lists the changes it takes", async () => {
   expect(stdout).toContain("rename-table");
 });
 
+test("users with no subcommand lists what it takes", async () => {
+  const { stdout, code } = await bare(["users"]);
+  expect(code).toBe(0);
+  expect(stdout).toContain("Usage: baseplate users <command>");
+  expect(stdout).toContain("reset");
+});
+
 test("an unknown command names itself and exits non-zero", async () => {
   const { stdout, code } = await bare(["bogus"]);
   expect(code).toBe(1);
@@ -61,7 +68,20 @@ test("no command at all is an error, not a silent success", async () => {
 });
 
 test("the usage names every command it dispatches", () => {
-  for (const command of ["init", "up", "down", "dashboard", "tables", "types", "schema", "mint-token"]) {
+  for (const command of [
+    "init",
+    "up",
+    "down",
+    "dashboard",
+    "tables",
+    "types",
+    "schema",
+    "storage",
+    "backup",
+    "restore",
+    "users",
+    "mint-token",
+  ]) {
     expect(USAGE).toContain(command);
   }
 });

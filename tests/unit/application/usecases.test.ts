@@ -176,12 +176,39 @@ test("this project's own stack already running is not another project", async ()
   expect(runtime.upCalls).toBe(1);
 });
 
-test("mint-token signs claims for a caller", async () => {
+test("mint-token signs claims for a caller, with the project's own lifetime", async () => {
   const token = await new MintToken({
     signer: new MemoryTokenSigner(),
     callerRole: "app_user",
+    defaultTtlSeconds: 3600,
   }).execute(subject);
-  expect(token).toBe(`memory.${subject}.app_user`);
+  expect(token).toBe(`memory.${subject}.app_user.3600`);
+});
+
+test("mint-token takes a lifetime for this one token", async () => {
+  const token = await new MintToken({
+    signer: new MemoryTokenSigner(),
+    callerRole: "app_user",
+    defaultTtlSeconds: 3600,
+  }).execute(subject, 43_200);
+  expect(token).toBe(`memory.${subject}.app_user.43200`);
+});
+
+test("mint-token rejects a lifetime that is not a positive whole number", async () => {
+  const mint = new MintToken({
+    signer: new MemoryTokenSigner(),
+    callerRole: "app_user",
+    defaultTtlSeconds: 3600,
+  });
+  await expect(mint.execute(subject, 0)).rejects.toMatchObject({
+    code: "token.invalid_lifetime",
+  });
+  await expect(mint.execute(subject, -60)).rejects.toMatchObject({
+    code: "token.invalid_lifetime",
+  });
+  await expect(mint.execute(subject, 1.5)).rejects.toMatchObject({
+    code: "token.invalid_lifetime",
+  });
 });
 
 test("mint-token rejects a subject that is not a UUID", async () => {
@@ -189,6 +216,7 @@ test("mint-token rejects a subject that is not a UUID", async () => {
     new MintToken({
       signer: new MemoryTokenSigner(),
       callerRole: "app_user",
+      defaultTtlSeconds: 3600,
     }).execute("alice"),
   ).rejects.toBeInstanceOf(DomainError);
 });

@@ -18,7 +18,9 @@ export const USAGE = `Usage: baseplate <command>
   storage <command>        Buckets for files; run \`baseplate storage\` for the list
   backup <command>         Back up and drill; run \`baseplate backup\` for the list
   restore [<id>] [--yes]   Put a backup back over the live database
-  mint-token --sub UUID    Sign a caller JWT, for scripts and tests
+  users <command>          Accounts; run \`baseplate users\` for the list
+  mint-token --sub UUID [--ttl 1h]
+                           Sign a caller JWT, for scripts and tests
 
   --help, -h               Show this
   --version, -v            Show the Baseplate version

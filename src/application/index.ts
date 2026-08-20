@@ -1,4 +1,5 @@
 export type {
+  AdminUser,
   BackupAdmin,
   BackupRecord,
   BucketUsage,
@@ -8,6 +9,8 @@ export type {
   CloudProvider,
   DownOptions,
   DrillRecord,
+  ListUsersQuery,
+  ListUsersResult,
   LiveColumn,
   LiveTable,
   ProvisionedStack,
@@ -20,6 +23,7 @@ export type {
   StorageAdmin,
   StoredObject,
   TokenSigner,
+  UserAdmin,
 } from "./ports/index.ts";
 export {
   ChangeSchema,

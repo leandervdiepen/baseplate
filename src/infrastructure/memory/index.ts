@@ -14,6 +14,8 @@ import type {
 import type { SchemaChange, Table, TokenClaims } from "#domain";
 import { changeSlug, createServer, type Server, type Stack } from "#domain";
 
+export { MemoryUserAdmin } from "./user-admin.ts";
+
 export class MemoryCloudProvider implements CloudProvider {
   readonly servers = new Map<string, Server>();
   firewallEnsured: string[] = [];
@@ -137,7 +139,7 @@ export class MemoryStackStateStore implements StackStateStore {
 
 export class MemoryTokenSigner implements TokenSigner {
   async sign(claims: TokenClaims): Promise<string> {
-    return `memory.${claims.subject}.${claims.role}`;
+    return `memory.${claims.subject}.${claims.role}.${claims.lifetimeSeconds}`;
   }
 }
 

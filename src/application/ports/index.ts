@@ -20,3 +20,9 @@ export type {
 } from "./stack-state-store.ts";
 export type { BucketUsage, StorageAdmin, StoredObject } from "./storage-admin.ts";
 export type { TokenSigner } from "./token-signer.ts";
+export type {
+  AdminUser,
+  ListUsersQuery,
+  ListUsersResult,
+  UserAdmin,
+} from "./user-admin.ts";

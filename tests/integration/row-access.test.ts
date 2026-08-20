@@ -71,8 +71,8 @@ afterAll(async () => {
 
 test("each caller reads only their own rows", async () => {
   const signer = new JwtTokenSigner(SECRET);
-  const tokenA = await signer.sign(createTokenClaims(ALICE, "app_user"));
-  const tokenB = await signer.sign(createTokenClaims(BOB, "app_user"));
+  const tokenA = await signer.sign(createTokenClaims(ALICE, "app_user", 3600));
+  const tokenB = await signer.sign(createTokenClaims(BOB, "app_user", 3600));
   const bodyA = `alice-row-${Date.now()}`;
   const bodyB = `bob-row-${Date.now()}`;
 
@@ -98,7 +98,7 @@ test("a missing token is rejected", async () => {
 
 test("a tampered token is rejected", async () => {
   const signer = new JwtTokenSigner(SECRET);
-  const token = await signer.sign(createTokenClaims(ALICE, "app_user"));
+  const token = await signer.sign(createTokenClaims(ALICE, "app_user", 3600));
   const payload = decodeJwt(token);
   expect(payload.sub).toBe(ALICE);
   const tampered = `${token.slice(0, -4)}xxxx`;
@@ -170,7 +170,7 @@ test("a table whose name starts with a route prefix is still the API's", async (
     ["schema", "add-table", "authored", "--column", "note:text"],
     ROOT,
   ).catch(() => undefined);
-  const token = await new JwtTokenSigner(SECRET).sign(createTokenClaims(ALICE, "app_user"));
+  const token = await new JwtTokenSigner(SECRET).sign(createTokenClaims(ALICE, "app_user", 3600));
 
   const response = await fetch(`${BASE_URL}/authored?limit=1`, {
     headers: { Authorization: `Bearer ${token}` },

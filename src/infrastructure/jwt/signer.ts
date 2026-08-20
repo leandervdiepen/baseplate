@@ -20,6 +20,8 @@ export class JwtTokenSigner implements TokenSigner {
     return new SignJWT({ role: claims.role })
       .setProtectedHeader({ alg: "HS256" })
       .setSubject(claims.subject)
+      .setIssuedAt()
+      .setExpirationTime(`${claims.lifetimeSeconds}s`)
       .sign(this.secret);
   }
 }
