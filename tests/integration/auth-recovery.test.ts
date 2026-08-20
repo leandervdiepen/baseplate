@@ -67,7 +67,9 @@ afterAll(async () => {
 test("the session the reset hands back belongs to the same person, rows and all", async () => {
   expect(after.user.id).toBe(before.user.id);
   expect(after.user.email).toBe(EMAIL);
-  expect(after.token).not.toBe(before.token);
+  // The access token is pure claims, so two mints in the same second are
+  // byte-identical. The refresh token is what makes a session a new session.
+  expect(after.refreshToken).not.toBe(before.refreshToken);
 
   // A session that cannot read the rows the account already owns is not a
   // session, whatever the response body says.
