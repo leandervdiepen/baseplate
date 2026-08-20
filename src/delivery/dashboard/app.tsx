@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AuthPage } from "./features/auth.tsx";
+import { BackupsPage } from "./features/backups.tsx";
 import { FirstRun } from "./features/first-run.tsx";
 import { LogsPage } from "./features/logs.tsx";
 import { PoliciesPage } from "./features/policies.tsx";
@@ -101,6 +102,7 @@ export function App() {
       ) : null}
       {nav === "policies" ? <PoliciesPage /> : null}
       {nav === "storage" ? <StoragePage apiUp={status.apiUp} /> : null}
+      {nav === "backups" ? <BackupsPage /> : null}
       {nav === "logs" ? <LogsPage target={status.target ?? "local"} /> : null}
       {nav === "auth" ? <AuthPage baseUrl={status.baseUrl} /> : null}
       {nav === "settings" ? <SettingsPage status={status} onChanged={refresh} /> : null}

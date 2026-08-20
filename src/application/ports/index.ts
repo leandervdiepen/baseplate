@@ -1,3 +1,9 @@
+export type {
+  BackupAdmin,
+  BackupRecord,
+  DrillRecord,
+  RequestOutcome,
+} from "./backup-admin.ts";
 export type { Clock } from "./clock.ts";
 export type { CloudAccount, CloudAccountSnapshot } from "./cloud-account.ts";
 export type { CloudProvider } from "./cloud-provider.ts";

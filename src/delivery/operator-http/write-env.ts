@@ -35,6 +35,22 @@ STORAGE_REGION=us-east-1
 ACCESS_TOKEN_TTL=1h
 REFRESH_TOKEN_TTL=30d
 
+# Backups. BACKUP_KEY seals them and is the only thing that opens them again:
+# lose it and the backups are noise. It is generated for this project and it
+# does go to the server, because the restore drill has to run where the
+# database is.
+BACKUP_EVERY=24h
+DRILL_EVERY=168h
+BACKUP_KEEP=14
+# Where sealed backups go. Leave these blank and they stay on the same machine
+# as the database, which is better than nothing and is not a backup. Any
+# S3-compatible bucket works: Hetzner Object Storage, Backblaze B2, S3.
+BACKUP_S3_ENDPOINT=
+BACKUP_S3_BUCKET=
+BACKUP_S3_REGION=us-east-1
+BACKUP_S3_ACCESS_KEY=
+BACKUP_S3_SECRET_KEY=
+
 # Hetzner is bring-your-own-key. These are YOUR account credentials.
 # Baseplate has no cloud account. Fill them in from Settings when you are ready.
 HCLOUD_TOKEN=
@@ -64,6 +80,7 @@ export function writeLocalFirstRun(root: string): void {
     STORAGE_SERVICE_PASSWORD: current.STORAGE_SERVICE_PASSWORD || secretValue(),
     STORAGE_ACCESS_KEY: current.STORAGE_ACCESS_KEY || secretValue(),
     STORAGE_SECRET_KEY: current.STORAGE_SECRET_KEY || secretValue(),
+    BACKUP_KEY: current.BACKUP_KEY || secretValue(),
     HTTP_PORT: current.HTTP_PORT || "8080",
     POSTGRES_PORT: current.POSTGRES_PORT || "5432",
     DASHBOARD_PORT: current.DASHBOARD_PORT || "8788",
@@ -86,6 +103,7 @@ export function ensureOperatorSecrets(root: string): void {
     "STORAGE_SERVICE_PASSWORD",
     "STORAGE_ACCESS_KEY",
     "STORAGE_SECRET_KEY",
+    "BACKUP_KEY",
   ]) {
     if (!current[key]) {
       updates[key] = secretValue();

@@ -89,6 +89,17 @@ export function IconStorage(props: IconProps) {
   );
 }
 
+/** An archive box, for backups. */
+export function IconBackups(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="1.5" y="2" width="13" height="3.5" rx="1" {...stroke} />
+      <path d="M2.75 5.5V13a1.5 1.5 0 0 0 1.5 1.5h7.5a1.5 1.5 0 0 0 1.5-1.5V5.5" {...stroke} />
+      <path d="M6.25 8.5h3.5" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconPlus(props: IconProps) {
   return (
     <Svg {...props}>

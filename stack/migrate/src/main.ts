@@ -2,6 +2,7 @@ import postgres from "postgres";
 import { applyMigrations } from "./apply.ts";
 import { ensureLedger } from "./ledger.ts";
 import { readDeclaredPolicies, syncPolicies } from "./policies.ts";
+import { ensurePrivileges } from "./privileges.ts";
 import { ensureRoles } from "./roles.ts";
 
 const PLATFORM_DIR = process.env.PLATFORM_DIR ?? "/platform";
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
     await ensureLedger(sql);
     const count = await applyMigrations(sql, [{ label: "platform", dir: PLATFORM_DIR }], log);
     log(count === 0 ? "platform up to date" : `${count} platform migration(s) applied`);
+    await ensurePrivileges(sql);
     await syncPolicies(sql, await readDeclaredPolicies(sql), log);
     log("ready");
   } finally {

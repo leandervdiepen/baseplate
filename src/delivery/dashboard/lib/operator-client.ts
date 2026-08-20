@@ -276,6 +276,54 @@ export async function getBucketObjects(bucket: string): Promise<StoredObject[]> 
   return ((await response.json()) as { objects: StoredObject[] }).objects;
 }
 
+export type BackupRecord = {
+  id: number;
+  key: string;
+  bytes: number;
+  destination: string;
+  finishedAt: string | null;
+  ok: boolean;
+  message: string | null;
+};
+
+export type DrillRecord = {
+  id: number;
+  backupId: number | null;
+  ranAt: string;
+  ok: boolean;
+  tables: number;
+  rows: number;
+  durationMs: number;
+  message: string | null;
+};
+
+export type BackupState = {
+  live: boolean;
+  backups: BackupRecord[];
+  drills: DrillRecord[];
+  message?: string;
+};
+
+export async function getBackups(): Promise<BackupState> {
+  const response = await fetch("/api/backups");
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return (await response.json()) as BackupState;
+}
+
+export async function runBackupJob(kind: "backup" | "drill"): Promise<BackupState> {
+  const response = await fetch("/api/backups", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind }),
+  });
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  return (await response.json()) as BackupState;
+}
+
 export type AuthSession = {
   token: string;
   user: { id: string; email: string };

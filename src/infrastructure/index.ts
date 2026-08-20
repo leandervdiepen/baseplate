@@ -1,12 +1,16 @@
 import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
-import type { SchemaAdmin, StorageAdmin } from "#application";
+import type { BackupAdmin, SchemaAdmin, StorageAdmin } from "#application";
 import type { Stack } from "#domain";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
 import { FileStackStateStore } from "./fs/index.ts";
 import { HetznerCloudProvider } from "./hetzner/index.ts";
 import { JwtTokenSigner } from "./jwt/index.ts";
-import { PostgresSchemaAdmin, PostgresStorageAdmin } from "./postgres/index.ts";
+import {
+  PostgresBackupAdmin,
+  PostgresSchemaAdmin,
+  PostgresStorageAdmin,
+} from "./postgres/index.ts";
 import { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
@@ -26,7 +30,11 @@ export {
   MemoryStackStateStore,
   MemoryTokenSigner,
 } from "./memory/index.ts";
-export { PostgresSchemaAdmin, PostgresStorageAdmin } from "./postgres/index.ts";
+export {
+  PostgresBackupAdmin,
+  PostgresSchemaAdmin,
+  PostgresStorageAdmin,
+} from "./postgres/index.ts";
 export { RemoteComposeRuntime } from "./ssh/index.ts";
 
 export type OperatorTarget = "local" | "hetzner";
@@ -59,6 +67,7 @@ export type Operator = {
   changeSchema: ChangeSchema;
   admin: SchemaAdmin;
   storage: StorageAdmin;
+  backups: BackupAdmin;
 };
 
 export function createOperator(config: OperatorConfig): Operator {
@@ -77,6 +86,7 @@ export function createOperator(config: OperatorConfig): Operator {
   };
   const admin = new PostgresSchemaAdmin(database);
   const storage = new PostgresStorageAdmin(database);
+  const backups = new PostgresBackupAdmin(database);
 
   if (config.target === "local") {
     const cloud = new DockerHostCloudProvider();
@@ -100,6 +110,7 @@ export function createOperator(config: OperatorConfig): Operator {
       changeSchema: new ChangeSchema({ admin }),
       admin,
       storage,
+      backups,
     };
   }
 
@@ -135,5 +146,6 @@ export function createOperator(config: OperatorConfig): Operator {
     changeSchema: new ChangeSchema({ admin }),
     admin,
     storage,
+    backups,
   };
 }

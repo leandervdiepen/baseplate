@@ -6,6 +6,10 @@ import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 /**
  * Keys the running stack needs. Everything else in the project's config,
  * including the operator's Hetzner credentials, stays on this machine.
+ *
+ * BACKUP_KEY and the BACKUP_S3_* credentials do cross, deliberately: the backup
+ * and its restore drill run where the database is. They are one bucket's worth
+ * of access, not an account that can create and destroy servers.
  */
 export const STACK_ENV_KEYS = [
   "JWT_SECRET",
@@ -19,6 +23,15 @@ export const STACK_ENV_KEYS = [
   "STORAGE_BUCKET",
   "STORAGE_REGION",
   "STORAGE_MAX_BYTES",
+  "BACKUP_KEY",
+  "BACKUP_EVERY",
+  "DRILL_EVERY",
+  "BACKUP_KEEP",
+  "BACKUP_S3_ENDPOINT",
+  "BACKUP_S3_BUCKET",
+  "BACKUP_S3_REGION",
+  "BACKUP_S3_ACCESS_KEY",
+  "BACKUP_S3_SECRET_KEY",
   "HTTP_PORT",
   "POSTGRES_PORT",
   "SITE_ADDRESS",

@@ -4,6 +4,7 @@ import { portLabel } from "../lib/format.ts";
 import type { NavId } from "./nav.ts";
 import {
   IconAuth,
+  IconBackups,
   IconLogs,
   IconPolicies,
   IconSchema,
@@ -18,6 +19,7 @@ const NAV: { id: NavId; label: string; Icon: ComponentType<SVGProps<SVGSVGElemen
   { id: "schema", label: "Schema", Icon: IconSchema },
   { id: "policies", label: "Policies", Icon: IconPolicies },
   { id: "storage", label: "Storage", Icon: IconStorage },
+  { id: "backups", label: "Backups", Icon: IconBackups },
   { id: "auth", label: "Auth", Icon: IconAuth },
   { id: "logs", label: "Logs", Icon: IconLogs },
   { id: "settings", label: "Settings", Icon: IconSettings },

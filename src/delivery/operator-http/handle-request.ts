@@ -6,6 +6,7 @@ import { sendError, sendJson, readJsonBody } from "./json.ts";
 import { readComposeLogs } from "./logs.ts";
 import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
+import { handleBackupRoute } from "./backups.ts";
 import { handleStorageRoute } from "./storage.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
 
@@ -83,6 +84,10 @@ export async function handleOperatorRequest(
       } finally {
         await operator.admin.close();
       }
+      return;
+    }
+    if (path.startsWith("/api/backups")) {
+      await handleBackupRoute(roots, path, method, req, res);
       return;
     }
     if (path.startsWith("/api/storage")) {

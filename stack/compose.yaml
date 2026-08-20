@@ -146,6 +146,35 @@ services:
       retries: 40
       start_period: 10s
 
+  # Dumps on a schedule, seals them, and puts them where the operator said. Then
+  # actually restores one into a scratch database and counts what came back,
+  # because a backup nobody has restored is a hope.
+  backup:
+    build:
+      context: .
+      dockerfile: backup/Dockerfile
+    restart: unless-stopped
+    labels: *baseplate-labels
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_KEY: ${BACKUP_KEY}
+      BACKUP_EVERY: ${BACKUP_EVERY:-24h}
+      DRILL_EVERY: ${DRILL_EVERY:-168h}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      BACKUP_S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      BACKUP_S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+    volumes:
+      - backups:/backups
+      - backup_scratch:/scratch
+
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped
@@ -176,3 +205,5 @@ volumes:
   pgdata:
   caddy_data:
   blobs:
+  backups:
+  backup_scratch:

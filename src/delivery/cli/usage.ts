@@ -16,6 +16,8 @@ export const USAGE = `Usage: baseplate <command>
   types                    Print TypeScript types for your tables
   schema <change>          Change your tables; run \`baseplate schema\` for the list
   storage <command>        Buckets for files; run \`baseplate storage\` for the list
+  backup <command>         Back up and drill; run \`baseplate backup\` for the list
+  restore [<id>] [--yes]   Put a backup back over the live database
   mint-token --sub UUID    Sign a caller JWT, for scripts and tests
 
   --help, -h               Show this

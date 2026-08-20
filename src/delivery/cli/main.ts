@@ -6,6 +6,7 @@ import { DomainError } from "#domain";
 import { InfraError } from "#shared";
 import { createOperatorFor, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE, packageRootFrom, projectRoot } from "../paths.ts";
+import { BACKUP_USAGE, runBackupCommand, runRestoreCommand } from "./backup-command.ts";
 import { initProject, portValue } from "./init-command.ts";
 import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
 import { runStorageCommand, STORAGE_USAGE } from "./storage-command.ts";
@@ -23,6 +24,8 @@ const STACK_COMMANDS = new Set([
   "types",
   "schema",
   "storage",
+  "backup",
+  "restore",
   "mint-token",
 ]);
 
@@ -68,6 +71,10 @@ async function main(): Promise<void> {
   }
   if (command === "storage" && positionals[1] === undefined) {
     console.log(STORAGE_USAGE);
+    return;
+  }
+  if (command === "backup" && positionals[1] === undefined) {
+    console.log(BACKUP_USAGE);
     return;
   }
   if (command === "init") {
@@ -146,6 +153,23 @@ async function main(): Promise<void> {
       );
       return;
     }
+    if (command === "backup") {
+      await runBackupCommand(operator.backups, positionals[1], (line) => {
+        console.log(line);
+      });
+      return;
+    }
+    if (command === "restore") {
+      await runRestoreCommand(
+        operator.backups,
+        positionals[1],
+        () => confirmRestore(project, values.yes === true),
+        (line) => {
+          console.log(line);
+        },
+      );
+      return;
+    }
     if (command === "mint-token") {
       if (!values.sub) {
         throw new DomainError("cli.sub_required", "mint-token requires --sub <uuid>.");
@@ -156,6 +180,7 @@ async function main(): Promise<void> {
   } finally {
     await operator.admin.close();
     await operator.storage.close();
+    await operator.backups.close();
   }
 }
 
@@ -183,6 +208,29 @@ async function confirmDestroy(project: string, assumeYes: boolean): Promise<void
   if (answer.trim() !== name) {
     throw new DomainError("cli.not_confirmed", "Nothing was destroyed.");
   }
+}
+
+/**
+ * A restore replaces the live database with an older one. Everything since that
+ * backup goes, so this asks in the same words `destroy` does.
+ */
+async function confirmRestore(project: string, assumeYes: boolean): Promise<boolean> {
+  if (assumeYes) {
+    return true;
+  }
+  const name = basename(project);
+  if (!process.stdin.isTTY) {
+    throw new DomainError(
+      "cli.confirm_required",
+      "restore replaces the live database. Pass --yes when there is nobody to answer a prompt.",
+    );
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(
+    `This replaces the database in ${project} with the backup. Everything since it is lost.\nType '${name}' to confirm: `,
+  );
+  rl.close();
+  return answer.trim() === name;
 }
 
 /** The studio is a long-running server, so it replaces this process's job. */

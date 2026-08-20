@@ -1,0 +1,9 @@
+{
+  "name": "baseplate-backup",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "postgres": "^3.4.7",
+    "tsx": "^4.23.12"
+  }
+}

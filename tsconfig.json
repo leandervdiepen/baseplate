@@ -25,6 +25,7 @@
     "sdk/src",
     "stack/shared",
     "stack/auth/src",
+    "stack/backup/src",
     "stack/migrate/src",
     "stack/storage/src"
   ],

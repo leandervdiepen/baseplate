@@ -3,6 +3,7 @@ export type NavId =
   | "schema"
   | "policies"
   | "storage"
+  | "backups"
   | "logs"
   | "settings"
   | "auth";
@@ -13,6 +14,7 @@ export const CRUMBS: Record<NavId, { section: string; leaf: string }> = {
   schema: { section: "Schema", leaf: "public" },
   policies: { section: "Policies", leaf: "row access" },
   storage: { section: "Storage", leaf: "buckets" },
+  backups: { section: "Backups", leaf: "and drills" },
   auth: { section: "Auth", leaf: "sessions" },
   logs: { section: "Logs", leaf: "all services" },
   settings: { section: "Settings", leaf: "this project" },
