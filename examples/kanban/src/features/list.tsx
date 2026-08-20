@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { client } from "../client.ts";
+import { deleteList } from "../cascade.ts";
 import { Attachments } from "./attachments.tsx";
 import type { CardsRow, ListsRow } from "../database.ts";
 
@@ -46,9 +47,10 @@ export function List({
   }
 
   async function removeList(): Promise<void> {
-    // The cascade on lists.board_id has a sibling on cards.list_id, so the
-    // cards go with it and no orphan is left behind.
-    await client.from("lists").delete().eq("id", list.id);
+    const failure = await deleteList(list.id);
+    if (failure) {
+      onError(failure);
+    }
     await onChanged();
   }
 

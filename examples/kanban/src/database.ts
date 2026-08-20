@@ -17,7 +17,7 @@ export type BoardsRow = {
 
 export type BoardsInsert = {
   title: string;
-  created_at?: string;
+  created_at: string;
 };
 
 export type BoardsUpdate = {

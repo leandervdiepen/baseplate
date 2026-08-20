@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { client } from "../client.ts";
+import { deleteBoard } from "../cascade.ts";
 import type { BoardsRow } from "../database.ts";
 
 export function Boards({ onOpen }: { onOpen: (board: BoardsRow) => void }) {
@@ -28,8 +29,11 @@ export function Boards({ onOpen }: { onOpen: (board: BoardsRow) => void }) {
       return;
     }
     setBusy(true);
-    // owner_id is never sent. The database stamps it from the token.
-    const { error: failure } = await client.from("boards").insert({ title: name });
+    // owner_id is never sent: the database stamps it from the token. created_at
+    // is sent, because a column made by `schema add-table` has no default.
+    const { error: failure } = await client
+      .from("boards")
+      .insert({ title: name, created_at: new Date().toISOString() });
     setBusy(false);
     if (failure) {
       setError(failure.message);
@@ -40,7 +44,10 @@ export function Boards({ onOpen }: { onOpen: (board: BoardsRow) => void }) {
   }
 
   async function remove(board: BoardsRow): Promise<void> {
-    await client.from("boards").delete().eq("id", board.id);
+    const failure = await deleteBoard(board.id);
+    if (failure) {
+      setError(failure);
+    }
     await load();
   }
 
