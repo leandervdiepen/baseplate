@@ -34,9 +34,19 @@ test("nothing running reads as nothing running", () => {
   expect(parseRunningStacks("")).toEqual([]);
 });
 
-/** A stack from an older version carries no labels, so it cannot be named. */
-test("a line with no project root is not a stack we can point at", () => {
-  expect(parseRunningStacks("baseplate-old-1\t\t8080")).toEqual([]);
+/**
+ * A stack from an older version, or one started by hand, carries no root label.
+ * It is still holding the ports, so it still counts: forgetting it would make
+ * the one-at-a-time rule blind to the stacks it can explain least.
+ */
+test("a stack with no project root still counts as running", () => {
+  expect(parseRunningStacks("baseplate-old-1\t\t8080")).toEqual([
+    {
+      projectName: "baseplate-old-1",
+      projectRoot: "",
+      baseUrl: "http://127.0.0.1:8080",
+    },
+  ]);
 });
 
 test("a directory with a space in it survives the split", () => {

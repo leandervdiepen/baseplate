@@ -52,15 +52,7 @@ export class DockerComposeRuntime implements StackRuntime {
    * track of which projects exist, so the running containers are asked instead.
    */
   async runningStacks(): Promise<readonly RunningStack[]> {
-    return parseRunningStacks(
-      await capture("docker", [
-        "ps",
-        "--filter",
-        `label=${ROOT_LABEL}`,
-        "--format",
-        `{{.Label "com.docker.compose.project"}}\t{{.Label "${ROOT_LABEL}"}}\t{{.Label "${PORT_LABEL}"}}`,
-      ]),
-    );
+    return runningStacks();
   }
 
   /**
@@ -88,15 +80,20 @@ export class DockerComposeRuntime implements StackRuntime {
 /**
  * One line per container, so a four-container stack answers four times. The
  * compose project name is what makes them one stack again.
+ *
+ * A stack with no project root still counts. It was started by an older version
+ * or by hand, and it is holding the ports either way; dropping it here would
+ * make the one-at-a-time rule blind to exactly the stacks it cannot explain.
+ * Not knowing where it lives costs a worse error message, nothing more.
  */
 export function parseRunningStacks(output: string): readonly RunningStack[] {
   const found = new Map<string, RunningStack>();
   for (const line of output.split("\n")) {
     const [projectName, projectRoot, port] = line.split("\t");
-    if (projectName && projectRoot && !found.has(projectName)) {
+    if (projectName && !found.has(projectName)) {
       found.set(projectName, {
         projectName,
-        projectRoot,
+        projectRoot: projectRoot ?? "",
         baseUrl: port ? `http://127.0.0.1:${port}` : "",
       });
     }
@@ -157,4 +154,22 @@ function capture(command: string, args: string[]): Promise<string> {
     child.on("error", () => resolve(""));
     child.on("close", (code) => resolve(code === 0 ? output.trim() : ""));
   });
+}
+
+/**
+ * Which stacks are up on this machine, asked of Docker rather than of any one
+ * project's config. It takes no configuration because it needs none: the labels
+ * a stack carries are the whole answer, which is what lets the studio list
+ * projects it is not currently serving.
+ */
+export async function runningStacks(): Promise<readonly RunningStack[]> {
+  return parseRunningStacks(
+    await capture("docker", [
+      "ps",
+      "--filter",
+      `label=${ROOT_LABEL}`,
+      "--format",
+      `{{.Label "com.docker.compose.project"}}\t{{.Label "${ROOT_LABEL}"}}\t{{.Label "${PORT_LABEL}"}}`,
+    ]),
+  );
 }

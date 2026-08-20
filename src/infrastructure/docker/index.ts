@@ -1,2 +1,6 @@
-export { DockerComposeRuntime, parseRunningStacks } from "./compose-runtime.ts";
+export {
+  DockerComposeRuntime,
+  parseRunningStacks,
+  runningStacks,
+} from "./compose-runtime.ts";
 export { DockerHostCloudProvider } from "./host-cloud.ts";

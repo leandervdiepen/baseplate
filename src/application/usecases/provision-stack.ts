@@ -87,5 +87,10 @@ function describe(other: RunningStack, count: number): string {
   const name = segments.at(-1) ?? other.projectName;
   const where = other.baseUrl ? ` on ${other.baseUrl}` : "";
   const rest = count > 1 ? ` (and ${count - 1} more)` : "";
-  return `'${name}' is already running${where}${rest}. Run \`baseplate down\` in ${other.projectRoot}, or \`baseplate up --replace\` to stop it and start this one.`;
+  // A stack we cannot place still has to be refused. Saying so plainly beats
+  // sending somebody to a directory named by an empty string.
+  const how = other.projectRoot
+    ? `Run \`baseplate down\` in ${other.projectRoot}, or \`baseplate up --replace\` to stop it and start this one.`
+    : `It does not say where it came from. Run \`baseplate up --replace\` to stop it and start this one.`;
+  return `'${name}' is already running${where}${rest}. ${how}`;
 }
