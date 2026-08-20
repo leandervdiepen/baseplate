@@ -5,25 +5,40 @@ export function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"signup" | "login" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"signup" | "login" | "forgot" | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
   async function submit(kind: "signup" | "login"): Promise<void> {
     setError(null);
+    setNotice(null);
     if (!email.trim() || !password) {
       setError("Enter an email address and a password.");
       emailRef.current?.focus();
       return;
     }
     setBusy(kind);
-    try {
-      const input = { email: email.trim(), password };
-      await (kind === "signup" ? client.auth.signUp(input) : client.auth.signIn(input));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That did not work. Check the details.");
-    } finally {
-      setBusy(null);
+    const input = { email: email.trim(), password };
+    const { error: failure } =
+      kind === "signup" ? await client.auth.signUp(input) : await client.auth.signIn(input);
+    setBusy(null);
+    setError(failure?.message ?? null);
+  }
+
+  async function forgot(): Promise<void> {
+    setError(null);
+    setNotice(null);
+    if (!email.trim()) {
+      setError("Enter your email address first.");
+      emailRef.current?.focus();
+      return;
     }
+    setBusy("forgot");
+    // The server answers the same way for an address it has never seen, so
+    // there is nothing here to tell an attacker who has an account.
+    await client.auth.resetPasswordForEmail(email.trim());
+    setBusy(null);
+    setNotice("Check your email for a reset link.");
   }
 
   return (
@@ -62,9 +77,21 @@ export function SignIn() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <p className="hint">At least 8 characters.</p>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <p className="hint">At least 8 characters.</p>
+            <span className="spacer" />
+            <button
+              className="link"
+              type="button"
+              disabled={busy !== null}
+              onClick={() => void forgot()}
+            >
+              {busy === "forgot" ? "Sending…" : "Forgot password?"}
+            </button>
+          </div>
         </div>
         {error ? <p className="error" role="alert">{error}</p> : null}
+        {notice ? <p className="hint" role="status">{notice}</p> : null}
         <div style={{ display: "flex", gap: 8 }}>
           <button className="button" type="button" disabled={busy !== null} onClick={() => void submit("signup")}>
             {busy === "signup" ? "Creating…" : "Create account"}

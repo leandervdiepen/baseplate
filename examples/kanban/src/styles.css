@@ -192,6 +192,7 @@ main { padding: 20px; }
   cursor: pointer;
   overflow-wrap: anywhere;
 }
+.link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
 .attach {
   font-size: 12px;
   color: var(--muted);

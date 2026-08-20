@@ -7,7 +7,7 @@ function snippetFor(baseUrl: string, table: string): string {
   return `import { createClient } from "@diepen/baseplate/client";
 
 const client = createClient("${baseUrl}");
-await client.auth.signUp({ email, password });
+const { error } = await client.auth.signUp({ email, password });
 
 const { data } = await client
   .from("${table}")

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { authPost } from "./support/stack.ts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const BASE_URL = "http://127.0.0.1:8080";
@@ -80,22 +81,14 @@ test("two accounts cannot see each other's rows", async () => {
 test("duplicate email is rejected", async () => {
   const email = `dup-${Date.now()}@example.com`;
   await auth("signup", email, "a-long-password");
-  const response = await fetch(`${BASE_URL}/auth/signup`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password: "a-long-password" }),
-  });
+  const response = await authPost("/auth/signup", { email, password: "a-long-password" });
   expect(response.status).toBe(409);
 });
 
 test("wrong password is rejected", async () => {
   const email = `pw-${Date.now()}@example.com`;
   await auth("signup", email, "a-long-password");
-  const response = await fetch(`${BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password: "nope-nope" }),
-  });
+  const response = await authPost("/auth/login", { email, password: "nope-nope" });
   expect(response.status).toBe(401);
 });
 
@@ -183,11 +176,9 @@ async function signExpired(subject: string): Promise<string> {
 }
 
 async function auth(kind: "signup" | "login", email: string, password: string): Promise<Session> {
-  const response = await fetch(`${BASE_URL}/auth/${kind}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  // Credential endpoints are rate limited per IP; authPost waits a 429 out so
+  // this file cannot fail because a sibling file spent the budget.
+  const response = await authPost(`/auth/${kind}`, { email, password });
   const text = await response.text();
   expect(response.status, text).toBe(kind === "signup" ? 201 : 200);
   return JSON.parse(text) as Session;
