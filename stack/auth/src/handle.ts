@@ -1,15 +1,46 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {
+  changePassword,
+  recover,
+  recoverConfirm,
+  sendVerifyEmail,
+  verifyConfirm,
+  verifyRequest,
+} from "./account.ts";
 import type { AuthDb } from "./db.ts";
-import { assertPassword, normalizeEmail } from "./email.ts";
-import { hashPassword, verifyPassword } from "./password.ts";
+import { authenticate, readCredentials, readJsonBody, sendJson } from "./http.ts";
+import type { Mailer } from "./mailer.ts";
+import { DUMMY_HASH, hashPassword, verifyPassword } from "./password.ts";
+import { clientIp, type RateLimiter } from "./rate-limit.ts";
 import { issueSession } from "./session.ts";
-import { hashRefreshToken, readUserId, type TokenConfig } from "./token.ts";
+import { hashToken, type TokenConfig } from "./token.ts";
 
 export type AuthConfig = TokenConfig & {
   db: AuthDb;
+  mailer: Mailer;
+  limiter: RateLimiter;
+  /** Where the app that owns these users lives; emailed links point at it. */
+  siteUrl: string;
+  requireEmailConfirm: boolean;
 };
 
-type JsonBody = { email?: unknown; password?: unknown; refreshToken?: unknown };
+type JsonBody = { refreshToken?: unknown };
+
+type Route = (c: AuthConfig, req: IncomingMessage, res: ServerResponse) => Promise<void>;
+
+/** Eleven routes read better as a table than as a ladder of ifs. */
+const ROUTES: Record<string, Route> = {
+  "POST /signup": signup,
+  "POST /login": login,
+  "POST /refresh": refresh,
+  "POST /logout": logout,
+  "GET /me": me,
+  "POST /recover": recover,
+  "POST /recover/confirm": recoverConfirm,
+  "POST /password": changePassword,
+  "POST /verify/request": verifyRequest,
+  "POST /verify/confirm": verifyConfirm,
+};
 
 export async function handleAuthRequest(
   config: AuthConfig,
@@ -23,27 +54,12 @@ export async function handleAuthRequest(
     sendJson(res, 200, { ok: true });
     return;
   }
-  if (path === "/signup" && method === "POST") {
-    await signup(config, req, res);
+  const route = ROUTES[`${method} ${path}`];
+  if (!route) {
+    sendJson(res, 404, { code: "auth.not_found", message: "Unknown auth route." });
     return;
   }
-  if (path === "/login" && method === "POST") {
-    await login(config, req, res);
-    return;
-  }
-  if (path === "/refresh" && method === "POST") {
-    await refresh(config, req, res);
-    return;
-  }
-  if (path === "/logout" && method === "POST") {
-    await logout(config, req, res);
-    return;
-  }
-  if (path === "/me" && method === "GET") {
-    await me(config, req, res);
-    return;
-  }
-  sendJson(res, 404, { code: "auth.not_found", message: "Unknown auth route." });
+  await route(config, req, res);
 }
 
 async function signup(
@@ -51,13 +67,23 @@ async function signup(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const parsed = await readCredentials(req, res, { requireStrength: true });
+  const parsed = await readCredentials(config, req, res, {
+    requireStrength: true,
+    limitPerEmail: false,
+  });
   if (!parsed) {
     return;
   }
   try {
     const passwordHash = await hashPassword(parsed.password);
     const user = await config.db.insertUser(parsed.email, passwordHash);
+    await sendVerifyEmail(config, user.id, user.email);
+    if (config.requireEmailConfirm) {
+      // No session: the SDK reads that as "check your inbox".
+      sendJson(res, 201, { user });
+      return;
+    }
+    await config.db.touchLastSignIn(user.id);
     sendJson(res, 201, await issueSession(config.db, config, user));
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -76,23 +102,35 @@ async function login(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const parsed = await readCredentials(req, res, { requireStrength: false });
+  const ip = clientIp(req);
+  const parsed = await readCredentials(config, req, res, {
+    requireStrength: false,
+    limitPerEmail: true,
+  });
   if (!parsed) {
     return;
   }
   const row = await config.db.findByEmail(parsed.email);
-  if (!row || !(await verifyPassword(parsed.password, row.passwordHash))) {
+  // Verified against a hash with no preimage when the email is unknown, so the
+  // work done, and therefore the time taken, does not depend on who exists.
+  const ok = await verifyPassword(parsed.password, row?.passwordHash ?? DUMMY_HASH);
+  if (!row || !ok) {
+    process.stdout.write(`auth: login failed email=${parsed.email} ip=${ip}\n`);
     sendJson(res, 401, {
       code: "auth.invalid_credentials",
       message: "Email or password is wrong.",
     });
     return;
   }
-  sendJson(
-    res,
-    200,
-    await issueSession(config.db, config, { id: row.id, email: row.email }),
-  );
+  if (config.requireEmailConfirm && !row.emailConfirmedAt) {
+    sendJson(res, 403, {
+      code: "auth.email_not_confirmed",
+      message: "Confirm your email first.",
+    });
+    return;
+  }
+  await config.db.touchLastSignIn(row.id);
+  sendJson(res, 200, await issueSession(config.db, config, { id: row.id, email: row.email }));
 }
 
 /**
@@ -107,7 +145,7 @@ async function refresh(
   const body = (await readJsonBody(req)) as JsonBody;
   const presented = typeof body.refreshToken === "string" ? body.refreshToken : undefined;
   const stored = presented
-    ? await config.db.findLiveRefreshToken(hashRefreshToken(presented))
+    ? await config.db.findLiveRefreshToken(hashToken(presented))
     : undefined;
   const user = stored ? await config.db.findById(stored.userId) : undefined;
   if (!stored || !user) {
@@ -118,7 +156,7 @@ async function refresh(
     return;
   }
   await config.db.revokeRefreshToken(stored.id);
-  sendJson(res, 200, await issueSession(config.db, config, user));
+  sendJson(res, 200, await issueSession(config.db, config, { id: user.id, email: user.email }));
 }
 
 async function logout(
@@ -128,7 +166,7 @@ async function logout(
 ): Promise<void> {
   const body = (await readJsonBody(req)) as JsonBody;
   if (typeof body.refreshToken === "string") {
-    const stored = await config.db.findLiveRefreshToken(hashRefreshToken(body.refreshToken));
+    const stored = await config.db.findLiveRefreshToken(hashToken(body.refreshToken));
     if (stored) {
       await config.db.revokeRefreshToken(stored.id);
     }
@@ -141,62 +179,19 @@ async function me(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const header = req.headers.authorization;
-  const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
-  if (!token) {
-    sendJson(res, 401, { code: "auth.missing_token", message: "Sign in first." });
-    return;
-  }
-  const id = await readUserId(config.secret, token);
-  const user = id ? await config.db.findById(id) : undefined;
+  const user = await authenticate(config, req, res);
   if (!user) {
-    sendJson(res, 401, { code: "auth.invalid_token", message: "Token was rejected." });
     return;
   }
-  sendJson(res, 200, { user });
-}
-
-async function readCredentials(
-  req: IncomingMessage,
-  res: ServerResponse,
-  options: { requireStrength: boolean },
-): Promise<{ email: string; password: string } | undefined> {
-  const body = (await readJsonBody(req)) as JsonBody;
-  const email = typeof body.email === "string" ? normalizeEmail(body.email) : undefined;
-  const password = typeof body.password === "string" ? body.password : undefined;
-  if (!email) {
-    sendJson(res, 400, { code: "auth.invalid_email", message: "Enter a valid email." });
-    return undefined;
-  }
-  if (!password) {
-    sendJson(res, 400, { code: "auth.weak_password", message: "Password is required." });
-    return undefined;
-  }
-  if (options.requireStrength) {
-    const passwordError = assertPassword(password);
-    if (passwordError) {
-      sendJson(res, 400, { code: "auth.weak_password", message: passwordError });
-      return undefined;
-    }
-  }
-  return { email, password };
-}
-
-async function readJsonBody(req: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  const raw = Buffer.concat(chunks).toString("utf8");
-  if (!raw) {
-    return {};
-  }
-  return JSON.parse(raw) as unknown;
-}
-
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { "content-type": "application/json" });
-  res.end(JSON.stringify(body));
+  sendJson(res, 200, {
+    user: {
+      id: user.id,
+      email: user.email,
+      emailConfirmedAt: user.emailConfirmedAt,
+      createdAt: user.createdAt,
+      lastSignInAt: user.lastSignInAt,
+    },
+  });
 }
 
 function isUniqueViolation(error: unknown): boolean {

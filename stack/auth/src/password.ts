@@ -4,6 +4,17 @@ import { promisify } from "node:util";
 const scryptAsync = promisify(scrypt);
 const KEY_LENGTH = 64;
 
+/**
+ * A well-formed hash with no preimage. Login verifies against this when the
+ * email is unknown, so an unknown address costs the same scrypt work as a real
+ * one and the response time stops telling an attacker who has an account.
+ *
+ * Random per process on purpose: no password can ever verify against it.
+ */
+export const DUMMY_HASH = `scrypt:${randomBytes(16).toString("base64url")}:${randomBytes(
+  KEY_LENGTH,
+).toString("base64url")}`;
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const hash = (await scryptAsync(password, salt, KEY_LENGTH)) as Buffer;

@@ -5,3 +5,9 @@ services:
       - "443:443"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+
+  # A dev inbox has no business on a server that can send real mail. The profile
+  # is never enabled in the cloud, so this service is defined and never started;
+  # production points SMTP_HOST at a real relay instead.
+  mailpit:
+    profiles: ["local-only"]

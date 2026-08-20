@@ -50,10 +50,19 @@ export async function readUserId(
 
 /** Opaque, not a JWT: it is checked against a row that can be revoked. */
 export function createRefreshToken(): { value: string; hash: string } {
-  const value = randomBytes(32).toString("base64url");
-  return { value, hash: hashRefreshToken(value) };
+  const value = createOpaqueToken();
+  return { value, hash: hashToken(value) };
 }
 
-export function hashRefreshToken(value: string): string {
+/** The shape every secret that lives in a row has: 32 random bytes, url-safe. */
+export function createOpaqueToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/**
+ * Refresh tokens and emailed one-time tokens are both stored as this hash, so
+ * a database dump carries nothing that can be presented.
+ */
+export function hashToken(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }

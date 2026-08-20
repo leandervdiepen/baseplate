@@ -76,6 +76,18 @@ services:
       CALLER_ROLE: app_user
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-1h}
       REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-30d}
+      # Where the app that owns these users lives. Recovery and confirmation
+      # links point at it, so a wrong value emails a dead link.
+      SITE_URL: ${SITE_URL:-http://localhost:3000}
+      REQUIRE_EMAIL_CONFIRM: ${REQUIRE_EMAIL_CONFIRM:-false}
+      # Defaults point at the mailpit container below. Empty SMTP_HOST turns
+      # mail off entirely: tokens are still issued, nothing is delivered.
+      SMTP_HOST: ${SMTP_HOST-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-Baseplate <no-reply@localhost>}
+      SMTP_SECURE: ${SMTP_SECURE:-none}
       PORT: "3001"
     expose:
       - "3001"
@@ -91,6 +103,20 @@ services:
       timeout: 5s
       retries: 30
       start_period: 10s
+
+  # The local inbox. Recovery and confirmation mail lands here instead of the
+  # internet, so the whole reset flow can be walked without an SMTP account.
+  # Nothing depends_on it: mail is best-effort, and auth signs people in whether
+  # or not this is up. The cloud overlay hides it behind a profile.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    labels: *baseplate-labels
+    ports:
+      # Loopback only. Read the inbox at http://127.0.0.1:8025.
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    expose:
+      - "1025"
 
   # Bytes only, on the compose network only. Never published, never routed by
   # Caddy, and the sole client is the storage service in front of it.
