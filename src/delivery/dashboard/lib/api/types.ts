@@ -95,9 +95,18 @@ export type SchemaColumn = {
 
 export type SchemaTable = { name: string; ownerColumn: string; columns: SchemaColumn[] };
 
+/**
+ * Why an answer came back empty. Screens that must render whatever happens used
+ * to turn every failure into an empty list, so "nothing here yet" and "I cannot
+ * reach your server" looked the same - and the second is exactly what a project
+ * pointed at Hetzner has to be able to say.
+ */
+export type Problem = { code: string; message: string };
+
 export type SchemaSnapshot = {
   live: boolean;
   tables: SchemaTable[];
+  problem?: Problem;
 };
 
 export type SchemaHistoryEntry = {
@@ -160,6 +169,7 @@ export type BackupState = {
 
 export type Overview = {
   live: boolean;
+  problem?: Problem;
   tables: number;
   rowsTracked: number;
   buckets: number;

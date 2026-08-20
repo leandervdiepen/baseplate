@@ -11,7 +11,7 @@ export function useSchemaHistory(tables: SchemaSnapshot["tables"]): SchemaHistor
 
   useEffect(() => {
     void getHistory()
-      .then(setEntries)
+      .then((answer) => setEntries(answer.entries))
       .catch(() => setEntries([]));
     // The tables are the trigger rather than an input: a change to them is the
     // only thing that writes a new line of history.

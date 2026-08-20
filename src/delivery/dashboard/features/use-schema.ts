@@ -23,10 +23,19 @@ export function useSchema(onFirstLoad: (first: string | null) => void) {
           onFirstLoad(next.tables[0]?.name ?? null);
         }
       })
-      .catch(() => setSchema({ live: false, tables: [] }));
+      .catch((cause: unknown) =>
+        setSchema({
+          live: false,
+          tables: [],
+          problem: {
+            code: "operator.unreachable",
+            message: cause instanceof Error ? cause.message : "Unable to read this project.",
+          },
+        }),
+      );
   }, [onFirstLoad]);
 
   useEffect(reload, [reload]);
 
-  return { schema, tables: schema?.tables ?? [], reload };
+  return { schema, tables: schema?.tables ?? [], problem: schema?.problem ?? null, reload };
 }

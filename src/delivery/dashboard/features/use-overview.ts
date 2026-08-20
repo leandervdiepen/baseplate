@@ -18,5 +18,7 @@ export function useOverview(apiUp: boolean) {
       });
   }, [apiUp]);
 
-  return { overview, error };
+  // The request can fail, and it can also succeed while saying it could not
+  // reach the database. Both are the same sentence to whoever is reading it.
+  return { overview, error: error ?? overview?.problem?.message ?? null };
 }

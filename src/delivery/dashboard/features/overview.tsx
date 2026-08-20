@@ -34,6 +34,11 @@ export function OverviewPage({
   const { overview, error } = useOverview(status.apiUp);
   const [busy, setBusy] = useState(false);
 
+  // A count of zero is a claim about the database. When it could not be read,
+  // the honest answer is that we do not know, not that there is nothing there.
+  const read = overview?.live === true;
+  const unread = "Not read. The database did not answer.";
+
   const url = status.baseUrl ?? "http://127.0.0.1:8080";
 
   return (
@@ -74,7 +79,11 @@ export function OverviewPage({
           detail={
             status.apiUp
               ? "Postgres, the API, auth, storage, and backups are answering."
-              : "Nothing is answering. Start the stack to use this project."
+              : // Why it is not answering, when the operator tool knows. A project
+                // pointed at a server that does not exist yet is not the same
+                // thing as a stack somebody has not started.
+                (overview?.problem?.message ??
+                "Nothing is answering. Start the stack to use this project.")
           }
         />
         <StatCard
@@ -95,11 +104,13 @@ export function OverviewPage({
         <StatCard
           icon={<IconTables />}
           label="Tables"
-          value={overview ? String(overview.tables) : "-"}
+          value={read ? String(overview.tables) : "-"}
           detail={
-            overview && overview.tables > 0
-              ? `${count(overview.rowsTracked, "column")}, every table under row security`
-              : "None yet. A table comes up already protected."
+            !read
+              ? unread
+              : overview.tables > 0
+                ? `${count(overview.rowsTracked, "column")}, every table under row security`
+                : "None yet. A table comes up already protected."
           }
           action={
             <Button variant="ghost" className="px-2" onClick={() => onNavigate("tables")}>
@@ -110,11 +121,13 @@ export function OverviewPage({
         <StatCard
           icon={<IconStorage />}
           label="Storage"
-          value={overview ? `${String(overview.objects)} objects` : "-"}
+          value={read ? `${String(overview.objects)} objects` : "-"}
           detail={
-            overview && overview.buckets > 0
-              ? `${count(overview.buckets, "bucket")}, ${formatBytes(overview.objectBytes)}`
-              : "No buckets yet. Files follow the same rule as rows."
+            !read
+              ? unread
+              : overview.buckets > 0
+                ? `${count(overview.buckets, "bucket")}, ${formatBytes(overview.objectBytes)}`
+                : "No buckets yet. Files follow the same rule as rows."
           }
           action={
             <Button variant="ghost" className="px-2" onClick={() => onNavigate("storage")}>
@@ -125,23 +138,29 @@ export function OverviewPage({
         <StatCard
           icon={<IconBackups />}
           label="Last backup"
-          value={overview?.lastBackup ? when(overview.lastBackup.at) : "None yet"}
+          value={overview?.lastBackup ? when(overview.lastBackup.at) : read ? "None yet" : "-"}
           tone={overview?.lastBackup?.ok === false ? "bad" : "plain"}
           detail={
             overview?.lastBackup
               ? `${formatBytes(overview.lastBackup.bytes)} to ${overview.lastBackup.destination}`
-              : "One runs on a schedule as soon as the stack is up."
+              : read
+                ? "One runs on a schedule as soon as the stack is up."
+                : unread
           }
         />
         <StatCard
           icon={<IconLock />}
           label="Last verified restore"
-          value={overview?.lastDrill ? when(overview.lastDrill.at) : "Not yet"}
-          tone={overview?.lastDrill ? (overview.lastDrill.ok ? "good" : "bad") : "warn"}
+          value={overview?.lastDrill ? when(overview.lastDrill.at) : read ? "Not yet" : "-"}
+          tone={
+            overview?.lastDrill ? (overview.lastDrill.ok ? "good" : "bad") : read ? "warn" : "plain"
+          }
           detail={
             overview?.lastDrill?.ok
               ? `${count(overview.lastDrill.tables, "table")} and ${count(overview.lastDrill.rows, "row")} came back, in ${String(overview.lastDrill.durationMs)}ms`
-              : "A backup nobody has restored is a hope."
+              : read
+                ? "A backup nobody has restored is a hope."
+                : unread
           }
           action={
             <Button variant="ghost" className="px-2" onClick={() => onNavigate("backups")}>

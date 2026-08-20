@@ -50,7 +50,7 @@ export function TablesPage({
     },
     [selected, onSelect],
   );
-  const { schema, tables, reload } = useSchema(openFirst);
+  const { schema, tables, problem, reload } = useSchema(openFirst);
 
   const table = tables.find((entry) => entry.name === selected);
   const columns = table?.columns ?? [];
@@ -82,6 +82,20 @@ export function TablesPage({
           title="The stack is not running"
           description="Your tables live in the database, and it is not up. Start the stack to browse them."
           action={<Button onClick={() => void onProvision()}>Start the stack</Button>}
+        />
+      </>
+    );
+  }
+  // Before the empty state, because a read that failed is not a database with
+  // nothing in it, and offering to make a table is the wrong thing to say.
+  if (schema && !schema.live) {
+    return (
+      <>
+        <PageHeader title="Tables" />
+        <EmptyState
+          title="Cannot read this project's tables"
+          description={problem?.message ?? "The database did not answer."}
+          action={<Button onClick={reload}>Try again</Button>}
         />
       </>
     );

@@ -1,6 +1,7 @@
 import { get, post } from "./http.ts";
 import type {
   LiveTable,
+  Problem,
   SchemaChangeBody,
   SchemaHistoryEntry,
   SchemaSnapshot,
@@ -11,14 +12,17 @@ export const changeSchema = (
 ): Promise<{ statement: string; tables: LiveTable[] }> =>
   post<{ statement: string; tables: LiveTable[] }>("/api/schema", body);
 
-export const getHistory = async (): Promise<SchemaHistoryEntry[]> =>
-  (await get<{ entries: SchemaHistoryEntry[] }>("/api/history")).entries;
+export const getHistory = (): Promise<{ entries: SchemaHistoryEntry[]; problem?: Problem }> =>
+  get<{ entries: SchemaHistoryEntry[]; problem?: Problem }>("/api/history");
 
 /** Marks the owner column, which is the one fact a table's own shape does not carry. */
 export async function getSchema(): Promise<SchemaSnapshot> {
-  const body = await get<{ tables: LiveTable[]; live?: boolean }>("/api/schema");
+  const body = await get<{ tables: LiveTable[]; live?: boolean; problem?: Problem }>(
+    "/api/schema",
+  );
   return {
     live: body.live !== false,
+    ...(body.problem ? { problem: body.problem } : {}),
     tables: body.tables.map((table) => ({
       name: table.name,
       ownerColumn: table.ownerColumn,
