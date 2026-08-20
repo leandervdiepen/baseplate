@@ -9,10 +9,12 @@ It exists to prove the whole path works, so nothing here is mocked.
 From this directory:
 
 ```bash
-npx @diepen/baseplate init --port 8090 --postgres-port 5490 --dashboard-port 8790
-npx @diepen/baseplate up
+npx @diepen/baseplate init
+npx @diepen/baseplate up --replace
 npm install
 ```
+
+One stack runs at a time, whatever ports it was given, so `--replace` stops whichever other project is holding them and starts this one. `baseplate down` in this directory gives them back.
 
 The schema is drizzle's, so push it and then hand the tables to Baseplate:
 

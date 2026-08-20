@@ -48,6 +48,11 @@ npx @diepen/baseplate dashboard   # the studio, on 127.0.0.1
 npx @diepen/baseplate down        # stop. your data stays
 ```
 
+Run `init` in more than one directory and the studio lists them: the project name in the sidebar
+opens a switcher, marks which stack is up, and points the studio at another without restarting it.
+One stack runs at a time, so switching shows you the other project; starting it is still a button
+you press.
+
 ## What you get
 
 | | |
@@ -59,7 +64,7 @@ npx @diepen/baseplate down        # stop. your data stays
 | **Email** | A local inbox on `127.0.0.1:8025` catches recovery and confirmation mail in development; `SMTP_*` points production at a real server. |
 | **Storage** | Buckets and objects, guarded by the same rule as rows. Signed URLs for `<img src>`. |
 | **Backups** | Scheduled `pg_dump`, encrypted with a key generated for your project, plus a drill that restores one and counts what came back. |
-| **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. |
+| **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. Every setting lives here; you never open `baseplate.env` by hand. |
 | **TLS** | Caddy gets a Let's Encrypt certificate for your hostname when you target Hetzner. |
 
 ## Agents
