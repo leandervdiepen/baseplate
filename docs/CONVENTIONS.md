@@ -93,8 +93,7 @@ Imperative, present tense, why before what.
 Not `update files`.
 Do not add an agent as co-author.
 
-User-facing shipped capability goes in `CHANGELOG.md`.
-Do not record decisions there.
+There is no changelog file.
 Git is the history of choices.
 Docs are the present.
 

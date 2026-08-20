@@ -65,6 +65,9 @@ The database does the filtering.
 
 - **Schema.** Tables, columns, renames, and drops from the studio, the CLI, or MCP. Each is one transaction: the DDL, the row access policy, the owner trigger, the grants, and a history entry. A table cannot exist unprotected.
 - **Auth.** Email and password on the stack. Short-lived access tokens with `exp`, single-use refresh tokens that can be revoked, both lifetimes configurable in the studio.
+  Password reset and email verification over mail: a dev inbox ships in the local stack, production names an SMTP server.
+  Credential endpoints are rate limited.
+  The studio's Auth view lists every account and can add, impersonate, reset, revoke, and delete one.
 - **The client.** `@diepen/baseplate/client`. Typed queries with the filters an app needs, sessions that persist and refresh themselves. It never filters rows; the database does.
   The package publishes `skills/baseplate-app/SKILL.md` for agents writing apps.
 - **Object storage.** Buckets the operator makes, objects an app puts in them. An object is a row with bytes attached and is guarded the same way: private buckets show a caller only their own, public ones are readable by anyone signed in and writable only by the owner. Signed links for what a browser must fetch without a header.
@@ -78,7 +81,7 @@ The database does the filtering.
 ### Still open
 
 - A live Hetzner provision against a real domain
-- Rate limiting, password reset, and email verification on auth
+- OAuth, magic links, and MFA are not planned; email and password is the whole auth story
 
 ## Out
 

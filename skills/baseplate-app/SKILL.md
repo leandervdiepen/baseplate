@@ -25,15 +25,22 @@ Signup and login are public HTTP; everything else needs the session they return.
 ## Auth
 
 ```ts
-await client.auth.signUp({ email, password });
+const { data, error } = await client.auth.signUp({ email, password });
 await client.auth.signIn({ email, password });
 await client.auth.signOut();
 
 client.auth.getSession();
-client.auth.onAuthStateChange((session) => render(session?.user));
+client.auth.onAuthStateChange((event, session) => render(session?.user));
+
+await client.auth.resetPasswordForEmail(email);
+await client.auth.confirmPasswordReset({ token, password });
+await client.auth.updateUser({ currentPassword, password });
 ```
 
-The session persists in `localStorage` in a browser and in memory elsewhere.
+Auth answers `{ data, error }` like queries do; render `error.message`, never `try/catch`.
+The listener gets `(event, session)` and fires once with `INITIAL_SESSION` right after subscribing.
+The reset token arrives by mail as `{SITE_URL}/reset-password?token=...`; confirming it signs the user in.
+The session persists in `localStorage` in a browser and in memory elsewhere, and is shared across tabs.
 Refresh is automatic; do not call `refresh` yourself.
 Pass `{ persist: false }` for a session that dies with the process, or `{ storage }` to keep it somewhere else.
 
@@ -116,6 +123,7 @@ Give every table an `owner_id uuid not null` column and adopt it after each push
 
 Run against a real stack.
 Users are cheap: one signup each.
+Credential endpoints allow ten calls a minute per IP, so a large suite reuses accounts or waits out a `429` and its `Retry-After`.
 The first test is two callers, one endpoint, disjoint rows.
 Nothing in the test filters by user.
 

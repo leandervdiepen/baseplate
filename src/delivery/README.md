@@ -14,6 +14,11 @@ It returns 503 `operator.api_down` rather than a 500 when the stack is not up.
 `/api/auth/*` proxies to the stack's `/auth/*` so the studio can sign up without
 crossing an origin.
 
+`/api/users` is the operator's own user management: list and search, create,
+delete, recovery links, reset a password, revoke sessions. It reaches the
+database directly as the owning role - `auth.users` is not behind PostgREST -
+and answers `{ live: false, users: [] }` when the stack is down, like schema.
+
 Every `/api/*` route is refused unless the request looks like it came from the
 studio itself. See `operator-http/localhost.ts` for why binding to 127.0.0.1 is
 not enough on its own.

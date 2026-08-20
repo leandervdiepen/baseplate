@@ -34,13 +34,14 @@ import type { Database } from "./database.ts";
 
 const client = createClient<Database>("http://127.0.0.1:8080");
 
-await client.auth.signUp({ email, password });
+const { error } = await client.auth.signUp({ email, password });
 await client.from("notes").insert({ title: "hello" });
 
-const { data, error } = await client.from("notes").select("id,title").order("title").limit(20);
+const { data } = await client.from("notes").select("id,title").order("title").limit(20);
 ```
 
 That is the whole loop. `data` contains this user's notes and nobody else's, because the database decided that, not the client.
+Every call answers `{ data, error }` and nothing throws, so a failure is a value you render rather than an exception you catch.
 
 ```bash
 npx @diepen/baseplate dashboard   # the studio, on 127.0.0.1
@@ -54,7 +55,8 @@ npx @diepen/baseplate down        # stop. your data stays
 | **Postgres** | Your database. Reachable on localhost for tools like `psql` and drizzle-kit. |
 | **REST API** | PostgREST over your tables, behind Caddy. Filters, ordering, pagination. |
 | **Row access** | Every table is protected before it takes its first row. A caller sees rows whose `owner_id` matches the `sub` in their token. |
-| **Auth** | `POST /auth/signup`, `/auth/login`, `/auth/refresh`, `/auth/logout`. Sessions persist and refresh themselves. |
+| **Auth** | Signup, login, refresh, logout, password reset, and email verification under `/auth/*`. Sessions persist and refresh themselves; credential endpoints are rate limited. |
+| **Email** | A local inbox on `127.0.0.1:8025` catches recovery and confirmation mail in development; `SMTP_*` points production at a real server. |
 | **Storage** | Buckets and objects, guarded by the same rule as rows. Signed URLs for `<img src>`. |
 | **Backups** | Scheduled `pg_dump`, encrypted with a key generated for your project, plus a drill that restores one and counts what came back. |
 | **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. |
@@ -259,7 +261,7 @@ Worth knowing before you trust it with something:
 
 - Hetzner provisioning has not been run live against a real domain yet.
 - One node. No replica and no failover, so a restore is minutes of downtime.
-- No rate limiting, password reset, or email verification on auth.
+- Auth is email and password only: no OAuth or social login, no magic links, no MFA.
 - No metrics, and no alert when a backup or drill fails: it is a log line and a row.
 - No point-in-time recovery. The worst case is losing up to one backup interval of writes.
 - A backup is uploaded in a single request, so S3's 5 GB limit for one is the practical ceiling. Multipart upload is not implemented.
