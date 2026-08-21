@@ -1,5 +1,5 @@
-import { createBucket, DomainError, isBucketVisibility } from "#domain";
-import type { StorageAdmin } from "#application";
+import type { ManageStorage } from "#application";
+import { DomainError } from "#domain";
 
 export const STORAGE_USAGE = `Usage: baseplate storage <command>
 
@@ -19,7 +19,7 @@ export type StorageArgs = {
 };
 
 export async function runStorageCommand(
-  storage: StorageAdmin,
+  storage: ManageStorage,
   action: string | undefined,
   positionals: readonly (string | undefined)[],
   args: StorageArgs,
@@ -31,16 +31,14 @@ export async function runStorageCommand(
   }
 
   if (action === "buckets") {
-    const usage = await storage.usage();
-    const buckets = await storage.listBuckets();
+    const buckets = await storage.buckets();
     if (buckets.length === 0) {
       print("No buckets yet. `baseplate storage add-bucket avatars` makes one.");
       return;
     }
     for (const bucket of buckets) {
-      const counts = usage.find((entry) => entry.bucket === bucket.name);
       print(
-        `${bucket.name} (${bucket.visibility}): ${counts?.objects ?? 0} object(s), ${formatBytes(counts?.bytes ?? 0)}`,
+        `${bucket.name} (${bucket.visibility}): ${bucket.objects} object(s), ${formatBytes(bucket.bytes)}`,
       );
     }
     return;
@@ -52,8 +50,7 @@ export async function runStorageCommand(
   }
 
   if (action === "add-bucket") {
-    const bucket = createBucket(name, args.makePublic ? "public" : "private");
-    await storage.createBucket(bucket);
+    const bucket = await storage.addBucket(name, args.makePublic ? "public" : undefined);
     print(
       bucket.visibility === "public"
         ? `Made '${bucket.name}'. Anyone signed in can read it; only the owner of an object can change it.`
@@ -63,26 +60,19 @@ export async function runStorageCommand(
   }
 
   if (action === "set-visibility") {
-    const visibility = positionals[1];
-    if (!visibility || !isBucketVisibility(visibility)) {
-      throw new DomainError(
-        "cli.invalid_visibility",
-        "Visibility is public or private.",
-      );
-    }
-    await storage.setVisibility(name, visibility);
-    print(`'${name}' is now ${visibility}.`);
+    const bucket = await storage.setVisibility(name, positionals[1] ?? "");
+    print(`'${bucket.name}' is now ${bucket.visibility}.`);
     return;
   }
 
   if (action === "rm-bucket") {
-    const removed = await storage.dropBucket(name);
+    const removed = await storage.removeBucket(name);
     print(`Removed '${name}' and ${removed} object(s). The bytes go with the next sweep.`);
     return;
   }
 
   if (action === "objects") {
-    const objects = await storage.listObjects(name, 200);
+    const objects = await storage.objects(name);
     if (objects.length === 0) {
       print(`'${name}' is empty.`);
       return;

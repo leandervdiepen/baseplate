@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
+import { ManageUsers } from "#application";
 import { MemoryUserAdmin } from "#infrastructure";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -10,8 +11,8 @@ const users = new MemoryUserAdmin();
 // not.
 vi.mock("../../../src/delivery/operator-setup.ts", () => ({
   createOperatorFor: () => ({
-    users,
-    admin: { close: async () => undefined },
+    users: new ManageUsers({ users }),
+    close: async () => undefined,
   }),
   siteUrlFromEnv: () => "https://app.example.test",
 }));

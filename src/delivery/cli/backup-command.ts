@@ -1,5 +1,5 @@
+import type { ManageBackups } from "#application";
 import { DomainError } from "#domain";
-import type { BackupAdmin } from "#application";
 import { formatBytes } from "./storage-command.ts";
 
 export const BACKUP_USAGE = `Usage: baseplate backup <command>
@@ -15,11 +15,8 @@ and DRILL_EVERY set the pace, and BACKUP_S3_* send them off the machine.
 
 To put one back: baseplate restore [<id>]`;
 
-/** A dump, a seal, and an upload take longer than a request usually should. */
-const BACKUP_TIMEOUT_MS = 10 * 60_000;
-
 export async function runBackupCommand(
-  backups: BackupAdmin,
+  backups: ManageBackups,
   action: string | undefined,
   print: (line: string) => void,
 ): Promise<void> {
@@ -30,16 +27,13 @@ export async function runBackupCommand(
 
   if (action === "now" || action === "drill") {
     print(action === "now" ? "Backing up…" : "Restoring the newest backup into a scratch database…");
-    const outcome = await backups.request(action === "now" ? "backup" : "drill", undefined, BACKUP_TIMEOUT_MS);
-    if (!outcome.ok) {
-      throw new DomainError("backup.failed", outcome.message || "That did not work.");
-    }
+    const outcome = await backups.run(action === "now" ? "backup" : "drill");
     print(outcome.message);
     return;
   }
 
   if (action === "list") {
-    const records = await backups.list(20);
+    const records = await backups.list();
     if (records.length === 0) {
       print("Nothing backed up yet. `baseplate backup now` takes one.");
       return;
@@ -53,7 +47,7 @@ export async function runBackupCommand(
   }
 
   if (action === "drills") {
-    const records = await backups.drills(20);
+    const records = await backups.drills();
     if (records.length === 0) {
       print("No drill has run yet. `baseplate backup drill` runs one now.");
       return;
@@ -78,7 +72,7 @@ export async function runBackupCommand(
  * the API errors while it runs, so it asks first.
  */
 export async function runRestoreCommand(
-  backups: BackupAdmin,
+  backups: ManageBackups,
   rawId: string | undefined,
   confirm: () => Promise<boolean>,
   print: (line: string) => void,
@@ -91,9 +85,5 @@ export async function runRestoreCommand(
     throw new DomainError("cli.not_confirmed", "Nothing was restored.");
   }
   print("Restoring…");
-  const outcome = await backups.request("restore", id, BACKUP_TIMEOUT_MS);
-  if (!outcome.ok) {
-    throw new DomainError("backup.restore_failed", outcome.message || "That did not work.");
-  }
-  print(outcome.message);
+  print((await backups.restore(id)).message);
 }

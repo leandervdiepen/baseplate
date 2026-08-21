@@ -29,12 +29,19 @@ export type {
 } from "./ports/index.ts";
 export {
   ChangeSchema,
+  InspectSchema,
   ListProjects,
+  ManageBackups,
+  ManageStorage,
+  ManageUsers,
   MintToken,
   ProvisionStack,
   TeardownStack,
+  type BucketSummary,
   type ProjectSummary,
   type ProvisionOptions,
+  type RecoveryLink,
   type SchemaChangeResult,
   type TeardownOptions,
+  type UserPage,
 } from "./usecases/index.ts";

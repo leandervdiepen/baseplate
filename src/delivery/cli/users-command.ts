@@ -1,5 +1,5 @@
 import { createInterface } from "node:readline/promises";
-import type { UserAdmin } from "#application";
+import type { ManageUsers } from "#application";
 import { DomainError } from "#domain";
 
 export const USERS_USAGE = `Usage: baseplate users <command>
@@ -24,10 +24,8 @@ export type UsersArgs = {
   readonly siteUrl: string;
 };
 
-const PAGE = 50;
-
 export async function runUsersCommand(
-  users: UserAdmin,
+  users: ManageUsers,
   action: string | undefined,
   positionals: readonly (string | undefined)[],
   args: UsersArgs,
@@ -39,11 +37,7 @@ export async function runUsersCommand(
   }
 
   if (action === "list") {
-    const { users: rows, total } = await users.listUsers({
-      ...(args.email ? { search: args.email } : {}),
-      limit: PAGE,
-      offset: 0,
-    });
+    const { users: rows, total } = await users.list(args.email ? { search: args.email } : {});
     if (rows.length === 0) {
       print(
         args.email
@@ -68,7 +62,7 @@ export async function runUsersCommand(
       throw new DomainError("cli.email_required", "`users create` needs --email <address>.");
     }
     const password = args.password ?? (await askForPassword());
-    const user = await users.createUser(args.email, password, true);
+    const user = await users.create(args.email, password);
     print(`Made ${user.email}. Their id is ${user.id}, which is what owns their rows.`);
     return;
   }
@@ -80,15 +74,13 @@ export async function runUsersCommand(
 
   if (action === "delete") {
     await confirmDelete(id, args.yes);
-    if (!(await users.deleteUser(id))) {
-      throw new DomainError("users.not_found", `There is no user with id ${id}.`);
-    }
+    await users.remove(id);
     print(`Removed ${id}. Their rows are still there, owned by an id nobody holds.`);
     return;
   }
 
   if (action === "reset") {
-    const { link, expiresAt } = await users.createRecoveryLink(id, args.siteUrl);
+    const { link, expiresAt } = await users.recoveryLink(id, args.siteUrl);
     print(link);
     print(`Good until ${expiresAt}. Hand it over yourself; nothing was emailed.`);
     return;

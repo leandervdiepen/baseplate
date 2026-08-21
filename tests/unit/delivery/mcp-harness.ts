@@ -1,6 +1,15 @@
 import { createStack, DomainError } from "#domain";
-import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
-import type { BackupAdmin, StorageAdmin } from "#application";
+import {
+  ChangeSchema,
+  InspectSchema,
+  ManageBackups,
+  ManageStorage,
+  ManageUsers,
+  MintToken,
+  ProvisionStack,
+  TeardownStack,
+} from "#application";
+import type { BackupAdmin, SchemaAdmin, StorageAdmin, UserAdmin } from "#application";
 import {
   MemoryClock,
   MemoryCloudProvider,
@@ -10,13 +19,24 @@ import {
   MemoryTokenSigner,
   MemoryUserAdmin,
 } from "#infrastructure";
-import type { Operator } from "#infrastructure";
 import { createMcpServer, type SessionOpener } from "../../../src/delivery/mcp/server.ts";
 import type { ToolSession } from "../../../src/delivery/mcp/handle.ts";
 
 const SUB = "11111111-1111-4111-8111-111111111111";
 
-export function testSession(over: Partial<Operator> = {}): ToolSession {
+/**
+ * The tools reach ports only through use cases now, so the harness composes an
+ * operator the way the real composition root does: hand it adapters, not
+ * use cases.
+ */
+export type TestPorts = {
+  admin?: SchemaAdmin;
+  storage?: StorageAdmin;
+  backups?: BackupAdmin;
+  users?: UserAdmin;
+};
+
+export function testSession(over: TestPorts = {}): ToolSession {
   const admin = over.admin ?? new MemorySchemaAdmin();
   const cloud = new MemoryCloudProvider();
   const runtime = new MemoryStackRuntime();
@@ -33,18 +53,19 @@ export function testSession(over: Partial<Operator> = {}): ToolSession {
     siteUrl: "http://localhost:3000",
     stack,
     operator: {
-      admin,
-      changeSchema: over.changeSchema ?? new ChangeSchema({ admin }),
-      mintToken: over.mintToken ?? new MintToken({
+      changeSchema: new ChangeSchema({ admin }),
+      schema: new InspectSchema({ admin }),
+      mintToken: new MintToken({
         signer: new MemoryTokenSigner(),
         callerRole: "app_user",
         defaultTtlSeconds: 3600,
       }),
-      provision: over.provision ?? provision,
-      teardown: over.teardown ?? new TeardownStack({ cloud, runtime, store }),
-      storage: over.storage ?? emptyStorage(),
-      backups: over.backups ?? emptyBackups(),
-      users: over.users ?? new MemoryUserAdmin(),
+      provision,
+      teardown: new TeardownStack({ cloud, runtime, store }),
+      storage: new ManageStorage({ storage: over.storage ?? emptyStorage() }),
+      backups: new ManageBackups({ backups: over.backups ?? emptyBackups() }),
+      users: new ManageUsers({ users: over.users ?? new MemoryUserAdmin() }),
+      close: async () => {},
     },
   };
 }

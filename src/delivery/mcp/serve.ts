@@ -1,5 +1,4 @@
 import { createInterface } from "node:readline";
-import type { Operator } from "#infrastructure";
 import { version } from "../cli/usage.ts";
 import { createOperatorFor, siteUrlFromEnv, stackFromEnv, type OperatorRoots } from "../operator-setup.ts";
 import type { ToolSession } from "./handle.ts";
@@ -36,15 +35,6 @@ async function withSession<T>(
       stack: stackFromEnv(),
     });
   } finally {
-    await closeOperator(operator);
+    await operator.close();
   }
-}
-
-async function closeOperator(operator: Operator): Promise<void> {
-  await Promise.all([
-    operator.admin.close(),
-    operator.storage.close(),
-    operator.backups.close(),
-    operator.users.close(),
-  ]);
 }

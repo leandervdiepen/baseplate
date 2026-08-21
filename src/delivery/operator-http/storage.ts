@@ -1,14 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createBucket, DomainError, isBucketVisibility } from "#domain";
 import { createOperatorFor, type OperatorRoots } from "../operator-setup.ts";
 import { readJsonBody, sendJson } from "./json.ts";
-
-export type BucketSummary = {
-  name: string;
-  visibility: "private" | "public";
-  objects: number;
-  bytes: number;
-};
 
 /**
  * Buckets are rows in the operator's database, so the studio reads and writes
@@ -32,62 +24,37 @@ export async function handleStorageRoute(
     sendJson(res, 200, { live: false, buckets: [] });
     return;
   }
+  const storage = operator.storage;
 
   try {
     if (path === "/api/storage" && method === "GET") {
-      sendJson(res, 200, { live: true, buckets: await summarize(operator.storage) });
+      sendJson(res, 200, { live: true, buckets: await storage.buckets() });
       return;
     }
     if (path === "/api/storage" && method === "POST") {
       const body = (await readJsonBody(req)) as { name?: string; visibility?: string };
-      const visibility = body.visibility ?? "private";
-      if (!isBucketVisibility(visibility)) {
-        throw new DomainError("bucket.invalid_visibility", "Visibility is public or private.");
-      }
-      await operator.storage.createBucket(createBucket(body.name ?? "", visibility));
-      sendJson(res, 200, { live: true, buckets: await summarize(operator.storage) });
+      await storage.addBucket(body.name ?? "", body.visibility);
+      sendJson(res, 200, { live: true, buckets: await storage.buckets() });
       return;
     }
     if (path === "/api/storage" && method === "PATCH") {
       const body = (await readJsonBody(req)) as { name?: string; visibility?: string };
-      const visibility = body.visibility ?? "";
-      if (!body.name || !isBucketVisibility(visibility)) {
-        throw new DomainError("bucket.invalid_visibility", "Visibility is public or private.");
-      }
-      await operator.storage.setVisibility(body.name, visibility);
-      sendJson(res, 200, { live: true, buckets: await summarize(operator.storage) });
+      await storage.setVisibility(body.name ?? "", body.visibility ?? "");
+      sendJson(res, 200, { live: true, buckets: await storage.buckets() });
       return;
     }
     if (path === "/api/storage" && method === "DELETE") {
-      const name = url.searchParams.get("bucket") ?? "";
-      const removed = await operator.storage.dropBucket(name);
-      sendJson(res, 200, { removed, live: true, buckets: await summarize(operator.storage) });
+      const removed = await storage.removeBucket(url.searchParams.get("bucket") ?? "");
+      sendJson(res, 200, { removed, live: true, buckets: await storage.buckets() });
       return;
     }
     if (path === "/api/storage/objects" && method === "GET") {
       const bucket = url.searchParams.get("bucket") ?? "";
-      sendJson(res, 200, { objects: await operator.storage.listObjects(bucket, 200) });
+      sendJson(res, 200, { objects: await storage.objects(bucket) });
       return;
     }
     sendJson(res, 404, { code: "operator.not_found", message: "Unknown storage route." });
   } finally {
-    await operator.storage.close();
-    await operator.admin.close();
+    await operator.close();
   }
-}
-
-async function summarize(storage: {
-  listBuckets: () => Promise<readonly { name: string; visibility: "private" | "public" }[]>;
-  usage: () => Promise<readonly { bucket: string; objects: number; bytes: number }[]>;
-}): Promise<BucketSummary[]> {
-  const [buckets, usage] = await Promise.all([storage.listBuckets(), storage.usage()]);
-  return buckets.map((bucket) => {
-    const counts = usage.find((entry) => entry.bucket === bucket.name);
-    return {
-      name: bucket.name,
-      visibility: bucket.visibility,
-      objects: counts?.objects ?? 0,
-      bytes: counts?.bytes ?? 0,
-    };
-  });
 }

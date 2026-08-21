@@ -5,10 +5,10 @@ import { expect, test } from "vitest";
 import { createStack } from "#domain";
 import { createOperator, tunnelArgs, type OperatorTarget } from "#infrastructure";
 
-function config(target: OperatorTarget, statePath: string) {
+function config(target: OperatorTarget, statePath: string, jwtSecret = "a-secret-long-enough-to-sign-with") {
   return {
     target,
-    jwtSecret: "a-secret-long-enough-to-sign-with",
+    jwtSecret,
     stack: createStack({
       name: "baseplate",
       hostname: target === "hetzner" ? "api.example.com" : "localhost",
@@ -40,10 +40,7 @@ function emptyStatePath(): string {
 
 test("a local project talks to the database on this machine", async () => {
   const operator = await createOperator(config("local", emptyStatePath()));
-  await operator.admin.close();
-  await operator.storage.close();
-  await operator.backups.close();
-  await operator.users.close();
+  await operator.close();
 });
 
 /**
@@ -76,4 +73,16 @@ test("a hetzner project reaches the database through the ssh access it already h
   // Without this ssh stays up with no forward, and every query hangs instead
   // of failing.
   expect(args.join(" ")).toContain("ExitOnForwardFailure=yes");
+});
+
+/**
+ * Config the operator tool can check on its own costs nothing to check. Doing it
+ * after a tunnel means waiting on a network round trip to be told a secret is
+ * the wrong length, or never being told, because the server's own complaint
+ * arrives first.
+ */
+test("a secret that is too short is refused before anything is dialled", async () => {
+  await expect(
+    createOperator(config("hetzner", emptyStatePath(), "too-short")),
+  ).rejects.toThrow(/at least 32 characters/i);
 });

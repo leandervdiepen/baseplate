@@ -1,10 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { BackupRecord, DrillRecord, ManageBackups } from "#application";
 import { DomainError } from "#domain";
 import { createOperatorFor, type OperatorRoots } from "../operator-setup.ts";
 import { readJsonBody, sendJson } from "./json.ts";
-
-/** Long enough for a real dump, short enough that the studio is not left hanging. */
-const REQUEST_TIMEOUT_MS = 5 * 60_000;
 
 export async function handleBackupRoute(
   roots: OperatorRoots,
@@ -20,14 +18,11 @@ export async function handleBackupRoute(
     sendJson(res, 200, { live: false, backups: [], drills: [] });
     return;
   }
+  const backups = operator.backups;
 
   try {
     if (path === "/api/backups" && method === "GET") {
-      const [backups, drills] = await Promise.all([
-        operator.backups.list(20),
-        operator.backups.drills(10),
-      ]);
-      sendJson(res, 200, { live: true, backups, drills });
+      sendJson(res, 200, { live: true, ...(await history(backups)) });
       return;
     }
     if (path === "/api/backups" && method === "POST") {
@@ -40,21 +35,23 @@ export async function handleBackupRoute(
           "The studio takes backups and runs drills. Restoring is `baseplate restore`.",
         );
       }
-      const outcome = await operator.backups.request(body.kind, undefined, REQUEST_TIMEOUT_MS);
-      if (!outcome.ok) {
-        throw new DomainError("backup.failed", outcome.message || "That did not work.");
-      }
-      const [backups, drills] = await Promise.all([
-        operator.backups.list(20),
-        operator.backups.drills(10),
-      ]);
-      sendJson(res, 200, { live: true, backups, drills, message: outcome.message });
+      const outcome = await backups.run(body.kind);
+      sendJson(res, 200, { live: true, ...(await history(backups)), message: outcome.message });
       return;
     }
     sendJson(res, 404, { code: "operator.not_found", message: "Unknown backup route." });
   } finally {
-    await operator.backups.close();
-    await operator.storage.close();
-    await operator.admin.close();
+    await operator.close();
   }
+}
+
+type History = {
+  readonly backups: readonly BackupRecord[];
+  readonly drills: readonly DrillRecord[];
+};
+
+/** Both lists come back with every answer, so the studio never shows a stale one. */
+async function history(backups: ManageBackups): Promise<History> {
+  const [taken, drills] = await Promise.all([backups.list(), backups.drills()]);
+  return { backups: taken, drills };
 }

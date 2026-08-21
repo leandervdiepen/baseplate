@@ -43,10 +43,10 @@ export async function handleOverview(roots: OperatorRoots, res: ServerResponse):
     return;
   }
   try {
-    const [tables, history, usage, backups, drills] = await Promise.all([
-      operator.admin.listTables().catch(() => []),
-      operator.admin.history(1).catch(() => []),
-      operator.storage.usage().catch(() => []),
+    const [tables, history, buckets, backups, drills] = await Promise.all([
+      operator.schema.tables().catch(() => []),
+      operator.schema.history(1).catch(() => []),
+      operator.storage.buckets().catch(() => []),
       operator.backups.list(1).catch(() => []),
       operator.backups.drills(1).catch(() => []),
     ]);
@@ -58,9 +58,9 @@ export async function handleOverview(roots: OperatorRoots, res: ServerResponse):
       live: true,
       tables: tables.length,
       rowsTracked: tables.reduce((total, table) => total + table.columns.length, 0),
-      buckets: usage.length,
-      objects: usage.reduce((total, bucket) => total + bucket.objects, 0),
-      objectBytes: usage.reduce((total, bucket) => total + bucket.bytes, 0),
+      buckets: buckets.length,
+      objects: buckets.reduce((total, bucket) => total + bucket.objects, 0),
+      objectBytes: buckets.reduce((total, bucket) => total + bucket.bytes, 0),
       lastChange: change ? { change: change.change, appliedAt: change.appliedAt } : null,
       lastBackup: backup
         ? {
@@ -83,8 +83,6 @@ export async function handleOverview(roots: OperatorRoots, res: ServerResponse):
   } catch (error) {
     sendJson(res, 200, { ...EMPTY, problem: problemFrom(error) });
   } finally {
-    await operator.admin.close();
-    await operator.storage.close();
-    await operator.backups.close();
+    await operator.close();
   }
 }

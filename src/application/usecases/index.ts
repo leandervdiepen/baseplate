@@ -1,5 +1,9 @@
 export { ChangeSchema, type SchemaChangeResult } from "./change-schema.ts";
+export { InspectSchema } from "./inspect-schema.ts";
 export { ListProjects, type ProjectSummary } from "./list-projects.ts";
+export { ManageBackups } from "./manage-backups.ts";
+export { ManageStorage, type BucketSummary } from "./manage-storage.ts";
+export { ManageUsers, type RecoveryLink, type UserPage } from "./manage-users.ts";
 export { MintToken } from "./mint-token.ts";
 export { ProvisionStack, type ProvisionOptions } from "./provision-stack.ts";
 export { TeardownStack, type TeardownOptions } from "./teardown-stack.ts";

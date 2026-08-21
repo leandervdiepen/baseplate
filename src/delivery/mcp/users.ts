@@ -2,8 +2,6 @@ import { DomainError } from "#domain";
 import type { Operator } from "#infrastructure";
 import { asString, objectArgs, ok, requireConfirm, requireString, type ToolResult } from "./helpers.ts";
 
-const PAGE = 50;
-
 export async function handleUsers(
   operator: Operator,
   params: unknown,
@@ -13,13 +11,7 @@ export async function handleUsers(
   const command = requireString(args, "command", "mcp.users_command", "users needs command.");
   if (command === "list") {
     const email = asString(args, "email");
-    return ok(
-      await operator.users.listUsers({
-        ...(email ? { search: email } : {}),
-        limit: PAGE,
-        offset: 0,
-      }),
-    );
+    return ok(await operator.users.list(email ? { search: email } : {}));
   }
   if (command === "create") {
     const email = requireString(args, "email", "cli.email_required", "users create needs email.");
@@ -29,18 +21,16 @@ export async function handleUsers(
       "cli.password_required",
       "users create needs password. Stdio cannot prompt.",
     );
-    return ok(await operator.users.createUser(email, password, true));
+    return ok(await operator.users.create(email, password));
   }
   const id = requireString(args, "id", "cli.user_id_required", `users ${command} needs id.`);
   if (command === "delete") {
     requireConfirm(args, "delete");
-    if (!(await operator.users.deleteUser(id))) {
-      throw new DomainError("users.not_found", `There is no user with id ${id}.`);
-    }
+    await operator.users.remove(id);
     return ok({ id, deleted: true });
   }
   if (command === "reset") {
-    return ok(await operator.users.createRecoveryLink(id, siteUrl));
+    return ok(await operator.users.recoveryLink(id, siteUrl));
   }
   if (command === "revoke") {
     return ok({ id, revoked: await operator.users.revokeSessions(id) });

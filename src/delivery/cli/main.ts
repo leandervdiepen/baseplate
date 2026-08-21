@@ -134,7 +134,7 @@ async function main(): Promise<void> {
       return;
     }
     if (command === "tables") {
-      const tables = await operator.admin.listTables();
+      const tables = await operator.schema.tables();
       if (tables.length === 0) {
         console.log("No tables yet. `baseplate schema add-table <name>` makes one.");
         return;
@@ -146,7 +146,7 @@ async function main(): Promise<void> {
       return;
     }
     if (command === "types") {
-      process.stdout.write(renderTypes(await operator.admin.listTables()));
+      process.stdout.write(renderTypes(await operator.schema.tables()));
       return;
     }
     if (command === "schema") {
@@ -213,10 +213,7 @@ async function main(): Promise<void> {
       return;
     }
   } finally {
-    await operator.admin.close();
-    await operator.storage.close();
-    await operator.backups.close();
-    await operator.users.close();
+    await operator.close();
   }
 }
 

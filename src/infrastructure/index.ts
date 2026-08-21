@@ -1,11 +1,14 @@
-import { ChangeSchema, MintToken, ProvisionStack, TeardownStack } from "#application";
-import type {
-  BackupAdmin,
-  SchemaAdmin,
-  StackStateStore,
-  StorageAdmin,
-  UserAdmin,
+import {
+  ChangeSchema,
+  InspectSchema,
+  ManageBackups,
+  ManageStorage,
+  ManageUsers,
+  MintToken,
+  ProvisionStack,
+  TeardownStack,
 } from "#application";
+import type { CloudProvider, StackRuntime, StackStateStore } from "#application";
 import type { Stack } from "#domain";
 import { InfraError } from "#shared";
 import { SystemClock } from "./clock/index.ts";
@@ -121,93 +124,107 @@ export type OperatorConfig = {
   accessTtlSeconds: number;
 };
 
+/**
+ * What an operator can do, and nothing else.
+ *
+ * Use cases rather than the ports behind them: a surface that held `SchemaAdmin`
+ * or `UserAdmin` would be free to invent its own rules for what an answer means,
+ * and the CLI, the studio and MCP each did.
+ */
 export type Operator = {
   provision: ProvisionStack;
   teardown: TeardownStack;
   mintToken: MintToken;
   changeSchema: ChangeSchema;
-  admin: SchemaAdmin;
-  storage: StorageAdmin;
-  backups: BackupAdmin;
-  users: UserAdmin;
+  schema: InspectSchema;
+  storage: ManageStorage;
+  backups: ManageBackups;
+  users: ManageUsers;
+  /** Closes every adapter this built. One call, so none of them can be forgotten. */
+  close(): Promise<void>;
 };
 
 export async function createOperator(config: OperatorConfig): Promise<Operator> {
+  // Before anything that reaches the network. This one rejects a secret that is
+  // too short, and finding that out after waiting on an SSH handshake to a
+  // server - or instead of finding it out, because the server error came first -
+  // is the wrong way round for a check this cheap.
   const signer = new JwtTokenSigner(config.jwtSecret);
   const store = new FileStackStateStore(config.statePath);
-  const clock = new SystemClock();
-  const mintToken = new MintToken({
-    signer,
-    callerRole: config.stack.callerRole,
-    defaultTtlSeconds: config.accessTtlSeconds,
-  });
   const database = await databaseEndpoint(config, store);
   const admin = new PostgresSchemaAdmin(database);
   const storage = new PostgresStorageAdmin(database);
   const backups = new PostgresBackupAdmin(database);
   const users = new PostgresUserAdmin(database);
+  const { cloud, runtime, healthTimeoutMs } = machineryFor(config);
 
-  if (config.target === "local") {
-    const cloud = new DockerHostCloudProvider();
-    const runtime = new DockerComposeRuntime({
-      stackDir: config.stackDir,
-      envFile: config.envFile,
-      projectName: config.projectName,
-      projectRoot: config.projectRoot,
-    });
-    return {
-      provision: new ProvisionStack({
-        cloud,
-        runtime,
-        store,
-        clock,
-        httpPort: config.httpPort,
-        projectName: config.projectName,
-      }),
-      teardown: new TeardownStack({ cloud, runtime, store }),
-      mintToken,
-      changeSchema: new ChangeSchema({ admin }),
-      admin,
-      storage,
-      backups,
-      users,
-    };
-  }
-
-  const cloud = new HetznerCloudProvider({
-    sourceDir: config.infraSourceDir,
-    workDir: config.infraWorkDir,
-    token: config.hcloudToken,
-    dnsToken: config.hetznerDnsToken,
-    dnsZone: config.hetznerDnsZone,
-    sshKeyName: config.sshKeyName,
-    location: config.serverLocation,
-    stackName: config.stack.name,
-    hostname: config.stack.hostname,
-  });
-  const runtime = new RemoteComposeRuntime({
-    stackDir: config.stackDir,
-    envFile: config.envFile,
-    remoteDir: "/opt/baseplate",
-    projectName: config.projectName,
-    sshUser: "root",
-  });
   return {
     provision: new ProvisionStack({
       cloud,
       runtime,
       store,
-      clock,
+      clock: new SystemClock(),
       httpPort: config.httpPort,
       projectName: config.projectName,
-      healthTimeoutMs: 300_000,
+      ...(healthTimeoutMs === undefined ? {} : { healthTimeoutMs }),
     }),
     teardown: new TeardownStack({ cloud, runtime, store }),
-    mintToken,
+    mintToken: new MintToken({
+      signer,
+      callerRole: config.stack.callerRole,
+      defaultTtlSeconds: config.accessTtlSeconds,
+    }),
     changeSchema: new ChangeSchema({ admin }),
-    admin,
-    storage,
-    backups,
-    users,
+    schema: new InspectSchema({ admin }),
+    storage: new ManageStorage({ storage }),
+    backups: new ManageBackups({ backups }),
+    users: new ManageUsers({ users }),
+    async close() {
+      await Promise.all([admin.close(), storage.close(), backups.close(), users.close()]);
+    },
+  };
+}
+
+/**
+ * What creates and runs the stack. Everything else is the same whether the
+ * database is on this machine or on the operator's server.
+ */
+function machineryFor(config: OperatorConfig): {
+  cloud: CloudProvider;
+  runtime: StackRuntime;
+  /** A server has to boot first, so it is given longer to answer. */
+  healthTimeoutMs?: number;
+} {
+  if (config.target === "local") {
+    return {
+      cloud: new DockerHostCloudProvider(),
+      runtime: new DockerComposeRuntime({
+        stackDir: config.stackDir,
+        envFile: config.envFile,
+        projectName: config.projectName,
+        projectRoot: config.projectRoot,
+      }),
+    };
+  }
+  return {
+    cloud: new HetznerCloudProvider({
+      sourceDir: config.infraSourceDir,
+      workDir: config.infraWorkDir,
+      token: config.hcloudToken,
+      dnsToken: config.hetznerDnsToken,
+      dnsZone: config.hetznerDnsZone,
+      sshKeyName: config.sshKeyName,
+      location: config.serverLocation,
+      stackName: config.stack.name,
+      hostname: config.stack.hostname,
+    }),
+    runtime: new RemoteComposeRuntime({
+      stackDir: config.stackDir,
+      envFile: config.envFile,
+      remoteDir: "/opt/baseplate",
+      projectName: config.projectName,
+      sshUser: "root",
+    }),
+    healthTimeoutMs: 300_000,
   };
 }

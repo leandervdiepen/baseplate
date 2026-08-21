@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { resolve } from "node:path";
+import type { LiveTable, SchemaHistoryEntry } from "#application";
 import { createSchemaChange, DomainError } from "#domain";
+import type { Operator } from "#infrastructure";
 import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
 import { createOperatorFor, type OperatorRoots, stackFromEnv } from "../operator-setup.ts";
 import { CONFIG_FILE } from "../paths.ts";
@@ -18,6 +20,9 @@ import { dropProject, listProjects, openProject } from "./projects.ts";
 import { handleStorageRoute } from "./storage.ts";
 import { handleUsersRoute } from "./users.ts";
 import { writeLocalFirstRun, writeOperatorEnv } from "./write-env.ts";
+
+/** What the history screen shows without asking for more. */
+const HISTORY_PAGE = 50;
 
 export async function handleOperatorRequest(
   roots: OperatorRoots,
@@ -150,21 +155,18 @@ export async function handleOperatorRequest(
 
 /**
  * Every route that opens an operator closes it again, whatever happened. The
- * pools are lazy, so a missed close leaks nothing today; it is one rule rather
- * than a habit that holds until someone adds a route that does connect.
+ * operator closes every adapter it built, so a route cannot leak one by
+ * forgetting it was there.
  */
 async function withOperator<T>(
   roots: OperatorRoots,
-  run: (operator: Awaited<ReturnType<typeof createOperatorFor>>) => Promise<T>,
+  run: (operator: Operator) => Promise<T>,
 ): Promise<T> {
   const operator = await createOperatorFor(roots, true);
   try {
     return await run(operator);
   } finally {
-    await operator.admin.close();
-    await operator.storage.close();
-    await operator.backups.close();
-    await operator.users.close();
+    await operator.close();
   }
 }
 
@@ -175,7 +177,7 @@ async function withOperator<T>(
  */
 async function readTables(
   roots: OperatorRoots,
-): Promise<{ tables: unknown[]; live: boolean; problem?: Problem }> {
+): Promise<{ tables: readonly LiveTable[]; live: boolean; problem?: Problem }> {
   let operator;
   try {
     operator = await createOperatorFor(roots, true);
@@ -183,17 +185,17 @@ async function readTables(
     return { tables: [], live: false, problem: problemFrom(error) };
   }
   try {
-    return { tables: await operator.admin.listTables(), live: true };
+    return { tables: await operator.schema.tables(), live: true };
   } catch (error) {
     return { tables: [], live: false, problem: problemFrom(error) };
   } finally {
-    await operator.admin.close();
+    await operator.close();
   }
 }
 
 async function readHistory(
   roots: OperatorRoots,
-): Promise<{ entries: unknown[]; problem?: Problem }> {
+): Promise<{ entries: readonly SchemaHistoryEntry[]; problem?: Problem }> {
   let operator;
   try {
     operator = await createOperatorFor(roots, true);
@@ -201,11 +203,11 @@ async function readHistory(
     return { entries: [], problem: problemFrom(error) };
   }
   try {
-    return { entries: await operator.admin.history(50) };
+    return { entries: await operator.schema.history(HISTORY_PAGE) };
   } catch (error) {
     return { entries: [], problem: problemFrom(error) };
   } finally {
-    await operator.admin.close();
+    await operator.close();
   }
 }
 

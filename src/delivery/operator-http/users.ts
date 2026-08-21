@@ -1,9 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ManageUsers } from "#application";
 import { DomainError } from "#domain";
 import { createOperatorFor, type OperatorRoots, siteUrlFromEnv } from "../operator-setup.ts";
 import { readJsonBody, sendJson } from "./json.ts";
-
-const MAX_LIMIT = 200;
 
 /**
  * People are rows in the operator's database, so the studio reads and writes
@@ -27,14 +26,17 @@ export async function handleUsersRoute(
     sendJson(res, 200, { live: false, total: 0, users: [] });
     return;
   }
+  const users = operator.users;
 
   try {
     if (path === "/api/users" && method === "GET") {
       const search = url.searchParams.get("search");
-      const result = await operator.users.listUsers({
+      const limit = url.searchParams.get("limit");
+      const offset = url.searchParams.get("offset");
+      const result = await users.list({
         ...(search ? { search } : {}),
-        limit: limitParam(url),
-        offset: offsetParam(url),
+        ...(limit === null ? {} : { limit: Number(limit) }),
+        ...(offset === null ? {} : { offset: Number(offset) }),
       });
       sendJson(res, 200, { live: true, total: result.total, users: result.users });
       return;
@@ -45,26 +47,17 @@ export async function handleUsersRoute(
         password?: string;
         confirmed?: boolean;
       };
-      const user = await operator.users.createUser(
-        body.email ?? "",
-        body.password ?? "",
-        body.confirmed === true,
-      );
+      const user = await users.create(body.email ?? "", body.password ?? "", body.confirmed === true);
       sendJson(res, 200, { user });
       return;
     }
     if (path === "/api/users" && method === "DELETE") {
-      const removed = await operator.users.deleteUser(url.searchParams.get("id") ?? "");
-      if (!removed) {
-        sendJson(res, 404, { code: "users.not_found", message: "There is no user with that id." });
-        return;
-      }
-      sendJson(res, 200, { removed: true });
+      await removeUser(users, url.searchParams.get("id") ?? "", res);
       return;
     }
     if (path === "/api/users/recovery-link" && method === "POST") {
       const id = await requiredId(req);
-      sendJson(res, 200, await operator.users.createRecoveryLink(id, siteUrlFromEnv()));
+      sendJson(res, 200, await users.recoveryLink(id, siteUrlFromEnv()));
       return;
     }
     if (path === "/api/users/reset-password" && method === "POST") {
@@ -72,20 +65,36 @@ export async function handleUsersRoute(
       if (!body.id) {
         throw new DomainError("users.id_required", "Say which user.");
       }
-      await operator.users.setPassword(body.id, body.password ?? "");
+      await users.setPassword(body.id, body.password ?? "");
       sendJson(res, 200, { ok: true });
       return;
     }
     if (path === "/api/users/revoke-sessions" && method === "POST") {
-      const revoked = await operator.users.revokeSessions(await requiredId(req));
+      const revoked = await users.revokeSessions(await requiredId(req));
       sendJson(res, 200, { revoked });
       return;
     }
     sendJson(res, 404, { code: "operator.not_found", message: "Unknown users route." });
   } finally {
-    await operator.users.close();
-    await operator.admin.close();
+    await operator.close();
   }
+}
+
+/**
+ * Whether there was anyone to remove is the use case's rule; which status says
+ * so is this surface's, and a missing row is the one case that is not a 400.
+ */
+async function removeUser(users: ManageUsers, id: string, res: ServerResponse): Promise<void> {
+  try {
+    await users.remove(id);
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "users.not_found") {
+      sendJson(res, 404, { code: error.code, message: error.message });
+      return;
+    }
+    throw error;
+  }
+  sendJson(res, 200, { removed: true });
 }
 
 async function requiredId(req: IncomingMessage): Promise<string> {
@@ -94,18 +103,4 @@ async function requiredId(req: IncomingMessage): Promise<string> {
     throw new DomainError("users.id_required", "Say which user.");
   }
   return body.id;
-}
-
-/** A page size, capped so a stray `?limit=1000000` cannot ask for the lot. */
-function limitParam(url: URL): number {
-  const raw = Number(url.searchParams.get("limit") ?? "");
-  if (!Number.isInteger(raw) || raw < 1) {
-    return 50;
-  }
-  return Math.min(raw, MAX_LIMIT);
-}
-
-function offsetParam(url: URL): number {
-  const raw = Number(url.searchParams.get("offset") ?? "");
-  return Number.isInteger(raw) && raw > 0 ? raw : 0;
 }

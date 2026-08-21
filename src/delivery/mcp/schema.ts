@@ -4,18 +4,18 @@ import { renderTypes } from "../cli/types-command.ts";
 import { asNumber, asString, objectArgs, ok, requireConfirm, requireString, type ToolResult } from "./helpers.ts";
 
 export async function handleTables(operator: Operator): Promise<ToolResult> {
-  return ok(await operator.admin.listTables());
+  return ok(await operator.schema.tables());
 }
 
 export async function handleTypes(operator: Operator): Promise<ToolResult> {
-  return ok(renderTypes(await operator.admin.listTables()));
+  return ok(renderTypes(await operator.schema.tables()));
 }
 
 export async function handleSchema(operator: Operator, params: unknown): Promise<ToolResult> {
   const args = objectArgs(params);
   const command = requireString(args, "command", "mcp.schema_command", "schema needs command.");
   if (command === "history") {
-    return ok(await operator.admin.history(asNumber(args, "limit") ?? 20));
+    return ok(await operator.schema.history(asNumber(args, "limit")));
   }
   if (command === "drop-table" || command === "drop-column") {
     requireConfirm(args, command);
