@@ -72,6 +72,13 @@ export function readReadiness(input: ReadinessInput): ReadinessCheck[] {
       ok: input.siteAddress === input.hostname && input.hostname !== "localhost",
       detail: "Caddy asks Let's Encrypt for exactly this name.",
     },
+    {
+      id: "ssh",
+      label: "ssh and rsync are installed",
+      ok: hasCommand("ssh", ["-V"]) && hasCommand("rsync", ["--version"]),
+      detail:
+        "The stack is copied to the server and run over SSH, and the database is reached through a tunnel.",
+    },
   ];
 }
 

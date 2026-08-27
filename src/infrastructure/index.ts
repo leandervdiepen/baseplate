@@ -264,6 +264,8 @@ function machineryFor(config: OperatorConfig): {
       projectName: config.projectName,
       sshUser: "root",
     }),
-    healthTimeoutMs: 300_000,
+    // A server boots, builds four images, and then waits on DNS propagation and
+    // a Let's Encrypt challenge before it can answer over TLS at all.
+    healthTimeoutMs: 900_000,
   };
 }

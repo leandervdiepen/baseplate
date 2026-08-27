@@ -68,11 +68,24 @@ resource "hcloud_server" "stack" {
   user_data    = file("${path.module}/cloud-init.yaml")
 }
 
+# Hetzner DNS names the zone's own record "@". Trimming the suffix off a
+# hostname that IS the zone leaves the zone, which would have created
+# example.com.example.com instead of the apex record the operator asked for.
 resource "hetznerdns_record" "api" {
   zone_id = data.hetznerdns_zone.zone.id
-  name    = trimsuffix(var.hostname, ".${var.dns_zone}")
+  name    = var.hostname == var.dns_zone ? "@" : trimsuffix(var.hostname, ".${var.dns_zone}")
   type    = "A"
   value   = hcloud_server.stack.ipv4_address
+  ttl     = 60
+}
+
+# The server gets IPv6 whether or not anything points at it, and a client on an
+# IPv6-only network resolves AAAA first.
+resource "hetznerdns_record" "api_v6" {
+  zone_id = data.hetznerdns_zone.zone.id
+  name    = var.hostname == var.dns_zone ? "@" : trimsuffix(var.hostname, ".${var.dns_zone}")
+  type    = "AAAA"
+  value   = hcloud_server.stack.ipv6_address
   ttl     = 60
 }
 

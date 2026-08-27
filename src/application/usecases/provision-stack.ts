@@ -38,11 +38,17 @@ export class ProvisionStack {
     const server = await this.deps.cloud.createServer(stack);
     await this.deps.cloud.ensureFirewall(server);
     await this.deps.cloud.ensureDns(stack, server);
-    await this.deps.runtime.up(server);
-    const baseUrl = apiBaseUrl(stack.hostname, server.ipv4, this.deps.httpPort);
-    await this.waitUntilHealthy(baseUrl);
-    const record = { server, baseUrl };
+    const record = {
+      server,
+      baseUrl: apiBaseUrl(stack.hostname, server.ipv4, this.deps.httpPort),
+    };
+    // Saved as soon as the server exists, because teardown reads this to find
+    // it. Saving after the stack came up meant a failed build or a certificate
+    // that took too long left a server the operator was paying for and nothing
+    // in the product could remove.
     await this.deps.store.save(record);
+    await this.deps.runtime.up(server);
+    await this.waitUntilHealthy(record.baseUrl);
     return record;
   }
 

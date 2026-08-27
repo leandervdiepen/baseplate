@@ -220,3 +220,54 @@ test("mint-token rejects a subject that is not a UUID", async () => {
     }).execute("alice"),
   ).rejects.toBeInstanceOf(DomainError);
 });
+
+/**
+ * The expensive failure: a server exists and the operator is paying for it, but
+ * the state record teardown reads to find it was only written on success.
+ */
+test("a server that never becomes healthy is still one destroy can remove", async () => {
+  const cloud = new MemoryCloudProvider();
+  const runtime = new MemoryStackRuntime();
+  runtime.healthy = false;
+  const store = new MemoryStackStateStore();
+  const provision = new ProvisionStack({
+    cloud,
+    runtime,
+    store,
+    clock: new MemoryClock(),
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  });
+
+  await expect(provision.execute(stack)).rejects.toMatchObject({ code: "stack.unhealthy" });
+
+  // Read before teardown, which clears the record it just used.
+  const id = store.record?.server.id;
+  expect(id).toBeDefined();
+  await new TeardownStack({ cloud, runtime, store }).execute({ destroy: true });
+  expect(cloud.destroyed).toEqual([id]);
+});
+
+test("a stack that fails to start is still one destroy can remove", async () => {
+  const cloud = new MemoryCloudProvider();
+  const runtime = new MemoryStackRuntime();
+  runtime.up = async () => {
+    throw new Error("rsync exited 12");
+  };
+  const store = new MemoryStackStateStore();
+  const provision = new ProvisionStack({
+    cloud,
+    runtime,
+    store,
+    clock: new MemoryClock(),
+    httpPort: 8080,
+    projectName: "baseplate-app-1111",
+  });
+
+  await expect(provision.execute(stack)).rejects.toThrow(/rsync/);
+
+  const id = store.record?.server.id;
+  expect(id).toBeDefined();
+  await new TeardownStack({ cloud, runtime, store }).execute({ destroy: true });
+  expect(cloud.destroyed).toEqual([id]);
+});
