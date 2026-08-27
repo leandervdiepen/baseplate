@@ -7,6 +7,7 @@ import {
   ManageUsers,
   MintToken,
   ProvisionStack,
+  ReadLogs,
   TeardownStack,
 } from "#application";
 import type { BackupAdmin, SchemaAdmin, StorageAdmin, UserAdmin } from "#application";
@@ -66,6 +67,7 @@ export function testSession(over: TestPorts = {}): ToolSession {
       storage: new ManageStorage({ storage: over.storage ?? emptyStorage() }),
       backups: new ManageBackups({ backups: over.backups ?? emptyBackups() }),
       users: new ManageUsers({ users: over.users ?? new MemoryUserAdmin() }),
+      logs: new ReadLogs({ runtime, store }),
       close: async () => {},
     },
   };

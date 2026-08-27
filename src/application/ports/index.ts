@@ -15,7 +15,12 @@ export type {
   SchemaAdmin,
   SchemaHistoryEntry,
 } from "./schema-admin.ts";
-export type { DownOptions, RunningStack, StackRuntime } from "./stack-runtime.ts";
+export type {
+  DownOptions,
+  LogOptions,
+  RunningStack,
+  StackRuntime,
+} from "./stack-runtime.ts";
 export type {
   ProvisionedStack,
   StackStateStore,

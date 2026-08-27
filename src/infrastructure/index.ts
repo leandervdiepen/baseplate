@@ -6,6 +6,7 @@ import {
   ManageUsers,
   MintToken,
   ProvisionStack,
+  ReadLogs,
   TeardownStack,
 } from "#application";
 import type {
@@ -167,6 +168,7 @@ export type Operator = {
   storage: ManageStorage;
   backups: ManageBackups;
   users: ManageUsers;
+  logs: ReadLogs;
   /** Closes every adapter this built. One call, so none of them can be forgotten. */
   close(): Promise<void>;
 };
@@ -215,6 +217,7 @@ export async function createOperator(config: OperatorConfig): Promise<Operator> 
     storage: new ManageStorage({ storage }),
     backups: new ManageBackups({ backups }),
     users: new ManageUsers({ users }),
+    logs: new ReadLogs({ runtime, store }),
     async close() {
       await Promise.all([admin.close(), storage.close(), backups.close(), users.close()]);
     },

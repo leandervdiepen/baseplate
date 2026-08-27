@@ -53,6 +53,7 @@ export class MemoryStackRuntime implements StackRuntime {
   removedVolumes = false;
   running: RunningStack[] = [];
   readonly stopped: string[] = [];
+  logLines: string[] = [];
 
   async up(_server: Server): Promise<void> {
     this.upCalls += 1;
@@ -81,6 +82,10 @@ export class MemoryStackRuntime implements StackRuntime {
 
   async isHealthy(_baseUrl: string): Promise<boolean> {
     return this.healthy;
+  }
+
+  async logs(_server: Server | undefined, options: { tail: number }): Promise<string> {
+    return this.logLines.slice(-options.tail).join("\n");
   }
 }
 

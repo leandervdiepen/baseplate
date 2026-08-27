@@ -10,7 +10,6 @@ import { CONFIG_FILE } from "../paths.ts";
 import { proxyAuth, proxyPostgrest } from "./db-proxy.ts";
 import { parseEnvMap } from "./env-file.ts";
 import { sendError, sendJson, readJsonBody } from "./json.ts";
-import { readComposeLogs } from "./logs.ts";
 import { type Problem, problemFrom } from "./problem.ts";
 import { inspectAccount } from "./hetzner-account.ts";
 import { readStatus } from "./status.ts";
@@ -136,7 +135,9 @@ export async function handleOperatorRequest(
       return;
     }
     if (path === "/api/logs" && method === "GET") {
-      sendJson(res, 200, { text: await readComposeLogs(root) });
+      // `stack/` belongs to the package, and the containers may be on a server.
+      const text = await withOperator(roots, (operator) => operator.logs.execute());
+      sendJson(res, 200, { text });
       return;
     }
     if (path.startsWith("/api/auth")) {

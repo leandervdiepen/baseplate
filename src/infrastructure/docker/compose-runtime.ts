@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { DownOptions, RunningStack, StackRuntime } from "#application";
+import type { DownOptions, LogOptions, RunningStack, StackRuntime } from "#application";
 import type { Server } from "#domain";
 import { InfraError } from "#shared";
 
@@ -60,6 +60,16 @@ export class DockerComposeRuntime implements StackRuntime {
 
   async migrate(_server: Server | undefined): Promise<void> {
     await runDocker(this.config, ["run", "--rm", "--build", "migrate"]);
+  }
+
+  /** The same compose project the stack was started as, so these are its logs. */
+  async logs(_server: Server | undefined, options: LogOptions): Promise<string> {
+    return captureDocker(this.config, [
+      "logs",
+      "--tail",
+      String(options.tail),
+      "--no-color",
+    ]);
   }
 
   async isHealthy(baseUrl: string): Promise<boolean> {
@@ -125,11 +135,50 @@ export function parseRunningStacks(output: string): readonly RunningStack[] {
   return [...found.values()];
 }
 
-function runDocker(
+/** Handed back rather than printed: `runDocker` inherits stdio, this does not. */
+function captureDocker(
   config: DockerComposeRuntimeConfig,
   subcommand: string[],
-): Promise<void> {
-  const args = [
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("docker", composeArgs(config, subcommand), {
+      cwd: config.stackDir,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: composeEnv(process.env, config.projectRoot),
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", (cause) => {
+      reject(new InfraError("docker.spawn", "Failed to run docker compose.", cause));
+    });
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve(stdout);
+        return;
+      }
+      reject(
+        new InfraError(
+          "docker.failed",
+          stderr.trim() || `docker compose ${subcommand.join(" ")} exited ${code ?? "null"}.`,
+        ),
+      );
+    });
+  });
+}
+
+function composeArgs(
+  config: DockerComposeRuntimeConfig,
+  subcommand: string[],
+): string[] {
+  return [
     "compose",
     "--env-file",
     config.envFile,
@@ -139,8 +188,14 @@ function runDocker(
     "compose.yaml",
     ...subcommand,
   ];
+}
+
+function runDocker(
+  config: DockerComposeRuntimeConfig,
+  subcommand: string[],
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn("docker", args, {
+    const child = spawn("docker", composeArgs(config, subcommand), {
       cwd: config.stackDir,
       stdio: "inherit",
       env: composeEnv(process.env, config.projectRoot),

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { DownOptions, RunningStack, StackRuntime } from "#application";
+import type { DownOptions, LogOptions, RunningStack, StackRuntime } from "#application";
 import type { Server } from "#domain";
 import { InfraError } from "#shared";
 
@@ -75,6 +75,21 @@ export class RemoteComposeRuntime implements StackRuntime {
     ]);
   }
 
+  /** Over SSH, because the containers are on the server and not on this laptop. */
+  async logs(server: Server | undefined, options: LogOptions): Promise<string> {
+    if (!server) {
+      throw new InfraError(
+        "ssh.no_server",
+        "This project targets Hetzner and has no server yet, so there is nothing to read.",
+      );
+    }
+    return capture("ssh", [
+      ...SSH_OPTS,
+      `${this.config.sshUser}@${server.ipv4}`,
+      `cd ${this.config.remoteDir} && ${this.compose} logs --tail ${String(options.tail)} --no-color`,
+    ]);
+  }
+
   /**
    * A remote stack has a server to itself and binds none of this machine's
    * ports, so there is nothing here for another project to collide with.
@@ -133,6 +148,35 @@ export class RemoteComposeRuntime implements StackRuntime {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
+  });
+}
+
+/** Like `run`, but the output is the answer rather than something to watch. */
+function capture(command: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", (cause) => {
+      reject(new InfraError("ssh.spawn", `Failed to run ${command}.`, cause));
+    });
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve(stdout);
+        return;
+      }
+      reject(
+        new InfraError("ssh.failed", stderr.trim() || `${command} exited ${code ?? "null"}.`),
+      );
+    });
   });
 }
 

@@ -6,4 +6,5 @@ export { ManageStorage, type BucketSummary } from "./manage-storage.ts";
 export { ManageUsers, type RecoveryLink, type UserPage } from "./manage-users.ts";
 export { MintToken } from "./mint-token.ts";
 export { ProvisionStack, type ProvisionOptions } from "./provision-stack.ts";
+export { ReadLogs } from "./read-logs.ts";
 export { TeardownStack, type TeardownOptions } from "./teardown-stack.ts";

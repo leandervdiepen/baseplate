@@ -17,6 +17,11 @@ export type DownOptions = {
   readonly volumes: boolean;
 };
 
+export type LogOptions = {
+  /** How many lines from the end of each service. */
+  readonly tail: number;
+};
+
 export type StackRuntime = {
   up(server: Server): Promise<void>;
   down(server: Server | undefined, options: DownOptions): Promise<void>;
@@ -26,4 +31,6 @@ export type StackRuntime = {
   runningStacks(): Promise<readonly RunningStack[]>;
   /** Stops one, keeping its data, so another project can have the ports. */
   stopProject(projectName: string): Promise<void>;
+  /** Every service in one stream. Local answers over Docker, remote over SSH. */
+  logs(server: Server | undefined, options: LogOptions): Promise<string>;
 };
