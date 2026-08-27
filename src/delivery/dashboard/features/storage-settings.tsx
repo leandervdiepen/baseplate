@@ -1,6 +1,12 @@
 import { ConfigField, type ConfigDraft } from "./config-field.tsx";
+import { Callout } from "../patterns/callout.tsx";
 import { Section } from "../patterns/section.tsx";
+import { IconLock } from "../primitives/icon.tsx";
 import { Hint } from "../primitives/input.tsx";
+import { SecretField } from "../primitives/secret-field.tsx";
+
+/** The store that ships beside the stack, which needs no credentials typed. */
+const BUNDLED_ENDPOINT = "storage-blobs";
 
 /**
  * Where object bytes are kept, and how large one may be.
@@ -12,11 +18,17 @@ import { Hint } from "../primitives/input.tsx";
  */
 export function StorageSettings({
   draft,
+  storedSecrets,
   onChange,
 }: {
   draft: ConfigDraft;
+  storedSecrets: Record<string, boolean>;
   onChange: (name: string, value: string) => void;
 }) {
+  // Blank is the bundled store too: that is what the stack defaults to.
+  const endpoint = (draft.STORAGE_ENDPOINT ?? "").trim();
+  const external = endpoint.length > 0 && !endpoint.includes(BUNDLED_ENDPOINT);
+
   return (
     <Section title="Storage">
       <ConfigField
@@ -56,6 +68,35 @@ export function StorageSettings({
           onChange={onChange}
         />
       </div>
+      {external ? (
+        <>
+          <Callout icon={<IconLock width={16} height={16} />}>
+            Your provider issued its own keys. Until they are here, the stack is still presenting
+            the pair it generated for the bundled store, and every upload will be refused.
+          </Callout>
+          <div className="flex flex-wrap items-start gap-[var(--space-md)]">
+            <div className="w-72">
+              <SecretField
+                label="Access key"
+                value={draft.STORAGE_ACCESS_KEY ?? ""}
+                stored={storedSecrets.STORAGE_ACCESS_KEY ?? false}
+                hint="Sets STORAGE_ACCESS_KEY. Scoped to that one bucket, if your provider allows it."
+                onChange={(value) => onChange("STORAGE_ACCESS_KEY", value)}
+              />
+            </div>
+            <div className="w-72">
+              <SecretField
+                label="Secret key"
+                value={draft.STORAGE_SECRET_KEY ?? ""}
+                stored={storedSecrets.STORAGE_SECRET_KEY ?? false}
+                hint="Sets STORAGE_SECRET_KEY. It crosses to the server, because the server is what reads and writes the bytes."
+                onChange={(value) => onChange("STORAGE_SECRET_KEY", value)}
+              />
+            </div>
+          </div>
+        </>
+      ) : null}
+
       <Hint>
         The bundled store is on the same disk as the database, so it does not survive losing the
         machine either. It is fine for local work and for small apps; it is not a second copy.

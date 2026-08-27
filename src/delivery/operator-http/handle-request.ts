@@ -235,12 +235,15 @@ const CONFIG_KEYS = [
   "SMTP_FROM",
   "SMTP_SECURE",
   "REQUIRE_EMAIL_CONFIRM",
+  "MAILPIT_UI_PORT",
   "CORS_ORIGIN",
   "HTTP_PORT",
   "POSTGRES_PORT",
   "STORAGE_ENDPOINT",
   "STORAGE_BUCKET",
   "STORAGE_REGION",
+  "STORAGE_ACCESS_KEY",
+  "STORAGE_SECRET_KEY",
   "STORAGE_MAX_BYTES",
   "BACKUP_EVERY",
   "DRILL_EVERY",
@@ -252,11 +255,17 @@ const CONFIG_KEYS = [
   "BACKUP_S3_SECRET_KEY",
 ] as const;
 
-/** Written only when a value is given, never cleared by an empty field. */
+/**
+ * Written only when a value is given, and never sent to the browser. The
+ * storage keys are generated rather than typed, so clearing one by leaving a
+ * field blank would lock the bundled store out of its own bytes.
+ */
 const SECRET_KEYS = new Set<string>([
   "HCLOUD_TOKEN",
   "HETZNER_DNS_TOKEN",
   "SMTP_PASS",
+  "STORAGE_ACCESS_KEY",
+  "STORAGE_SECRET_KEY",
   "BACKUP_S3_SECRET_KEY",
 ]);
 

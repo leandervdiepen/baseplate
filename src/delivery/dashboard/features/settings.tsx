@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { OperatorStatus } from "../lib/api/index.ts";
 import { ApiSettings } from "./api-settings.tsx";
 import { BackupSettings } from "./backup-settings.tsx";
+import { EmailSettings } from "./email-settings.tsx";
 import { HetznerSettings, type HetznerDraft } from "./hetzner-settings.tsx";
 import { StorageSettings } from "./storage-settings.tsx";
 import { ReadinessList } from "./readiness-list.tsx";
@@ -60,8 +61,9 @@ export function SettingsPage({
     <>
       <PageHeader title="Settings" description="Where the stack runs, and the keys it needs." />
       <Callout icon={<IconLock />} className="mb-[var(--space-lg)] max-w-[var(--container-form)]">
-        These keys stay on this machine. Only the database and JWT secrets are sent to a server;
-        your Hetzner tokens never leave here.
+        Your Hetzner tokens never leave this machine. What a server is given is what it has to use:
+        the database and JWT secrets, and whichever mail, object store and backup credentials you
+        have filled in below.
       </Callout>
       <form
         className="flex max-w-[var(--container-form)] flex-col"
@@ -103,7 +105,17 @@ export function SettingsPage({
           onRefresh={setRefreshTtl}
         />
         <ApiSettings draft={settings.config} onChange={settings.change} />
-        <StorageSettings draft={settings.config} onChange={settings.change} />
+        <EmailSettings
+          draft={settings.config}
+          cloud={cloud}
+          secretStored={settings.storedSecrets.SMTP_PASS ?? false}
+          onChange={settings.change}
+        />
+        <StorageSettings
+          draft={settings.config}
+          storedSecrets={settings.storedSecrets}
+          onChange={settings.change}
+        />
         <BackupSettings
           draft={settings.config}
           secretStored={settings.storedSecrets.BACKUP_S3_SECRET_KEY ?? false}

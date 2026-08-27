@@ -192,6 +192,15 @@ export function IconLock(props: IconProps) {
   );
 }
 
+export function IconMail(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" {...stroke} />
+      <path d="M2 4.5L8 9L14 4.5" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconSearch(props: IconProps) {
   return (
     <Svg {...props}>

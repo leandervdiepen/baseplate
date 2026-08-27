@@ -24,6 +24,44 @@ test("an ordinary setting left blank is cleared", () => {
   expect(configUpdates({ BACKUP_S3_BUCKET: "" })).toEqual({ BACKUP_S3_BUCKET: "" });
 });
 
+/** The claim is that an operator never opens the file, so these live in the studio. */
+test("production settings the studio has to be able to write", () => {
+  expect(
+    configUpdates({
+      SITE_URL: "https://app.example.com",
+      SMTP_HOST: "smtp.example.com",
+      SMTP_PORT: "587",
+      SMTP_USER: "postmaster",
+      SMTP_FROM: "App <no-reply@example.com>",
+      SMTP_SECURE: "starttls",
+      REQUIRE_EMAIL_CONFIRM: "true",
+      MAILPIT_UI_PORT: "8025",
+      STORAGE_ENDPOINT: "https://fsn1.your-objectstorage.com",
+    }),
+  ).toEqual({
+    SITE_URL: "https://app.example.com",
+    SMTP_HOST: "smtp.example.com",
+    SMTP_PORT: "587",
+    SMTP_USER: "postmaster",
+    SMTP_FROM: "App <no-reply@example.com>",
+    SMTP_SECURE: "starttls",
+    REQUIRE_EMAIL_CONFIRM: "true",
+    MAILPIT_UI_PORT: "8025",
+    STORAGE_ENDPOINT: "https://fsn1.your-objectstorage.com",
+  });
+});
+
+/** Generated rather than typed, so a blank field must not clear them. */
+test("the object store keys are never cleared by an untouched field", () => {
+  expect(configUpdates({ STORAGE_ACCESS_KEY: "", STORAGE_SECRET_KEY: "", SMTP_PASS: "" })).toEqual(
+    {},
+  );
+  expect(configUpdates({ STORAGE_ACCESS_KEY: "AKIA", STORAGE_SECRET_KEY: "shh" })).toEqual({
+    STORAGE_ACCESS_KEY: "AKIA",
+    STORAGE_SECRET_KEY: "shh",
+  });
+});
+
 test("a key nobody put on the list is ignored", () => {
   expect(configUpdates({ JWT_SECRET: "hunter2", POSTGRES_PASSWORD: "hunter2" })).toEqual({});
 });
