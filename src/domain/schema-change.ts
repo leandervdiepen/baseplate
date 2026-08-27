@@ -1,6 +1,12 @@
 import { assertIdentifier, createColumn, type Column } from "./column.ts";
 import { DomainError } from "./errors.ts";
-import { createTable, type Table } from "./table.ts";
+import {
+  assertTableAccess,
+  createTable,
+  DEFAULT_ACCESS,
+  type Table,
+  type TableAccess,
+} from "./table.ts";
 
 /** Tables the stack itself needs. The operator may not drop these. */
 const RESERVED_TABLES = new Set(["users", "migrations"]);
@@ -12,13 +18,16 @@ export type SchemaChange =
       readonly kind: "create-table";
       readonly table: string;
       readonly ownerColumn: string;
+      readonly access: TableAccess;
       readonly columns: readonly Column[];
     }
   | {
       readonly kind: "adopt-table";
       readonly table: string;
       readonly ownerColumn: string;
+      readonly access: TableAccess;
     }
+  | { readonly kind: "set-access"; readonly table: string; readonly access: TableAccess }
   | { readonly kind: "drop-table"; readonly table: string }
   | { readonly kind: "rename-table"; readonly table: string; readonly to: string }
   | { readonly kind: "add-column"; readonly table: string; readonly column: Column }
@@ -29,6 +38,7 @@ export type SchemaChangeInput = {
   table?: string;
   to?: string;
   ownerColumn?: string;
+  access?: string;
   column?: { name?: string; type?: string; nullable?: boolean };
   columns?: { name?: string; type?: string; nullable?: boolean }[];
 };
@@ -49,7 +59,7 @@ export function createSchemaChange(input: SchemaChangeInput): SchemaChange {
       createColumn(column.name ?? "", column.type ?? "text", column.nullable ?? false),
     );
     assertNoDuplicates(columns, ownerColumn);
-    return { kind: "create-table", table, ownerColumn, columns };
+    return { kind: "create-table", table, ownerColumn, access: accessOf(input), columns };
   }
   if (input.kind === "adopt-table") {
     return {
@@ -60,7 +70,11 @@ export function createSchemaChange(input: SchemaChangeInput): SchemaChange {
         "schema.invalid_owner_column",
         "Owner column",
       ),
+      access: accessOf(input),
     };
+  }
+  if (input.kind === "set-access") {
+    return { kind: "set-access", table, access: assertTableAccess(input.access ?? "") };
   }
   if (input.kind === "drop-table") {
     assertNotReserved(table);
@@ -99,7 +113,8 @@ export function createSchemaChange(input: SchemaChangeInput): SchemaChange {
 
 /**
  * The tables that should exist after the change lands. Every table carries its
- * owner column, so a new one can never arrive without row access.
+ * owner column and who may read it, so a new one can never arrive without row
+ * access.
  */
 export function applySchemaChange(
   current: readonly Table[],
@@ -115,7 +130,11 @@ export function applySchemaChange(
         `Table '${change.table}' is already declared.`,
       );
     }
-    tables.push({ name: change.table, ownerColumn: change.ownerColumn });
+    tables.push({
+      name: change.table,
+      ownerColumn: change.ownerColumn,
+      access: change.access,
+    });
   } else {
     if (!named(change.table)) {
       throw new DomainError(
@@ -126,6 +145,12 @@ export function applySchemaChange(
     if (change.kind === "drop-table") {
       const index = tables.findIndex((table) => table.name === change.table);
       tables.splice(index, 1);
+    }
+    if (change.kind === "set-access") {
+      const target = tables.find((table) => table.name === change.table);
+      if (target) {
+        target.access = change.access;
+      }
     }
     if (change.kind === "rename-table") {
       if (named(change.to)) {
@@ -150,18 +175,25 @@ export function applySchemaChange(
     }
   }
 
-  return tables.map((table) => createTable(table.name, table.ownerColumn));
+  return tables.map((table) => createTable(table.name, table.ownerColumn, table.access));
 }
 
 export function changeSlug(change: SchemaChange): string {
   if (change.kind === "rename-table") {
     return `rename_${change.table}_to_${change.to}`;
   }
+  if (change.kind === "set-access") {
+    return `set_access_${change.table}_${change.access}`;
+  }
   if (change.kind === "add-column" || change.kind === "drop-column") {
     const column = change.kind === "add-column" ? change.column.name : change.column;
     return `${change.kind.replace("-", "_")}_${change.table}_${column}`;
   }
   return `${change.kind.replace("-", "_")}_${change.table}`;
+}
+
+function accessOf(input: SchemaChangeInput): TableAccess {
+  return input.access ? assertTableAccess(input.access) : DEFAULT_ACCESS;
 }
 
 function assertNotReserved(table: string): void {

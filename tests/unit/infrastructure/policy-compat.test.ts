@@ -8,12 +8,14 @@ import { syncPolicies } from "../../../stack/migrate/src/policies.ts";
  * The studio writes a table's row access once, in the same transaction that
  * creates the table. The migrate service writes it again from its own copy of
  * the same SQL, on every start. Two copies is a thing that drifts, and drift
- * here means a table quietly changes who can read it at the next restart.
+ * here means a table quietly changes who can read it at the next restart. Every
+ * access mode is checked: a wider one drifting is the worse direction.
  */
 
 const TABLES = [
-  { table: "notes", ownerColumn: "owner_id" },
-  { table: "memos", ownerColumn: "author_id" },
+  { table: "notes", ownerColumn: "owner_id", access: "private" as const },
+  { table: "memos", ownerColumn: "author_id", access: "shared" as const },
+  { table: "docs", ownerColumn: "owner_id", access: "public" as const },
 ];
 
 /** Postgres does not care where a statement wraps, and neither does this. */
@@ -43,8 +45,8 @@ test("the migrate service re-applies the same policy the studio wrote", async ()
 
   await syncPolicies(sql, TABLES, () => undefined);
 
-  for (const { table, ownerColumn } of TABLES) {
-    const studio = protectStatements(createTable(table, ownerColumn)).map(squash);
+  for (const { table, ownerColumn, access } of TABLES) {
+    const studio = protectStatements(createTable(table, ownerColumn, access)).map(squash);
     const migrate = sent.filter((statement) => statement.includes(table)).map(squash);
     expect(studio.join(" ")).toContain("baseplate.caller_id()");
     expect(migrate, `policy for ${table}`).toEqual(studio);

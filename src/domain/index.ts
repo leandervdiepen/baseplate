@@ -26,6 +26,14 @@ export {
 } from "./schema-change.ts";
 export { createServer, type Server, type ServerStatus } from "./server.ts";
 export { apiBaseUrl, createStack, type Stack, type StackInput } from "./stack.ts";
-export { createTable, type Table } from "./table.ts";
+export {
+  assertTableAccess,
+  createTable,
+  DEFAULT_ACCESS,
+  isTableAccess,
+  TABLE_ACCESS,
+  type Table,
+  type TableAccess,
+} from "./table.ts";
 export { createTokenClaims, type TokenClaims } from "./token.ts";
 export { parseCallerId, type CallerId } from "./caller-id.ts";

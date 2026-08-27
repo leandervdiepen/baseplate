@@ -5,6 +5,7 @@ const notes = [
   {
     name: "notes",
     ownerColumn: "owner_id",
+    access: "private" as const,
     columns: [
       { name: "id", type: "uuid", nullable: false, primaryKey: true, hasDefault: true },
       { name: "owner_id", type: "uuid", nullable: false, primaryKey: false, hasDefault: false },

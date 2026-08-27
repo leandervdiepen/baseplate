@@ -5,7 +5,7 @@ import type {
   SchemaAdmin,
   SchemaHistoryEntry,
 } from "#application";
-import { changeSlug, type SchemaChange, type Table } from "#domain";
+import { assertTableAccess, changeSlug, type SchemaChange, type Table } from "#domain";
 import { InfraError } from "#shared";
 import { policyStatements, renderChange } from "./render-change.ts";
 import { registryStatements } from "./registry.ts";
@@ -39,6 +39,7 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
       {
         name: string;
         owner_column: string;
+        access: string;
         column_name: string;
         data_type: string;
         is_nullable: string;
@@ -50,6 +51,7 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
     >`
       SELECT t.name,
              t.owner_column,
+             t.access,
              c.column_name,
              c.data_type,
              c.is_nullable,
@@ -106,6 +108,7 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
       byTable.set(row.name, {
         name: row.name,
         ownerColumn: row.owner_column,
+        access: assertTableAccess(row.access),
         columns: [column],
       });
     }
@@ -137,14 +140,10 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
       await this.assertAdoptable(change.table, change.ownerColumn);
     }
     const ddl = renderChange(change);
-    // Adopting builds nothing, so there is no DDL to run. Everything else in
-    // the transaction is the same: the registry row, the access rules, the
-    // history entry.
-    const record =
-      ddl ||
-      `-- adopted ${change.table}, owned by ${
-        change.kind === "adopt-table" ? change.ownerColumn : "owner_id"
-      }`;
+    // Adopting a table and changing who may read it build nothing, so there is
+    // no DDL to run. The rest of the transaction is the same: the registry row,
+    // the access rules, the history entry.
+    const record = ddl || note(change);
     const statements = [
       ...(ddl ? [ddl] : []),
       ...registryStatements(change),
@@ -202,6 +201,17 @@ export class PostgresSchemaAdmin implements SchemaAdmin {
   async close(): Promise<void> {
     await this.sql.end();
   }
+}
+
+/** What the history shows for a change that had no DDL of its own. */
+function note(change: SchemaChange): string {
+  if (change.kind === "adopt-table") {
+    return `-- adopted ${change.table}, owned by ${change.ownerColumn}`;
+  }
+  if (change.kind === "set-access") {
+    return `-- ${change.table} is now ${change.access}`;
+  }
+  return `-- ${changeSlug(change)}`;
 }
 
 function messageOf(cause: unknown): string {

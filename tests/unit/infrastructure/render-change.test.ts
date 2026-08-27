@@ -69,7 +69,53 @@ test("a new table is protected in the same breath as it is created", () => {
 });
 
 test("refuses to build SQL from an identifier the domain would not allow", () => {
-  expect(() => protectStatements({ name: "items; drop table x", ownerColumn: "owner_id" })).toThrow(
-    /identifier/,
+  expect(() =>
+    protectStatements({
+      name: "items; drop table x",
+      ownerColumn: "owner_id",
+      access: "private",
+    }),
+  ).toThrow(/identifier/);
+});
+
+test("a private table shows a caller nothing but their own rows", () => {
+  const joined = protectStatements(createTable("notes", "owner_id", "private")).join("\n");
+
+  // Dropped even when it is not replaced, so narrowing a table takes the wider
+  // read away instead of leaving it behind.
+  expect(joined).toContain('DROP POLICY IF EXISTS "notes_read_all"');
+  expect(joined).not.toContain('CREATE POLICY "notes_read_all"');
+  expect(joined).not.toContain("TO anon");
+});
+
+test("a shared table is read by anyone signed in and still written by the owner", () => {
+  const joined = protectStatements(createTable("posts", "owner_id", "shared")).join("\n");
+
+  expect(joined).toContain(
+    'CREATE POLICY "posts_read_all" ON public."posts" FOR SELECT' +
+      " USING (baseplate.caller_id() IS NOT NULL)",
   );
+  expect(joined).toContain(
+    'CREATE POLICY "posts_owner" ON public."posts"' +
+      ' USING ("owner_id" = baseplate.caller_id())' +
+      ' WITH CHECK ("owner_id" = baseplate.caller_id())',
+  );
+  // Signed in still means a token, so the tokenless role gains nothing.
+  expect(joined).not.toContain("TO anon");
+});
+
+test("a public table is read without a token, and written by nobody without one", () => {
+  const joined = protectStatements(createTable("docs", "owner_id", "public")).join("\n");
+
+  expect(joined).toContain(
+    'CREATE POLICY "docs_read_all" ON public."docs" FOR SELECT USING (true)',
+  );
+  expect(joined).toContain('GRANT SELECT ON public."docs" TO anon');
+  expect(joined).not.toContain("INSERT, UPDATE, DELETE ON public.\"docs\" TO anon");
+});
+
+test("an insert keeps the caller as the owner, and lets the operator name one", () => {
+  const joined = protectStatements(createTable("notes", "owner_id")).join("\n");
+
+  expect(joined).toContain('coalesce(baseplate.caller_id(), NEW."owner_id")');
 });

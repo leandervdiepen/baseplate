@@ -8,8 +8,15 @@ import { literal, quote } from "./sql.ts";
 export function registryStatements(change: SchemaChange): string[] {
   if (change.kind === "create-table" || change.kind === "adopt-table") {
     return [
-      `INSERT INTO baseplate.tables (name, owner_column)
-       VALUES (${literal(change.table)}, ${literal(change.ownerColumn)})`,
+      `INSERT INTO baseplate.tables (name, owner_column, access)
+       VALUES (${literal(change.table)}, ${literal(change.ownerColumn)},
+               ${literal(change.access)})`,
+    ];
+  }
+  if (change.kind === "set-access") {
+    return [
+      `UPDATE baseplate.tables SET access = ${literal(change.access)}
+       WHERE name = ${literal(change.table)}`,
     ];
   }
   if (change.kind === "drop-table") {

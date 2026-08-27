@@ -1,4 +1,4 @@
-import type { SchemaChange, Table } from "#domain";
+import type { SchemaChange, Table, TableAccess } from "#domain";
 
 export type LiveColumn = {
   readonly name: string;
@@ -13,6 +13,7 @@ export type LiveColumn = {
 export type LiveTable = {
   readonly name: string;
   readonly ownerColumn: string;
+  readonly access: TableAccess;
   readonly columns: readonly LiveColumn[];
 };
 

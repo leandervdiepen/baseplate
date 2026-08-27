@@ -13,7 +13,9 @@ class AskedSchemaAdmin extends MemorySchemaAdmin {
 }
 
 test("the tables are the ones the database has", async () => {
-  const admin = new MemorySchemaAdmin([{ name: "notes", ownerColumn: "owner_id", columns: [] }]);
+  const admin = new MemorySchemaAdmin([
+    { name: "notes", ownerColumn: "owner_id", access: "private", columns: [] },
+  ]);
 
   expect((await new InspectSchema({ admin }).tables()).map((table) => table.name)).toEqual([
     "notes",

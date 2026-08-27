@@ -22,7 +22,7 @@ test("a created table arrives carrying its owner column", () => {
     }),
   );
 
-  expect(next).toContainEqual({ name: "notes", ownerColumn: "owner_id" });
+  expect(next).toContainEqual({ name: "notes", ownerColumn: "owner_id", access: "private" });
 });
 
 test("a dropped table leaves the set", () => {
@@ -45,7 +45,7 @@ test("a renamed table keeps its owner column under the new name", () => {
     createSchemaChange({ kind: "rename-table", table: "items", to: "notes" }),
   );
 
-  expect(next).toEqual([{ name: "notes", ownerColumn: "owner_id" }]);
+  expect(next).toEqual([{ name: "notes", ownerColumn: "owner_id", access: "private" }]);
 });
 
 test("rejects dropping the owner column", () => {
@@ -121,4 +121,44 @@ test("a column created with the table can be required", () => {
   expect(change).toMatchObject({
     columns: [{ name: "title", type: "text", nullable: false }],
   });
+});
+
+test("a table is private unless the change asks for something wider", () => {
+  expect(createSchemaChange({ kind: "create-table", table: "posts" })).toMatchObject({
+    access: "private",
+  });
+  expect(
+    createSchemaChange({ kind: "create-table", table: "posts", access: "shared" }),
+  ).toMatchObject({ access: "shared" });
+});
+
+test("an access mode the database has no policy for is refused", () => {
+  expect(
+    codeOf(() => createSchemaChange({ kind: "create-table", table: "posts", access: "world" })),
+  ).toBe("table.invalid_access");
+  expect(codeOf(() => createSchemaChange({ kind: "set-access", table: "posts" }))).toBe(
+    "table.invalid_access",
+  );
+});
+
+test("changing access changes the mode and nothing else about the table", () => {
+  const posts = applySchemaChange([], createSchemaChange({ kind: "create-table", table: "posts" }));
+
+  const next = applySchemaChange(
+    posts,
+    createSchemaChange({ kind: "set-access", table: "posts", access: "public" }),
+  );
+
+  expect(next).toEqual([{ name: "posts", ownerColumn: "owner_id", access: "public" }]);
+});
+
+test("access cannot be set on a table Baseplate does not know about", () => {
+  expect(
+    codeOf(() =>
+      applySchemaChange(
+        [],
+        createSchemaChange({ kind: "set-access", table: "ghosts", access: "shared" }),
+      ),
+    ),
+  ).toBe("schema.unknown_table");
 });

@@ -1,9 +1,13 @@
 import type postgres from "postgres";
 import { identifier } from "./roles.ts";
 
+/** Mirrors the `TableAccess` the studio writes into `baseplate.tables`. */
+export type TableAccess = "private" | "shared" | "public";
+
 export type DeclaredPolicy = {
   table: string;
   ownerColumn: string;
+  access: TableAccess;
 };
 
 /**
@@ -27,9 +31,13 @@ $caller$`;
 export async function readDeclaredPolicies(
   sql: postgres.Sql,
 ): Promise<DeclaredPolicy[]> {
-  const rows = await sql<{ name: string; owner_column: string }[]>`
-    SELECT name, owner_column FROM baseplate.tables ORDER BY name`;
-  return rows.map((row) => ({ table: row.name, ownerColumn: row.owner_column }));
+  const rows = await sql<{ name: string; owner_column: string; access: string }[]>`
+    SELECT name, owner_column, access FROM baseplate.tables ORDER BY name`;
+  return rows.map((row) => ({
+    table: row.name,
+    ownerColumn: row.owner_column,
+    access: row.access as TableAccess,
+  }));
 }
 
 export async function syncPolicies(
@@ -45,7 +53,7 @@ export async function syncPolicies(
   const declared = new Set(policies.map((policy) => policy.table));
   for (const policy of policies) {
     await applyPolicy(sql, policy);
-    log(`policy ${policy.table} on ${policy.ownerColumn}`);
+    log(`policy ${policy.table} on ${policy.ownerColumn} (${policy.access})`);
   }
   for (const table of await publicTables(sql)) {
     if (!declared.has(table)) {
@@ -92,21 +100,28 @@ export async function applyStoragePolicies(sql: postgres.Sql): Promise<void> {
 async function applyPolicy(sql: postgres.Sql, policy: DeclaredPolicy): Promise<void> {
   const table = identifier(policy.table);
   const owner = identifier(policy.ownerColumn);
+  const owned = identifier(`${policy.table}_owner`);
+  const readAll = identifier(`${policy.table}_read_all`);
   const trigger = identifier(`${policy.table}_set_owner`);
   const setter = identifier(`set_owner_${policy.table}`);
   const match = `${owner} = baseplate.caller_id()`;
+  const visible = readCondition(policy.access);
 
   await sql.unsafe(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY`).simple();
-  await sql
-    .unsafe(`DROP POLICY IF EXISTS ${identifier(`${policy.table}_owner`)} ON public.${table}`)
-    .simple();
-  await sql.unsafe(`CREATE POLICY ${identifier(`${policy.table}_owner`)} ON public.${table}
+  await sql.unsafe(`DROP POLICY IF EXISTS ${owned} ON public.${table}`).simple();
+  await sql.unsafe(`CREATE POLICY ${owned} ON public.${table}
     USING (${match}) WITH CHECK (${match})`).simple();
+
+  await sql.unsafe(`DROP POLICY IF EXISTS ${readAll} ON public.${table}`).simple();
+  if (visible) {
+    await sql.unsafe(`CREATE POLICY ${readAll} ON public.${table}
+      FOR SELECT USING (${visible})`).simple();
+  }
 
   await sql.unsafe(`CREATE OR REPLACE FUNCTION baseplate.${setter}() RETURNS trigger
 LANGUAGE plpgsql AS $owner$
 BEGIN
-  NEW.${owner} := baseplate.caller_id();
+  NEW.${owner} := coalesce(baseplate.caller_id(), NEW.${owner});
   RETURN NEW;
 END
 $owner$`).simple();
@@ -115,9 +130,23 @@ $owner$`).simple();
     FOR EACH ROW EXECUTE FUNCTION baseplate.${setter}()`).simple();
 
   await sql.unsafe(`REVOKE ALL ON public.${table} FROM anon`).simple();
+  if (policy.access === "public") {
+    await sql.unsafe(`GRANT SELECT ON public.${table} TO anon`).simple();
+  }
   await sql
     .unsafe(`GRANT SELECT, INSERT, UPDATE, DELETE ON public.${table} TO app_user`)
     .simple();
+}
+
+/** What a read has to satisfy beyond owning the row, or nothing for private. */
+function readCondition(access: TableAccess): string {
+  if (access === "shared") {
+    return "baseplate.caller_id() IS NOT NULL";
+  }
+  if (access === "public") {
+    return "true";
+  }
+  return "";
 }
 
 async function lockDown(sql: postgres.Sql, table: string): Promise<void> {

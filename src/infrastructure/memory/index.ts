@@ -119,6 +119,7 @@ export class MemorySchemaAdmin implements SchemaAdmin {
     this.tables = declared.map((table) => ({
       name: table.name,
       ownerColumn: table.ownerColumn,
+      access: table.access,
       columns: this.tables.find((live) => live.name === table.name)?.columns ?? [],
     }));
     return `-- ${changeSlug(change)}`;
