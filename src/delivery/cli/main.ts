@@ -15,24 +15,9 @@ import { schemaChangeFromArgs, SCHEMA_USAGE } from "./schema-command.ts";
 import { runStorageCommand, STORAGE_USAGE } from "./storage-command.ts";
 import { renderTypes } from "./types-command.ts";
 import { runUsersCommand, USERS_USAGE } from "./users-command.ts";
-import { USAGE, version } from "./usage.ts";
+import { STACK_COMMANDS, USAGE, version } from "./usage.ts";
 
 const PACKAGE_ROOT = packageRootFrom(import.meta.dirname);
-
-/** Commands that need a project and a reachable database. */
-const STACK_COMMANDS = new Set([
-  "up",
-  "down",
-  "destroy",
-  "tables",
-  "types",
-  "schema",
-  "storage",
-  "backup",
-  "restore",
-  "users",
-  "mint-token",
-]);
 
 async function main(): Promise<void> {
   const { positionals, values } = parseArgs({
@@ -43,6 +28,7 @@ async function main(): Promise<void> {
       email: { type: "string" },
       password: { type: "string" },
       ttl: { type: "string" },
+      tail: { type: "string" },
       column: { type: "string", multiple: true },
       "owner-column": { type: "string" },
       port: { type: "string" },
@@ -108,7 +94,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (!STACK_COMMANDS.has(command)) {
+  if (!(STACK_COMMANDS as readonly string[]).includes(command)) {
     console.error(`Unknown command '${command}'.\n\n${USAGE}`);
     process.exit(1);
   }
@@ -131,6 +117,11 @@ async function main(): Promise<void> {
       await confirmDestroy(project, values.yes === true);
       await operator.teardown.execute({ destroy: true });
       console.log("Destroyed: containers, volumes, and any server that was provisioned.");
+      return;
+    }
+    if (command === "logs") {
+      const tail = values.tail === undefined ? undefined : portValue(values.tail, "--tail");
+      process.stdout.write(await operator.logs.execute(tail));
       return;
     }
     if (command === "tables") {

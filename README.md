@@ -77,7 +77,7 @@ you press.
 
 `npx baseplate mcp` is the operator path for agents.
 Run it from the project directory (where `baseplate.env` lives), or set `BASEPLATE_PROJECT`.
-It speaks stdio JSON-RPC, covers the same actions as the CLI, and never binds a port.
+It speaks stdio JSON-RPC and never binds a port, and covers every CLI command that acts on a running project - `init` is not one of them, because the host is started inside a project that already exists.
 Destructive tools need `confirm: true`.
 It does not query app rows; apps use the [client](sdk/README.md).
 
@@ -220,8 +220,8 @@ Worth knowing before you trust it with something:
 
 ```
 init      up        down      destroy   dashboard
-mcp       tables    types     schema    storage
-backup    restore   users     mint-token
+logs      mcp       tables    types     schema
+storage   backup    restore   users     mint-token
 ```
 
 Run `npx baseplate --help`, or any command with no arguments, for its own list.

@@ -140,6 +140,17 @@ export const TOOLS: readonly Tool[] = [
     },
   },
   {
+    name: "logs",
+    description:
+      "What the stack has printed, every service in one stream. Local answers over Docker, remote over SSH.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tail: { type: "number", description: "Lines from the end of each service. Default 80." },
+      },
+    },
+  },
+  {
     name: "up",
     description: "Bring the stack up and return the API URL. One stack runs at a time.",
     inputSchema: {

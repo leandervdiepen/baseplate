@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 import { createBucket } from "#domain";
 import type { StorageAdmin } from "#application";
 import { MemorySchemaAdmin, MemoryUserAdmin } from "#infrastructure";
+import { TOOLS } from "../../../src/delivery/mcp/catalog.ts";
+import { STACK_COMMANDS } from "../../../src/delivery/cli/usage.ts";
 import { rpc, server, SUB, testSession, toolText } from "./mcp-harness.ts";
 
 test("tables is empty until a table is added", async () => {
@@ -127,3 +129,12 @@ function recordingStorage(): StorageAdmin & { dropped: string[] } {
     close: async () => {},
   };
 }
+
+/**
+ * An agent host is started inside a project that already exists, so init is
+ * the one command it has no use for. Everything that acts on a running project
+ * has to be here, or the README's claim about the two surfaces is false.
+ */
+test("the MCP catalogue is exactly the commands that act on a running project", () => {
+  expect([...TOOLS].map((tool) => tool.name).sort()).toEqual([...STACK_COMMANDS].sort());
+});

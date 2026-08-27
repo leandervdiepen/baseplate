@@ -4,7 +4,7 @@ import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
 import { handleBackup, handleRestore } from "./backup.ts";
 import { fail, objectArgs, ok, requireString, type ToolResult } from "./helpers.ts";
 import { handleSchema, handleTables, handleTypes } from "./schema.ts";
-import { handleDestroy, handleDown, handleUp } from "./stack.ts";
+import { handleDestroy, handleDown, handleLogs, handleUp } from "./stack.ts";
 import { handleStorage } from "./storage.ts";
 import { handleUsers } from "./users.ts";
 
@@ -56,6 +56,9 @@ async function dispatch(name: string, params: unknown, session: ToolSession): Pr
   }
   if (name === "mint-token") {
     return mint(operator, params);
+  }
+  if (name === "logs") {
+    return handleLogs(operator, params);
   }
   if (name === "up") {
     return handleUp(operator, session.stack, params);

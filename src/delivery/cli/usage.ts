@@ -1,6 +1,25 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+/**
+ * Commands that need a project and a reachable database. Beside the usage text
+ * so the two cannot drift, and so the MCP catalogue can be held to the list.
+ */
+export const STACK_COMMANDS = [
+  "up",
+  "down",
+  "destroy",
+  "logs",
+  "tables",
+  "types",
+  "schema",
+  "storage",
+  "backup",
+  "restore",
+  "users",
+  "mint-token",
+] as const;
+
 export const USAGE = `Usage: baseplate <command>
 
   init [--port N]          Start a project here: config, secrets, state
@@ -11,6 +30,7 @@ export const USAGE = `Usage: baseplate <command>
   down                     Stop the stack. Your data stays.
   destroy [--yes]          Delete the volumes, and any server. Cannot be undone.
   dashboard [--port N]     Open the studio on 127.0.0.1
+  logs [--tail N]          What the stack has printed, every service at once
   mcp                      Operator tools over stdio, for agents
 
   tables                   List your tables and their columns

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { expect, test } from "vitest";
-import { USAGE, version } from "../../../src/delivery/cli/usage.ts";
+import { STACK_COMMANDS, USAGE, version } from "../../../src/delivery/cli/usage.ts";
 
 const run = promisify(execFile);
 const BIN = resolve(import.meta.dirname, "../../../bin/baseplate.js");
@@ -68,21 +68,7 @@ test("no command at all is an error, not a silent success", async () => {
 });
 
 test("the usage names every command it dispatches", () => {
-  for (const command of [
-    "init",
-    "up",
-    "down",
-    "dashboard",
-    "tables",
-    "types",
-    "schema",
-    "storage",
-    "backup",
-    "restore",
-    "users",
-    "mint-token",
-    "mcp",
-  ]) {
+  for (const command of [...STACK_COMMANDS, "init", "dashboard", "mcp"]) {
     expect(USAGE).toContain(command);
   }
 });

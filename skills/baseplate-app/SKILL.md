@@ -45,7 +45,7 @@ Refresh is automatic; do not call `refresh` yourself.
 Pass `{ persist: false }` for a session that dies with the process, or `{ storage }` to keep it somewhere else.
 
 Apps sign up and log in.
-`npx @diepen/baseplate mint-token --sub UUID` is for scripts and tests only.
+`npx baseplate mint-token --sub UUID` is for scripts and tests only.
 
 ## Queries
 
@@ -81,7 +81,7 @@ The database stamps it and row-level security decides what a caller sees.
 ## Types
 
 ```bash
-npx @diepen/baseplate types > src/database.ts
+npx baseplate types > src/database.ts
 ```
 
 ```ts
@@ -115,10 +115,10 @@ Schema is a change against the running system, not a file in the Baseplate packa
 Do not invent migration files inside `node_modules/@diepen/baseplate`.
 Do not fork Baseplate.
 
-If you are also the operator, `npx @diepen/baseplate schema add-table notes --column title:text`.
+If you are also the operator, `npx baseplate schema add-table notes --column title:text`.
 That is the path to use. It needs no file and no second tool.
 
-Only if the project already keeps a drizzle schema: `drizzle-kit push`, then `npx @diepen/baseplate schema adopt-table boards` for each table, giving every one an `owner_id uuid not null` column. Adopt after each push, then regenerate types.
+Only if the project already keeps a drizzle schema: `drizzle-kit push`, then `npx baseplate schema adopt-table boards` for each table, giving every one an `owner_id uuid not null` column. Adopt after each push, then regenerate types.
 
 ## Tests
 
@@ -137,7 +137,7 @@ expect(await get("/notes", bob.token)).toHaveLength(0);
 ```
 
 `baseplate init` runs once in the test project directory and refuses to run again over an existing `baseplate.env`, so it is a setup step and never part of a test run.
-`baseplate up` is the repeatable half: it belongs in Playwright `globalSetup` (`execFileSync("npx", ["@diepen/baseplate", "up"], { stdio: "inherit" })`), not `webServer`.
+`baseplate up` is the repeatable half: it belongs in Playwright `globalSetup` (`execFileSync("npx", ["baseplate", "up"], { stdio: "inherit" })`), not `webServer`.
 Running it against a stack that is already up is a no-op.
 
 Skip the login form by writing the session into `localStorage` before the page loads:
@@ -154,7 +154,7 @@ await page.addInitScript(
 Keep one test that signs in through the form.
 Files: 404, not 403.
 Isolate via fresh users, not a shared reset.
-`npx @diepen/baseplate destroy --yes && npx @diepen/baseplate up` deletes the volume; use it only on a dedicated test project.
+`npx baseplate destroy --yes && npx baseplate up` deletes the volume; use it only on a dedicated test project.
 
 ## Operator vs app
 
