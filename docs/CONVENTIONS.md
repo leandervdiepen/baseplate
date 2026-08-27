@@ -177,9 +177,7 @@ Not a place for access-policy logic.
 Those belong in `src/application/` and `src/domain/`.
 Secrets belong in the project's `baseplate.env`, written by operator HTTP, never in the browser.
 
-## Linear
+## Issues
 
-Every piece of work is an issue on [Baseplate](https://linear.app/diepenio/project/baseplate-8380d9ef118c).
-Agents use Linear MCP **linear-personal** (workspace diepenio / team DPN).
-Do not file Baseplate work on the employer Linear.
-Put the issue id in the commit subject when one exists (`DPN-140: ...`).
+Work is tracked in [GitHub issues](https://github.com/leandervdiepen/baseplate/issues).
+One issue per change, and the issue says why before it says what.

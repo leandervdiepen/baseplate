@@ -9,23 +9,29 @@ A Postgres backend you run yourself: an HTTP API over your tables with per-user 
 Install a version, point it at Docker on your laptop or at your own Hetzner account, and you own the database, the API, TLS, and the access rules.
 Baseplate has no cloud account, no hosted control plane, and no bill of its own.
 
-> **Status:** the local path is proven end to end in CI, on every commit. Hetzner provisioning is implemented and preflighted but has not been run live against a real domain yet. See [Limits](#limits).
+> **Status:** the local path is supported and release-tested. On every commit, CI packs this package, installs it into an empty project, and runs row isolation, object isolation, password recovery and a destructive restore against the installed copy.
+> Hetzner deployment is **experimental** until the first documented live drill: it is implemented and preflighted, but it has never been run against a real domain. See [Limits](#limits).
 
 ## Quick start
 
 You need Docker running and Node 22 or newer.
 
 ```bash
-mkdir my-backend && cd my-backend
-npx @diepen/baseplate init      # writes baseplate.env with secrets for this project
-npx @diepen/baseplate up        # starts the stack, prints your API URL
+mkdir my-backend && cd my-backend && mkdir src
+npm init -y
+npm install @diepen/baseplate@0.1.0   # the version you own
+
+npx baseplate init                    # writes baseplate.env with secrets for this project
+npx baseplate up                      # starts the stack, prints your API URL
 ```
+
+Installed rather than `npx @diepen/baseplate`, for two reasons: a bare `npx` follows `latest` and would change under you, and the client below is imported from your app, so the package has to be a dependency.
 
 Make a table and reach it from an app:
 
 ```bash
-npx @diepen/baseplate schema add-table notes --column title:text
-npx @diepen/baseplate types > src/database.ts
+npx baseplate schema add-table notes --column title:text
+npx baseplate types > src/database.ts
 ```
 
 ```ts
@@ -44,8 +50,8 @@ That is the whole loop. `data` contains this user's notes and nobody else's, bec
 Every call answers `{ data, error }` and nothing throws, so a failure is a value you render rather than an exception you catch.
 
 ```bash
-npx @diepen/baseplate dashboard   # the studio, on 127.0.0.1
-npx @diepen/baseplate down        # stop. your data stays
+npx baseplate dashboard   # the studio, on 127.0.0.1
+npx baseplate down        # stop. your data stays
 ```
 
 Run `init` in more than one directory and the studio lists them: the project name in the sidebar
@@ -64,12 +70,12 @@ you press.
 | **Email** | A local inbox on `127.0.0.1:8025` catches recovery and confirmation mail in development; `SMTP_*` points production at a real server. |
 | **Storage** | Buckets and objects, guarded by the same rule as rows. Signed URLs for `<img src>`. |
 | **Backups** | Scheduled `pg_dump`, encrypted with a key generated for your project, plus a drill that restores one and counts what came back. |
-| **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. Every setting lives here; you never open `baseplate.env` by hand. |
+| **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. Every setting lives here, including mail and an external object store, so you never open `baseplate.env` by hand. The one exception is the studio's own port, which would move this page out from under you: that is `baseplate dashboard --port`. |
 | **TLS** | Caddy gets a Let's Encrypt certificate for your hostname when you target Hetzner. |
 
 ## Agents
 
-`npx @diepen/baseplate mcp` is the operator path for agents.
+`npx baseplate mcp` is the operator path for agents.
 Run it from the project directory (where `baseplate.env` lives), or set `BASEPLATE_PROJECT`.
 It speaks stdio JSON-RPC, covers the same actions as the CLI, and never binds a port.
 Destructive tools need `confirm: true`.
@@ -82,7 +88,7 @@ A typical Cursor config, started with that project as cwd:
   "mcpServers": {
     "baseplate": {
       "command": "npx",
-      "args": ["@diepen/baseplate", "mcp"]
+      "args": ["baseplate", "mcp"]
     }
   }
 }
@@ -104,8 +110,8 @@ A user signs up over plain HTTP and gets a JWT whose `sub` is their user id. Eve
 A table in `public` that is not in Baseplate's registry is locked down rather than left open: row security on, grants revoked, reachable by nobody. The stack re-applies all of this on every start, so a restart can never leave a table exposed.
 
 ```bash
-npx @diepen/baseplate tables    # what you have
-npx @diepen/baseplate schema    # every change your database has taken
+npx baseplate tables    # what you have
+npx baseplate schema    # every change your database has taken
 ```
 
 ## If you already keep a schema file
@@ -115,7 +121,7 @@ npx @diepen/baseplate schema    # every change your database has taken
 If you already run drizzle-kit, you do not have to give it up. This is an ordinary Postgres, so `drizzle-kit pull` reads what is there and `drizzle-kit push` applies your schema file. Baseplate did not create those tables, so hand each one over once:
 
 ```bash
-npx @diepen/baseplate schema adopt-table boards
+npx baseplate schema adopt-table boards
 ```
 
 That records the table, writes its policy, adds the owner trigger, and grants the app role, in one transaction. Give every table an `owner_id uuid not null` column and adopt it after each push.
@@ -125,7 +131,7 @@ That records the table, writes its policy, adds the owner trigger, and grants th
 ## Files
 
 ```bash
-npx @diepen/baseplate storage add-bucket avatars
+npx baseplate storage add-bucket avatars
 ```
 
 ```ts
@@ -143,9 +149,9 @@ Bytes live in a store on the compose network, never published. Point `STORAGE_EN
 A dump runs on a schedule, sealed with a key generated for your project, and goes wherever `BACKUP_S3_*` points. Name nothing and it stays on the same machine as the database, which the studio flags as not a backup.
 
 ```bash
-npx @diepen/baseplate backup now
-npx @diepen/baseplate backup drills   # restores that were actually verified
-npx @diepen/baseplate restore <id>
+npx baseplate backup now
+npx baseplate backup drills   # restores that were actually verified
+npx baseplate restore <id>
 ```
 
 On its own schedule the stack restores the newest backup into a scratch database and counts the tables and rows that came back. Restoring over the live database is a command, not a button, and it asks you to type the project name first.
@@ -174,9 +180,11 @@ Nothing there filters by user, and nothing in your app does either. Bob gets an 
 
 ## Going to production
 
+> Hetzner deployment is experimental for all of `0.1.x`. Every step below is implemented, unit tested and preflighted before it runs, and none of it has yet been run against a real domain end to end. Treat the first one as a drill, not a migration.
+
 Set the target to Hetzner in the studio's Settings. Baseplate creates a VM, a firewall, a DNS record, and a TLS certificate in **your** account, from your own API tokens.
 
-Those tokens never leave your machine. Only the database, JWT, and backup secrets are sent to the server.
+Those tokens never leave your machine. What the server is given is what it has to use: the database and JWT secrets, the backup key and its destination credentials, and whichever mail and object store credentials you filled in. `.baseplate/stack.env` is the list, and it is the only env file that crosses.
 
 Paste your Cloud and DNS tokens, press **Check my account**, and the region, SSH key, and DNS zone become lists read from your account rather than three names to type from memory.
 
@@ -216,7 +224,7 @@ mcp       tables    types     schema    storage
 backup    restore   users     mint-token
 ```
 
-Run `npx @diepen/baseplate --help`, or any command with no arguments, for its own list.
+Run `npx baseplate --help`, or any command with no arguments, for its own list.
 
 ## Docs
 
@@ -240,7 +248,9 @@ cd baseplate && npm install
 
 npm run lint && npm run lint:arch && npm run typecheck && npm test
 npm run test:integration    # boots the real stack
-npm run test:acceptance     # the definition of done
+npm run test:acceptance     # the definition of done, against this checkout
+npm run test:artifact       # the same, against the packed tarball
+npm run pack:check          # what is in the tarball, and how big
 ```
 
 All of them pass before a pull request. Read [CONTRIBUTING.md](CONTRIBUTING.md) first.

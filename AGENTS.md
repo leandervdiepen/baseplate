@@ -30,18 +30,18 @@ Local is proven end to end: rows, objects, auth, and a restore that has been dri
 Hetzner BYOK (`TARGET=hetzner`) is implemented and preflighted in Settings, but has not run live against a real domain.
 Do not build a hosted control plane. If a task feels like one, stop and ask.
 
-Linear: project Baseplate, team diepen (`DPN`).
-Use the **linear-personal** MCP (workspace diepenio), never the employer Linear.
-
 ## Commands
 
 ```
 npm test                 unit
 npm run test:integration boots the stack, speaks HTTP
-npm run test:acceptance  the definition of done
+npm run test:acceptance  the definition of done, against this checkout
+npm run test:artifact    the same, against the packed tarball
+npm run pack:check       what is in the tarball, and how big
 npm run lint             eslint
 npm run lint:arch        dependency-cruiser
 npm run typecheck        src, stack services, and the dashboard
+npm run deps:stack       each stack service's own dependencies
 
 ./scripts/dev <command>  the CLI from this checkout, with the repo as the project
 ```

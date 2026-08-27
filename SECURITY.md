@@ -5,7 +5,7 @@ that, please tell me before you tell anyone else.
 
 ## Reporting
 
-Open a [private security advisory](https://github.com/diepenio/baseplate/security/advisories/new),
+Open a [private security advisory](https://github.com/leandervdiepen/baseplate/security/advisories/new),
 or email leander.vandiepen@chaptr.com.
 
 Please include what you did, what you expected, and what happened instead. A
@@ -32,12 +32,16 @@ it. Anything that breaks that is the most serious kind of bug here:
 ## What does not
 
 - **Anything that needs the operator's own machine.** The studio binds
-  127.0.0.1, and `baseplate.env` is theirs to protect.
+  127.0.0.1, and `baseplate.env` is theirs to protect. Baseplate writes it 0600
+  and `.baseplate/` 0700; past that it is the filesystem's job.
 - **The blob store having no auth of its own.** It is on the compose network,
   never published and never routed by Caddy, and the storage service in front of
   it is the gate.
-- **Denial of service by an authenticated caller.** There is no rate limiting
-  yet, and that is stated in the README rather than hidden.
+- **Exhausting the machine as a signed-in caller.** Credential endpoints are
+  rate limited per address and per email, and an unauthenticated request body is
+  capped at 16 KB. Authenticated data traffic through PostgREST is not limited
+  at all: a caller who can sign in can make as many queries as they like, and
+  the honest answer to that is a proxy in front of it.
 - **A missing feature.** See the README's list of what is not built.
 
 ## Supported versions
