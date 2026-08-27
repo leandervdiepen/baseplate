@@ -15,7 +15,7 @@
   "scripts": {
     "test": "vitest run tests/unit",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:acceptance": "bash tests/acceptance/two-token.sh && bash tests/acceptance/signup-login.sh && bash tests/acceptance/object-access.sh && bash tests/acceptance/password-reset.sh && bash tests/acceptance/backup-restore.sh",
+    "test:acceptance": "bash tests/acceptance/two-token.sh && bash tests/acceptance/table-access.sh && bash tests/acceptance/signup-login.sh && bash tests/acceptance/object-access.sh && bash tests/acceptance/password-reset.sh && bash tests/acceptance/backup-restore.sh",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/delivery/dashboard/tsconfig.json",
     "lint": "eslint src tests sdk/src stack/shared stack/auth/src stack/backup/src stack/migrate/src stack/storage/src",
     "lint:arch": "depcruise src --config dependency-cruiser.cjs",

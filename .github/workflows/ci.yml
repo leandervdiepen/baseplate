@@ -69,8 +69,8 @@ jobs:
 
   # The definition of done, and the only version of it that means anything to
   # someone who installed this: packed, installed, brought up from the installed
-  # package, then row isolation, object isolation, password recovery and a
-  # destructive restore against it.
+  # package, then row isolation, the three table access modes, object isolation,
+  # password recovery and a destructive restore against it.
   artifact:
     runs-on: ubuntu-latest
     timeout-minutes: 25
