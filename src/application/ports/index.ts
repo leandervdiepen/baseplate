@@ -1,3 +1,4 @@
+export type { ApiSchemaCache } from "./api-schema-cache.ts";
 export type {
   BackupAdmin,
   BackupRecord,

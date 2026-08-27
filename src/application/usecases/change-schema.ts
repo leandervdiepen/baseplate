@@ -4,10 +4,13 @@ import {
   type SchemaChange,
   type Table,
 } from "#domain";
+import type { ApiSchemaCache } from "../ports/api-schema-cache.ts";
 import type { LiveTable, SchemaAdmin } from "../ports/schema-admin.ts";
 
 export type ChangeSchemaDeps = {
   admin: SchemaAdmin;
+  /** The API caches the schema, so a change is not usable until it agrees. */
+  api: ApiSchemaCache;
 };
 
 export type SchemaChangeResult = {
@@ -31,7 +34,10 @@ export class ChangeSchema {
     const current = await this.deps.admin.listTables();
     const next = applySchemaChange(declaredFrom(current), change);
     const statement = await this.deps.admin.apply(change, next);
-    return { statement, tables: await this.deps.admin.listTables() };
+    const tables = await this.deps.admin.listTables();
+    // Committed is not usable: returning early makes the next insert a 404.
+    await this.deps.api.waitFor(tables.map((table) => table.name));
+    return { statement, tables };
   }
 }
 

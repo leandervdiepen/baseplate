@@ -1,4 +1,5 @@
 import type {
+  ApiSchemaCache,
   Clock,
   CloudProvider,
   DownOptions,
@@ -119,6 +120,14 @@ export class MemorySchemaAdmin implements SchemaAdmin {
   }
 
   async close(): Promise<void> {}
+}
+
+export class MemoryApiSchemaCache implements ApiSchemaCache {
+  readonly waited: string[][] = [];
+
+  async waitFor(tables: readonly string[]): Promise<void> {
+    this.waited.push([...tables]);
+  }
 }
 
 export class MemoryStackStateStore implements StackStateStore {

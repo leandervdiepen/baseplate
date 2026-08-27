@@ -11,6 +11,7 @@ import {
 } from "#application";
 import type { BackupAdmin, SchemaAdmin, StorageAdmin, UserAdmin } from "#application";
 import {
+  MemoryApiSchemaCache,
   MemoryClock,
   MemoryCloudProvider,
   MemorySchemaAdmin,
@@ -53,7 +54,7 @@ export function testSession(over: TestPorts = {}): ToolSession {
     siteUrl: "http://localhost:3000",
     stack,
     operator: {
-      changeSchema: new ChangeSchema({ admin }),
+      changeSchema: new ChangeSchema({ admin, api: new MemoryApiSchemaCache() }),
       schema: new InspectSchema({ admin }),
       mintToken: new MintToken({
         signer: new MemoryTokenSigner(),

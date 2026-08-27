@@ -8,8 +8,13 @@ import {
   ProvisionStack,
   TeardownStack,
 } from "#application";
-import type { CloudProvider, StackRuntime, StackStateStore } from "#application";
-import type { Stack } from "#domain";
+import type {
+  ApiSchemaCache,
+  CloudProvider,
+  StackRuntime,
+  StackStateStore,
+} from "#application";
+import { apiBaseUrl, type Stack } from "#domain";
 import { InfraError } from "#shared";
 import { SystemClock } from "./clock/index.ts";
 import { DockerComposeRuntime, DockerHostCloudProvider } from "./docker/index.ts";
@@ -23,6 +28,7 @@ import {
   PostgresStorageAdmin,
   PostgresUserAdmin,
 } from "./postgres/index.ts";
+import { PostgrestSchemaCache } from "./postgrest/index.ts";
 import { openTunnel, RemoteComposeRuntime } from "./ssh/index.ts";
 
 export { SystemClock } from "./clock/index.ts";
@@ -38,6 +44,7 @@ export { FileProjectDirectory, FileStackStateStore } from "./fs/index.ts";
 export { HetznerAccount, HetznerCloudProvider, syncTerraformDir } from "./hetzner/index.ts";
 export { JwtTokenSigner } from "./jwt/index.ts";
 export {
+  MemoryApiSchemaCache,
   MemoryClock,
   MemoryCloudProvider,
   MemorySchemaAdmin,
@@ -52,6 +59,7 @@ export {
   PostgresStorageAdmin,
   PostgresUserAdmin,
 } from "./postgres/index.ts";
+export { PostgrestSchemaCache, tableNames } from "./postgrest/index.ts";
 export { closeTunnels, RemoteComposeRuntime, tunnelArgs } from "./ssh/index.ts";
 
 export type OperatorTarget = "local" | "hetzner";
@@ -98,6 +106,24 @@ async function databaseEndpoint(
     }),
   };
 }
+
+/** Where the API answers: a published port locally, the TLS hostname on a server. */
+async function apiEndpoint(
+  config: OperatorConfig,
+  store: StackStateStore,
+): Promise<string | undefined> {
+  if (config.target === "local") {
+    return `http://127.0.0.1:${String(config.httpPort)}`;
+  }
+  const record = await store.load();
+  return record
+    ? apiBaseUrl(config.stack.hostname, record.server.ipv4, config.httpPort)
+    : undefined;
+}
+
+/** A reader the API will show its schema to. Anonymous sees no app tables. */
+const PROBE_TTL_SECONDS = 60;
+const PROBE_SUBJECT = "00000000-0000-4000-8000-000000000000";
 
 export type OperatorConfig = {
   target: OperatorTarget;
@@ -158,6 +184,19 @@ export async function createOperator(config: OperatorConfig): Promise<Operator> 
   const backups = new PostgresBackupAdmin(database);
   const users = new PostgresUserAdmin(database);
   const { cloud, runtime, healthTimeoutMs } = machineryFor(config);
+  const mintToken = new MintToken({
+    signer,
+    callerRole: config.stack.callerRole,
+    defaultTtlSeconds: config.accessTtlSeconds,
+  });
+  const baseUrl = await apiEndpoint(config, store);
+  const api: ApiSchemaCache = baseUrl
+    ? new PostgrestSchemaCache({
+        baseUrl,
+        callerToken: () => mintToken.execute(PROBE_SUBJECT, PROBE_TTL_SECONDS),
+      })
+    // No server yet means no API to be stale.
+    : { async waitFor() {} };
 
   return {
     provision: new ProvisionStack({
@@ -170,12 +209,8 @@ export async function createOperator(config: OperatorConfig): Promise<Operator> 
       ...(healthTimeoutMs === undefined ? {} : { healthTimeoutMs }),
     }),
     teardown: new TeardownStack({ cloud, runtime, store }),
-    mintToken: new MintToken({
-      signer,
-      callerRole: config.stack.callerRole,
-      defaultTtlSeconds: config.accessTtlSeconds,
-    }),
-    changeSchema: new ChangeSchema({ admin }),
+    mintToken,
+    changeSchema: new ChangeSchema({ admin, api }),
     schema: new InspectSchema({ admin }),
     storage: new ManageStorage({ storage }),
     backups: new ManageBackups({ backups }),
