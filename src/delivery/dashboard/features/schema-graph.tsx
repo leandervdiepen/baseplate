@@ -38,6 +38,7 @@ export function SchemaGraph({
         return table ? (
           <SchemaCard
             name={table.name}
+            access={table.access}
             columns={table.columns}
             {...(footerFor ? { footer: footerFor(table.name) } : {})}
           />

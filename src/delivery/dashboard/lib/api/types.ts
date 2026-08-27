@@ -58,8 +58,21 @@ export const COLUMN_TYPES: ColumnType[] = [
 
 export type ColumnDraft = { name: string; type: ColumnType; nullable: boolean };
 
+/**
+ * Who may read a table's rows. A row is only ever written by whoever owns it,
+ * in all three.
+ */
+export type TableAccess = "private" | "shared" | "public";
+
 export type SchemaChangeBody =
-  | { kind: "create-table"; table: string; ownerColumn?: string; columns: ColumnDraft[] }
+  | {
+      kind: "create-table";
+      table: string;
+      ownerColumn?: string;
+      access?: TableAccess;
+      columns: ColumnDraft[];
+    }
+  | { kind: "set-access"; table: string; access: TableAccess }
   | { kind: "drop-table"; table: string }
   | { kind: "rename-table"; table: string; to: string }
   | { kind: "add-column"; table: string; column: ColumnDraft }
@@ -78,6 +91,7 @@ export type LiveColumn = {
 export type LiveTable = {
   name: string;
   ownerColumn: string;
+  access: TableAccess;
   columns: LiveColumn[];
 };
 
@@ -93,7 +107,12 @@ export type SchemaColumn = {
   references?: { table: string; column: string };
 };
 
-export type SchemaTable = { name: string; ownerColumn: string; columns: SchemaColumn[] };
+export type SchemaTable = {
+  name: string;
+  ownerColumn: string;
+  access: TableAccess;
+  columns: SchemaColumn[];
+};
 
 /**
  * Why an answer came back empty, because a screen that has to render anyway must
@@ -170,6 +189,7 @@ export type Overview = {
   problem?: Problem;
   tables: number;
   rowsTracked: number;
+  tablesWiderThanPrivate?: number;
   buckets: number;
   objects: number;
   objectBytes: number;

@@ -40,6 +40,7 @@ export function TableRows({
       <TableToolbar
         table={table.name}
         ownerColumn={table.ownerColumn}
+        access={table.access}
         columns={table.columns}
         filters={data.filters}
         onFilters={data.filterBy}
@@ -54,6 +55,7 @@ export function TableRows({
       />
       <TableGrid
         table={table.name}
+        access={table.access}
         columns={table.columns}
         rows={data.rows}
         primaryKey={primaryKey}

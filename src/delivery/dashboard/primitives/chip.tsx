@@ -9,20 +9,25 @@ export function MonoChip({ children }: { children: ReactNode }) {
   );
 }
 
+const TONES = {
+  muted: "bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]",
+  accent: "bg-[var(--color-accent-subtle)] text-[var(--color-accent-strong)]",
+  /** Not an error. Something the operator meant, and should still notice. */
+  warn: "bg-[var(--color-danger-subtle)] text-[var(--color-danger-strong)]",
+};
+
 export function StatusPill({
   children,
   tone = "muted",
 }: {
   children: ReactNode;
-  tone?: "muted" | "accent";
+  tone?: keyof typeof TONES;
 }) {
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-[var(--radius-sm)] px-2 py-0.5 text-[length:var(--text-xs)] font-medium leading-[var(--leading-chip)]",
-        tone === "accent"
-          ? "bg-[var(--color-accent-subtle)] text-[var(--color-accent-strong)]"
-          : "bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]",
+        TONES[tone],
       )}
     >
       {children}

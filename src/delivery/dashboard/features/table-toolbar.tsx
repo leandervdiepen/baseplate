@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SchemaColumn } from "../lib/api/index.ts";
+import type { SchemaColumn, TableAccess } from "../lib/api/index.ts";
 import {
   describeFilter,
   FILTER_LABELS,
@@ -15,6 +15,7 @@ import { Select } from "../primitives/select.tsx";
 export function TableToolbar({
   table,
   ownerColumn,
+  access,
   columns,
   filters,
   onFilters,
@@ -29,6 +30,7 @@ export function TableToolbar({
 }: {
   table: string;
   ownerColumn: string;
+  access: TableAccess;
   columns: SchemaColumn[];
   filters: FilterClause[];
   onFilters: (next: FilterClause[]) => void;
@@ -77,12 +79,12 @@ export function TableToolbar({
         )}
 
         <div className="ms-auto flex flex-wrap items-center gap-1">
-          {/* Status, not a switch. The stack applies this policy on every start
-              and a table cannot opt out of it. */}
+          {/* The mode is the part that varies; row security itself is never
+              off, and a table cannot opt out of it. */}
           <Button variant="ghost" onClick={onRls}>
-            <span aria-hidden="true">RLS on · {ownerColumn}</span>
+            <span aria-hidden="true">RLS · {access}</span>
             <span className="sr-only">
-              Row security on {table}: on, owner column {ownerColumn}. Open the details.
+              Row security on {table}: {access}, owner column {ownerColumn}. Open the details.
             </span>
           </Button>
           <Button variant="ghost" onClick={onApi}>

@@ -9,6 +9,8 @@ export type Overview = {
   problem?: Problem;
   tables: number;
   rowsTracked: number;
+  /** Tables anyone but the row's owner can read, which is the notable count. */
+  tablesWiderThanPrivate: number;
   buckets: number;
   objects: number;
   objectBytes: number;
@@ -21,6 +23,7 @@ const EMPTY: Overview = {
   live: false,
   tables: 0,
   rowsTracked: 0,
+  tablesWiderThanPrivate: 0,
   buckets: 0,
   objects: 0,
   objectBytes: 0,
@@ -58,6 +61,7 @@ export async function handleOverview(roots: OperatorRoots, res: ServerResponse):
       live: true,
       tables: tables.length,
       rowsTracked: tables.reduce((total, table) => total + table.columns.length, 0),
+      tablesWiderThanPrivate: tables.filter((table) => table.access !== "private").length,
       buckets: buckets.length,
       objects: buckets.reduce((total, bucket) => total + bucket.objects, 0),
       objectBytes: buckets.reduce((total, bucket) => total + bucket.bytes, 0),

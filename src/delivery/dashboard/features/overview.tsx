@@ -109,7 +109,7 @@ export function OverviewPage({
             !read
               ? unread
               : overview.tables > 0
-                ? `${count(overview.rowsTracked, "column")}, every table under row security`
+                ? `${count(overview.rowsTracked, "column")}, ${readableBeyondOwner(overview)}`
                 : "None yet. A table comes up already protected."
           }
           action={
@@ -188,6 +188,20 @@ export function OverviewPage({
 
 function count(value: number, noun: string): string {
   return `${String(value)} ${noun}${value === 1 ? "" : "s"}`;
+}
+
+/**
+ * Row security is never off, so saying so tells the operator nothing. What
+ * varies is how many tables anyone but a row's owner can read.
+ */
+function readableBeyondOwner(overview: { tablesWiderThanPrivate?: number }): string {
+  // A field an older studio server does not send is not a count of zero, but
+  // rendering "undefined tables" is worse than saying the unremarkable thing.
+  const wider = overview.tablesWiderThanPrivate ?? 0;
+  if (wider === 0) {
+    return "each private to the owner of the row";
+  }
+  return `${count(wider, "table")} readable beyond the owner`;
 }
 
 /** Recent time reads better as an interval; older reads better as a date. */

@@ -1,11 +1,12 @@
 import { shortId } from "../lib/format.ts";
-import type { SchemaColumn } from "../lib/api/index.ts";
+import type { SchemaColumn, TableAccess } from "../lib/api/index.ts";
 import { DataGrid, type SortState } from "../patterns/data-grid.tsx";
 import { Cell, Row as GridRow } from "../patterns/table.tsx";
 import { EmptyState } from "../patterns/empty-state.tsx";
 import { Button } from "../primitives/button.tsx";
 import { Checkbox } from "../primitives/checkbox.tsx";
 import { StatusPill } from "../primitives/chip.tsx";
+import { ACCESS_SUMMARY } from "./access-choice.tsx";
 import { EditableCell } from "./grid-cell.tsx";
 import type { Row } from "./use-table-rows.ts";
 
@@ -15,6 +16,7 @@ import type { Row } from "./use-table-rows.ts";
  */
 export function TableGrid({
   table,
+  access,
   columns,
   rows,
   primaryKey,
@@ -30,6 +32,7 @@ export function TableGrid({
   filtered,
 }: {
   table: string;
+  access: TableAccess;
   columns: SchemaColumn[];
   rows: Row[];
   primaryKey: string | null;
@@ -51,7 +54,7 @@ export function TableGrid({
         description={
           filtered
             ? "The database answered with nothing. Remove a filter to widen the question."
-            : `Insert the first row into public.${table}. Each row stays visible only to the caller who owns it.`
+            : `Insert the first row into public.${table}. ${ACCESS_SUMMARY[access]}`
         }
       />
     );

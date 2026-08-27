@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { changeSchema, type ColumnType } from "../lib/api/index.ts";
+import { changeSchema, type ColumnType, type TableAccess } from "../lib/api/index.ts";
+import { AccessChoice } from "./access-choice.tsx";
 import { ColumnTypeSelect } from "./column-type-select.tsx";
 import { StatusMessage } from "../patterns/status-message.tsx";
 import { Button } from "../primitives/button.tsx";
@@ -19,6 +20,7 @@ export function NewTableForm({
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
+  const [access, setAccess] = useState<TableAccess>("private");
   const [columns, setColumns] = useState<Draft[]>([{ ...EMPTY }]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +33,7 @@ export function NewTableForm({
       const result = await changeSchema({
         kind: "create-table",
         table: name.trim(),
+        access,
         columns: columns.filter((column) => column.name.trim().length > 0),
       });
       onDone(result.statement);
@@ -59,9 +62,9 @@ export function NewTableForm({
           <Title>New table</Title>
           <div className="mt-1">
             <Hint>
-              Every table gets an <code>id</code> and an{" "}
-              <code>owner_id</code>. The owner column is what row access
-              matches against, so a caller only ever sees their own rows.
+              Every table gets an <code>id</code> and an <code>owner_id</code>.
+              The owner is stamped from the caller&apos;s token on insert, and
+              is what decides who may write the row.
             </Hint>
           </div>
         </div>
@@ -73,6 +76,7 @@ export function NewTableForm({
             className="font-mono"
           />
         </Field>
+        <AccessChoice value={access} onChange={setAccess} disabled={busy} />
         <ColumnRows columns={columns} onChange={setColumns} />
         <StatusMessage message={error} tone="error" />
         <div className="flex items-center gap-2.5">

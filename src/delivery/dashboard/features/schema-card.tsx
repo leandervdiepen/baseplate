@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
+import { ACCESS_TONE } from "./access-choice.tsx";
 import { Card } from "../primitives/card.tsx";
 import { StatusPill } from "../primitives/chip.tsx";
-import type { SchemaColumn, SchemaSnapshot } from "../lib/api/types.ts";
+import type { SchemaColumn, SchemaSnapshot, TableAccess } from "../lib/api/types.ts";
 
 /**
  * One card, one border. The actions live in this card's footer rather than in a
@@ -10,10 +11,12 @@ import type { SchemaColumn, SchemaSnapshot } from "../lib/api/types.ts";
  */
 export function SchemaCard({
   name,
+  access,
   columns,
   footer,
 }: {
   name: string;
+  access: TableAccess;
   columns: SchemaColumn[];
   footer?: ReactNode;
 }) {
@@ -23,7 +26,7 @@ export function SchemaCard({
         <h2 className="min-w-0 grow truncate font-mono text-[length:var(--text-sm)] font-medium">
           public.{name}
         </h2>
-        <StatusPill tone="accent">rls</StatusPill>
+        <StatusPill tone={ACCESS_TONE[access]}>{access}</StatusPill>
       </header>
       <ul>
         {columns.map((column, index) => (

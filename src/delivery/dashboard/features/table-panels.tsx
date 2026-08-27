@@ -64,7 +64,13 @@ export function TablePanels({
   if (panel === "rls") {
     return (
       <Drawer title={`Row security on ${table.name}`} onClose={onClose}>
-        <RlsPanel table={table.name} ownerColumn={table.ownerColumn} callerSub={callerSub} />
+        <RlsPanel
+          table={table.name}
+          ownerColumn={table.ownerColumn}
+          access={table.access}
+          callerSub={callerSub}
+          onChanged={onSchemaChange}
+        />
       </Drawer>
     );
   }

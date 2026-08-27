@@ -26,6 +26,7 @@ export async function getSchema(): Promise<SchemaSnapshot> {
     tables: body.tables.map((table) => ({
       name: table.name,
       ownerColumn: table.ownerColumn,
+      access: table.access,
       columns: table.columns.map((column) => ({
         name: column.name,
         type: column.type,
