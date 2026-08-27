@@ -199,7 +199,7 @@ Baseplate is not trying to match a managed platform feature for feature. It exis
 | Who holds your data | You | Supabase | You |
 | Bill from this project | None | Per project | None |
 | Setup | Two commands | Sign up | Days |
-| Row-level security | On by default, cannot be turned off per table | Opt in per table | Whatever you write |
+| Row-level security | On by default, cannot be turned off, and private to one owner | Opt in per table, any policy you write | Whatever you write |
 | Realtime, edge functions, vector | No | Yes | Whatever you write |
 | Dashboard | Local, on 127.0.0.1 | Hosted | None |
 
@@ -209,6 +209,7 @@ If you need realtime subscriptions, edge functions, or a team dashboard, use Sup
 
 Worth knowing before you trust it with something:
 
+- **Every row belongs to exactly one caller.** There is no shared table, no public-read table, and no way to say "visible to my team" or "visible to anyone who can see the parent". If two users of your app have to see the same row, Baseplate cannot express that yet. Files have the one exception: `add-bucket --public` makes a bucket anyone signed in can read.
 - Hetzner provisioning has not been run live against a real domain yet.
 - One node. No replica and no failover, so a restore is minutes of downtime.
 - Auth is email and password only: no OAuth or social login, no magic links, no MFA.

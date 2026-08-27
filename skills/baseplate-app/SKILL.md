@@ -78,6 +78,11 @@ NEVER filter by user or owner in the client.
 NEVER send `owner_id`.
 The database stamps it and row-level security decides what a caller sees.
 
+Every row belongs to exactly one caller, and that is the whole model.
+There is no shared table, no public-read table, and no way to express "my team can see this" or "visible because the parent is".
+If a feature needs two users to see one row, say so rather than working around it: a second `owner_id`, a duplicated row, or client-side filtering are all wrong, and the last one does not work because the policy is in Postgres.
+Files are the one exception: an operator can make a bucket public for reading with `storage add-bucket --public`.
+
 ## Types
 
 ```bash
