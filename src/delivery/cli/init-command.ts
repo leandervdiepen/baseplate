@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DomainError } from "#domain";
 import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 import { composeProjectName } from "../project-name.ts";
+import { makeSecretDir, writeSecretFile } from "../operator-http/env-file.ts";
 import { TEMPLATE } from "../operator-http/write-env.ts";
 import { secretValue } from "../operator-http/write-env.ts";
 
@@ -72,7 +73,7 @@ export function initProject(project: string, ports: PortChoice = {}): string {
     );
   }
   assertNoOrphanedData(project);
-  mkdirSync(resolve(project, STATE_DIR), { recursive: true });
+  makeSecretDir(resolve(project, STATE_DIR));
   const httpPort = ports.http ?? 8080;
   const postgresPort = ports.postgres ?? 5432;
   const dashboardPort = ports.dashboard ?? 8788;
@@ -92,7 +93,7 @@ export function initProject(project: string, ports: PortChoice = {}): string {
       `AUTH_SERVICE_PASSWORD=${secretValue()}`,
     ].join("\n"),
   );
-  writeFileSync(configPath, config, { encoding: "utf8", mode: 0o600 });
+  writeSecretFile(configPath, config);
   writeFileSync(
     resolve(project, STATE_DIR, ".gitignore"),
     "*\n",

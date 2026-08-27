@@ -1,10 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { initProject, portValue } from "../../../src/delivery/cli/init-command.ts";
 import { parseEnvMap } from "../../../src/delivery/operator-http/env-file.ts";
 import { stackEnvText } from "../../../src/delivery/operator-http/stack-env.ts";
+import { writeLocalFirstRun } from "../../../src/delivery/operator-http/write-env.ts";
 import { composeProjectName } from "../../../src/delivery/project-name.ts";
 import { dashboardPortFor, OPERATOR_HTTP_PORT } from "../../../src/delivery/operator-setup.ts";
 
@@ -48,6 +49,49 @@ test("init keeps state out of the operator's git history", () => {
   initProject(dir);
 
   expect(existsSync(join(dir, ".baseplate/.gitignore"))).toBe(true);
+});
+
+/** The file mode is all that guards the secrets, so it is asserted. */
+function mode(path: string): string {
+  return (statSync(path).mode & 0o777).toString(8);
+}
+
+test("the config and the state directory are readable by nobody else", () => {
+  const dir = project();
+
+  initProject(dir);
+
+  expect(mode(join(dir, "baseplate.env"))).toBe("600");
+  expect(mode(join(dir, ".baseplate"))).toBe("700");
+});
+
+test("the studio's first run does not loosen a config init already wrote", () => {
+  const dir = project();
+  initProject(dir);
+
+  writeLocalFirstRun(dir);
+
+  expect(mode(join(dir, "baseplate.env"))).toBe("600");
+});
+
+test("a config left readable by an earlier version is tightened on the next write", () => {
+  const dir = project();
+  initProject(dir);
+  chmodSync(join(dir, "baseplate.env"), 0o644);
+
+  writeLocalFirstRun(dir);
+
+  expect(mode(join(dir, "baseplate.env"))).toBe("600");
+});
+
+test("the studio can create a config from nothing, and it is still 0600", () => {
+  const dir = project();
+
+  writeLocalFirstRun(dir);
+
+  expect(mode(join(dir, "baseplate.env"))).toBe("600");
+  expect(parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8")).JWT_SECRET?.length)
+    .toBeGreaterThan(30);
 });
 
 test("init refuses to overwrite a project that is already here", () => {

@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DomainError } from "#domain";
-import { parseEnvMap, upsertEnv } from "./env-file.ts";
+import { parseEnvMap, upsertEnv, writeSecretFile } from "./env-file.ts";
 import { CONFIG_FILE } from "../paths.ts";
 
 /** What `baseplate init` writes. Every secret in it is generated per project. */
@@ -106,7 +106,7 @@ export function writeLocalFirstRun(root: string): void {
     BASEPLATE_HOSTNAME: current.BASEPLATE_HOSTNAME || "localhost",
     SITE_ADDRESS: current.SITE_ADDRESS || ":8080",
   });
-  writeFileSync(envPath, next, "utf8");
+  writeSecretFile(envPath, next);
 }
 
 export function ensureOperatorSecrets(root: string): void {
@@ -131,7 +131,7 @@ export function ensureOperatorSecrets(root: string): void {
   if (Object.keys(updates).length === 0) {
     return;
   }
-  writeFileSync(envPath, upsertEnv(existing, updates), "utf8");
+  writeSecretFile(envPath, upsertEnv(existing, updates));
 }
 
 export function writeOperatorEnv(
@@ -146,5 +146,5 @@ export function writeOperatorEnv(
     );
   }
   const next = upsertEnv(readFileSync(envPath, "utf8"), updates);
-  writeFileSync(envPath, next, "utf8");
+  writeSecretFile(envPath, next);
 }

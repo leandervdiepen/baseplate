@@ -1,3 +1,23 @@
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+
+export const SECRET_FILE_MODE = 0o600;
+export const SECRET_DIR_MODE = 0o700;
+
+/**
+ * `writeFileSync`'s `mode` applies only when it creates a file, so a rewrite
+ * left whatever the umask said. Setting it again also repairs an old config.
+ */
+export function writeSecretFile(path: string, text: string): void {
+  writeFileSync(path, text, { encoding: "utf8", mode: SECRET_FILE_MODE });
+  chmodSync(path, SECRET_FILE_MODE);
+}
+
+/** Holds the stack env and Terraform state, so nobody else's business. */
+export function makeSecretDir(path: string): void {
+  mkdirSync(path, { recursive: true, mode: SECRET_DIR_MODE });
+  chmodSync(path, SECRET_DIR_MODE);
+}
+
 export function upsertEnv(text: string, updates: Record<string, string>): string {
   const pending = new Map(Object.entries(updates));
   const lines = text.split("\n").map((line) => {

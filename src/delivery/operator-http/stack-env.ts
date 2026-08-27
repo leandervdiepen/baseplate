@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { parseEnvMap } from "./env-file.ts";
+import { makeSecretDir, parseEnvMap, writeSecretFile } from "./env-file.ts";
 import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 
 /**
@@ -64,7 +64,7 @@ export function stackEnvText(operatorEnv: Record<string, string>): string {
 export function writeStackEnv(root: string): string {
   const target = resolve(root, STATE_DIR, "stack.env");
   const operatorEnv = parseEnvMap(readFileSync(resolve(root, CONFIG_FILE), "utf8"));
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, stackEnvText(operatorEnv), { encoding: "utf8", mode: 0o600 });
+  makeSecretDir(dirname(target));
+  writeSecretFile(target, stackEnvText(operatorEnv));
   return target;
 }
