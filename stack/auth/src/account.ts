@@ -12,14 +12,6 @@ import { createOpaqueToken, hashToken } from "./token.ts";
 const RECOVERY_TTL_SECONDS = 60 * 60;
 const VERIFY_TTL_SECONDS = 24 * 60 * 60;
 
-type Body = {
-  email?: unknown;
-  token?: unknown;
-  password?: unknown;
-  currentPassword?: unknown;
-  newPassword?: unknown;
-};
-
 /**
  * Always 200. Saying whether an address has an account would turn the
  * forgot-password form into a list of everybody who uses the app.
@@ -29,7 +21,10 @@ export async function recover(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as Body;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : undefined;
   if (sendThrottled(config, req, res, email)) {
     return;
@@ -52,7 +47,10 @@ export async function recoverConfirm(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as Body;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   if (throttled(config.limiter, res, [[RATE_POLICIES.credentialsPerIp, clientIp(req)]])) {
     return;
   }
@@ -91,7 +89,10 @@ export async function changePassword(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as Body;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   if (throttled(config.limiter, res, [[RATE_POLICIES.credentialsPerIp, clientIp(req)]])) {
     return;
   }
@@ -124,7 +125,10 @@ export async function verifyRequest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as Body;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : undefined;
   if (sendThrottled(config, req, res, email)) {
     return;
@@ -142,7 +146,10 @@ export async function verifyConfirm(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as Body;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   if (throttled(config.limiter, res, [[RATE_POLICIES.credentialsPerIp, clientIp(req)]])) {
     return;
   }

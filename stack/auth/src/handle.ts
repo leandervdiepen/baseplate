@@ -24,8 +24,6 @@ export type AuthConfig = TokenConfig & {
   requireEmailConfirm: boolean;
 };
 
-type JsonBody = { refreshToken?: unknown };
-
 type Route = (c: AuthConfig, req: IncomingMessage, res: ServerResponse) => Promise<void>;
 
 /** Eleven routes read better as a table than as a ladder of ifs. */
@@ -142,7 +140,10 @@ async function refresh(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as JsonBody;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   const presented = typeof body.refreshToken === "string" ? body.refreshToken : undefined;
   const stored = presented
     ? await config.db.findLiveRefreshToken(hashToken(presented))
@@ -164,7 +165,10 @@ async function logout(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  const body = (await readJsonBody(req)) as JsonBody;
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return;
+  }
   if (typeof body.refreshToken === "string") {
     const stored = await config.db.findLiveRefreshToken(hashToken(body.refreshToken));
     if (stored) {

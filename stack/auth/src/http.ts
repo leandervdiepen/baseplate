@@ -10,16 +10,74 @@ export function sendJson(res: ServerResponse, status: number, body: unknown): vo
   res.end(JSON.stringify(body));
 }
 
-export async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+/**
+ * The largest body any auth route has a use for. Generous: an email and a
+ * password are a few hundred bytes. Enforced while reading, because the body
+ * arrives before the rate limiter is asked anything.
+ */
+export const MAX_BODY_BYTES = 16 * 1024;
+
+export type JsonObject = Record<string, unknown>;
+
+/** The body, or `undefined` when this has already answered the request. */
+export async function readJsonBody(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<JsonObject | undefined> {
+  const declared = Number(req.headers["content-length"] ?? "0");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    tooLarge(req, res);
+    return undefined;
+  }
   const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  let size = 0;
+  try {
+    for await (const chunk of req) {
+      const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      size += buffer.length;
+      if (size > MAX_BODY_BYTES) {
+        tooLarge(req, res);
+        return undefined;
+      }
+      chunks.push(buffer);
+    }
+  } catch {
+    sendJson(res, 400, {
+      code: "auth.body_unreadable",
+      message: "The request body did not arrive in one piece.",
+    });
+    return undefined;
   }
   const raw = Buffer.concat(chunks).toString("utf8");
   if (!raw) {
     return {};
   }
-  return JSON.parse(raw) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    sendJson(res, 400, { code: "auth.invalid_json", message: "Body must be JSON." });
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    sendJson(res, 400, { code: "auth.invalid_json", message: "Body must be a JSON object." });
+    return undefined;
+  }
+  return parsed as JsonObject;
+}
+
+/** Hung up after the response has left, or the caller gets a reset not a reason. */
+function tooLarge(req: IncomingMessage, res: ServerResponse): void {
+  res.writeHead(413, { "content-type": "application/json", connection: "close" });
+  res.end(
+    JSON.stringify({
+      code: "auth.body_too_large",
+      message: `A request body here may not be larger than ${String(MAX_BODY_BYTES)} bytes.`,
+    }),
+    () => {
+      req.destroy();
+    },
+  );
 }
 
 /**
@@ -47,12 +105,8 @@ export async function authenticate(
 }
 
 /**
- * The body is read before the limiter is asked, so a rejected caller still had
- * its request drained, and the email is normalised first so the per-email
- * bucket cannot be dodged by changing the case.
- *
- * Answers the request itself on every rejection and returns undefined; the
- * caller only ever sees a pair it can act on.
+ * The body comes first because one bucket is keyed on the email in it,
+ * normalised so case cannot dodge it. Answers every rejection itself.
  */
 export async function readCredentials(
   config: AuthConfig,
@@ -60,7 +114,10 @@ export async function readCredentials(
   res: ServerResponse,
   options: { requireStrength: boolean; limitPerEmail: boolean },
 ): Promise<{ email: string; password: string } | undefined> {
-  const body = (await readJsonBody(req)) as { email?: unknown; password?: unknown };
+  const body = await readJsonBody(req, res);
+  if (!body) {
+    return undefined;
+  }
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : undefined;
   const perIp = [RATE_POLICIES.credentialsPerIp, clientIp(req)] as const;
   const checks =
