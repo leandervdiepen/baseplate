@@ -46,7 +46,7 @@ Two Baseplate projects on one machine must not collide.
 
 ### The substrate
 
-One command turns an empty directory into a working HTTP API backed by Postgres, where each caller sees only their own rows.
+One command turns an empty directory into a working HTTP API backed by Postgres, where a row is written only by whoever owns it and each table says who may read it.
 
 ```
 npx @diepen/baseplate init

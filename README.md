@@ -65,7 +65,7 @@ you press.
 | --- | --- |
 | **Postgres** | Your database. Reachable on localhost for tools like `psql` and drizzle-kit. |
 | **REST API** | PostgREST over your tables, behind Caddy. Filters, ordering, pagination. |
-| **Row access** | Every table is protected before it takes its first row. A caller sees rows whose `owner_id` matches the `sub` in their token. |
+| **Row access** | Every table is protected before it takes its first row. A row is written only by whoever owns it; reads are per-table - the owner's rows, anyone signed in, or anyone at all. |
 | **Auth** | Signup, login, refresh, logout, password reset, and email verification under `/auth/*`. Sessions persist and refresh themselves; credential endpoints are rate limited. |
 | **Email** | A local inbox on `127.0.0.1:8025` catches recovery and confirmation mail in development; `SMTP_*` points production at a real server. |
 | **Storage** | Buckets and objects, guarded by the same rule as rows. Signed URLs for `<img src>`. |
@@ -109,9 +109,26 @@ A user signs up over plain HTTP and gets a JWT whose `sub` is their user id. Eve
 
 A table in `public` that is not in Baseplate's registry is locked down rather than left open: row security on, grants revoked, reachable by nobody. The stack re-applies all of this on every start, so a restart can never leave a table exposed.
 
+### Who may read a table
+
+Writes are the owner's in every mode. Reads are your choice:
+
+| | Reads | Use it for |
+| --- | --- | --- |
+| `private` (default) | The caller's own rows | Notes, drafts, anything one person's |
+| `shared` | Every row, to anyone signed in | Comments, a team's boards, a feed |
+| `public` | Every row, no token at all | A published post, a price list, tags |
+
 ```bash
-npx baseplate tables    # what you have
-npx baseplate schema    # every change your database has taken
+npx baseplate schema add-table posts --column title:text --access shared
+npx baseplate schema set-access posts public
+```
+
+Set it when you make the table or change it later; either way it is one transaction and it applies at once.
+
+```bash
+npx baseplate tables            # what you have, and who may read each one
+npx baseplate schema history    # every change your database has taken
 ```
 
 ## If you already keep a schema file
@@ -124,7 +141,7 @@ If you already run drizzle-kit, you do not have to give it up. This is an ordina
 npx baseplate schema adopt-table boards
 ```
 
-That records the table, writes its policy, adds the owner trigger, and grants the app role, in one transaction. Give every table an `owner_id uuid not null` column and adopt it after each push.
+That records the table, writes its policy, adds the owner trigger, and grants the app role, in one transaction. `--access` works here too. Give every table an `owner_id uuid not null` column and adopt it after each push.
 
 [`examples/kanban`](examples/kanban) is a working board: `schema add-table` for the tables, Baseplate for login, row access, and card attachments. It used to keep a drizzle schema file and adopt it, which is why `adopt-table` exists and is tested; it does not need one.
 
@@ -199,7 +216,7 @@ Baseplate is not trying to match a managed platform feature for feature. It exis
 | Who holds your data | You | Supabase | You |
 | Bill from this project | None | Per project | None |
 | Setup | Two commands | Sign up | Days |
-| Row-level security | On by default, cannot be turned off, and private to one owner | Opt in per table, any policy you write | Whatever you write |
+| Row-level security | On by default, cannot be turned off, three read modes per table | Opt in per table, any policy you write | Whatever you write |
 | Realtime, edge functions, vector | No | Yes | Whatever you write |
 | Dashboard | Local, on 127.0.0.1 | Hosted | None |
 
@@ -209,7 +226,7 @@ If you need realtime subscriptions, edge functions, or a team dashboard, use Sup
 
 Worth knowing before you trust it with something:
 
-- **Every row belongs to exactly one caller.** There is no shared table, no public-read table, and no way to say "visible to my team" or "visible to anyone who can see the parent". If two users of your app have to see the same row, Baseplate cannot express that yet. Files have the one exception: `add-bucket --public` makes a bucket anyone signed in can read.
+- **A row is written by exactly one caller.** `--access shared` and `--access public` widen who may read a table, but never who may write: there is no way to say "my team may edit this" or "whoever can see the parent may edit this". Ownership is one user, always.
 - Hetzner provisioning has not been run live against a real domain yet.
 - One node. No replica and no failover, so a restore is minutes of downtime.
 - Auth is email and password only: no OAuth or social login, no magic links, no MFA.

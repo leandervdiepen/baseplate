@@ -78,10 +78,17 @@ NEVER filter by user or owner in the client.
 NEVER send `owner_id`.
 The database stamps it and row-level security decides what a caller sees.
 
-Every row belongs to exactly one caller, and that is the whole model.
-There is no shared table, no public-read table, and no way to express "my team can see this" or "visible because the parent is".
-If a feature needs two users to see one row, say so rather than working around it: a second `owner_id`, a duplicated row, or client-side filtering are all wrong, and the last one does not work because the policy is in Postgres.
-Files are the one exception: an operator can make a bucket public for reading with `storage add-bucket --public`.
+Every row is written by exactly one caller.
+Who may *read* a table is the operator's choice of three modes, set with `schema add-table --access` or changed with `schema set-access`:
+
+- `private` (default) - the caller's own rows only.
+- `shared` - every row, to anyone signed in.
+- `public` - every row, with no token at all.
+
+So a feature where two users see one row is a `shared` table, not a workaround.
+A feature where two users *edit* one row cannot be expressed: ownership is one user, always.
+Say so rather than reaching for a second `owner_id`, a duplicated row, or client-side filtering - the last one does not work anyway, because the policy is in Postgres.
+Files work the same way: `storage add-bucket --public` makes a bucket anyone signed in can read.
 
 ## Types
 

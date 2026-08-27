@@ -144,12 +144,16 @@ The migrate service re-applies row access from that registry on every start, so 
 
 This is the load-bearing decision: an operator runs a system, they do not maintain a fork.
 
-Every table Baseplate creates or adopts is private to one caller: the policy is
+Every table Baseplate creates or adopts is written by one caller: the policy is
 `owner_id = baseplate.caller_id()`, and a trigger stamps the owner on insert so a
-client cannot claim a row is somebody else's. There is no shared table, no
-public-read table, and no relation-based access. An app whose data is shared
-between users needs something Baseplate does not have yet; storage has the same
-rule, except that a bucket may be marked public for reading.
+client cannot claim a row is somebody else's.
+Reads are one of three modes, held in `baseplate.tables.access` and applied as a
+second, `SELECT`-only policy beside the owner policy: `private` adds nothing,
+`shared` matches any caller with a token, `public` matches everyone and grants
+`SELECT` to the tokenless role.
+Permissive policies are OR'd, so a mode can only ever widen reads - never writes.
+There is no relation-based access and no shared *ownership*: a row is one user's,
+whoever else may read it.
 
 PostgREST is the HTTP API for tables.
 `stack/auth/` is the HTTP API for signup, login, refresh, and logout.

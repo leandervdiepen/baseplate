@@ -16,11 +16,14 @@ There is no bounty. This is one person's project.
 
 ## What counts
 
-The load-bearing claim is that **a caller only ever reaches their own rows and
-their own objects**, and that the database, not any TypeScript, is what enforces
-it. Anything that breaks that is the most serious kind of bug here:
+The load-bearing claim is that **a caller only ever writes their own rows and
+their own objects, and only ever reads what the table's declared access mode
+allows**, and that the database, not any TypeScript, is what enforces it.
+Anything that breaks that is the most serious kind of bug here:
 
-- Reading, writing, or deleting another caller's rows or objects.
+- Writing or deleting another caller's rows or objects.
+- Reading rows a table's access mode does not permit: another caller's rows from
+  a `private` table, or any row of a `private` or `shared` table without a token.
 - Reaching `auth.users`, `auth.refresh_tokens`, or the `baseplate` schema through
   the public API.
 - Forging a token the stack accepts, or making an expired or revoked one work.
