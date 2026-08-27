@@ -137,6 +137,16 @@ A feature may import a sibling file of its own feature; it never reaches into an
 
 Anything that fetches or mutates lives outside the component tree.
 
+### The shell is a frame
+
+The studio is a fixed-height frame, not a long page.
+The sidebar and the top bar are chrome and do not move; the content region is the only thing that scrolls.
+The top bar carries the breadcrumb and which caller the studio is acting as, and neither may scroll out of view.
+
+Anything wider than the content region brings its own scroller, and that scroller is `relative`.
+Without it, an absolutely positioned child - `sr-only` text in a table cell is the one that bites - is positioned against the page and drags the page's scrollable width off screen with it.
+No page of the studio scrolls sideways.
+
 ### Tokens
 
 Colours, spacing, radii, and the type scale live in `styles/tokens.css` and nowhere else.

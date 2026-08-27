@@ -35,8 +35,13 @@ Public surface: `src/application/index.ts`.
 
 The dashboard does not grow a second set of rules.
 MCP follows that same rule.
-Save-config, provision, teardown, mint-token, and (later) logs are use cases.
-The CLI, studio, and MCP call them.
+The CLI, studio, and MCP call the same ten: `ChangeSchema`, `InspectSchema`,
+`ListProjects`, `ManageBackups`, `ManageStorage`, `ManageUsers`, `MintToken`,
+`ProvisionStack`, `ReadLogs`, `TeardownStack`.
+
+Writing `baseplate.env` is not one of them, deliberately. It is the operator's
+own file in the project root, the studio is the only surface that edits it, and
+the allowlist of what may be written is `CONFIG_KEYS` in operator HTTP.
 
 ### Infrastructure
 
@@ -96,6 +101,7 @@ They do not read operator keys from `process.env`.
 | Typed app client | `sdk/src/` (published as the `/client` subpath) |
 | A helper with no business meaning | `src/shared/` |
 | Compose, Caddyfile, platform schema, auth, migrate | `stack/` |
+| A dependency for one stack service | its own `package.json` and lockfile in `stack/<service>/`, installed by its Dockerfile with `npm ci` |
 | Terraform for the server | `infra/` |
 | Proof that row access holds | `tests/acceptance/` |
 | Use case and domain tests | `tests/unit/` |
@@ -138,6 +144,13 @@ The migrate service re-applies row access from that registry on every start, so 
 
 This is the load-bearing decision: an operator runs a system, they do not maintain a fork.
 
+Every table Baseplate creates or adopts is private to one caller: the policy is
+`owner_id = baseplate.caller_id()`, and a trigger stamps the owner on insert so a
+client cannot claim a row is somebody else's. There is no shared table, no
+public-read table, and no relation-based access. An app whose data is shared
+between users needs something Baseplate does not have yet; storage has the same
+rule, except that a bucket may be marked public for reading.
+
 PostgREST is the HTTP API for tables.
 `stack/auth/` is the HTTP API for signup, login, refresh, and logout.
 Callers hit those directly.
@@ -158,6 +171,7 @@ Nothing about schema editing is exposed publicly.
 | `ssh/` | Remote `StackRuntime` |
 | `jwt/` | `TokenSigner` |
 | `postgres/` | `SchemaAdmin`, `StorageAdmin`, `BackupAdmin`, `UserAdmin`, against the operator's database |
+| `postgrest/` | `ApiSchemaCache`. The API serves writes from a cache it rebuilds after the schema transaction commits, so a change is not finished until the API agrees |
 | `fs/` | `StackStateStore`, `ProjectDirectory` |
 | `clock/` | `Clock` |
 | `crypto/` | Password hashing for the user adapters. Not a port |
