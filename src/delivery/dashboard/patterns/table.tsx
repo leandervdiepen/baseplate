@@ -23,7 +23,10 @@ export function TableFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg)] shadow-[var(--shadow-raised)]">
+    /* `relative` so the scroller is the containing block for the sr-only spans
+       in the cells. Without it they are positioned against the page, and a
+       table wider than the viewport made the whole page scroll sideways. */
+    <div className="relative overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg)] shadow-[var(--shadow-raised)]">
       <table className={cn("w-full border-collapse", fixed && "table-fixed")}>
         <caption className="sr-only">{caption}</caption>
         <thead>

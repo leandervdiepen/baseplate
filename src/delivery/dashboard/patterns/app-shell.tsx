@@ -29,7 +29,11 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
+    /* A frame, not a long page: the sidebar and the top bar are chrome, and the
+       content region is the only thing that scrolls. The breadcrumb and the
+       caller pill used to scroll away, which on a studio whose whole subject is
+       "whose rows am I looking at" is the wrong thing to lose. */
+    <div className="flex h-dvh overflow-hidden">
       <a className="skip-link" href="#main">
         Skip to content
       </a>

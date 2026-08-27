@@ -47,7 +47,7 @@ export function Sidebar({
   projectControl?: ReactNode;
 }) {
   return (
-    <div className="sticky top-0 flex h-screen w-[var(--size-rail)] shrink-0 flex-col justify-between overflow-y-auto border-e border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2 pb-[var(--space-md)] pt-5 lg:w-[var(--size-sidebar)] lg:px-3">
+    <div className="flex h-full w-[var(--size-rail)] shrink-0 flex-col justify-between overflow-y-auto border-e border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2 pb-[var(--space-md)] pt-5 lg:w-[var(--size-sidebar)] lg:px-3">
       <div className="flex flex-col gap-[var(--space-lg)]">
         <div className="flex items-center gap-2.5 lg:px-[var(--space-sm)]">
           <LogoMark />
