@@ -4,11 +4,9 @@ const NAME_RE = /^[a-z][a-z0-9-]*$/;
 const MAX_KEY_LENGTH = 1024;
 
 /**
- * A place for objects, made by the operator like a table is.
- *
- * `private` means only the caller who put an object there can see it.
- * `public` means anyone holding a token may read it, and still only its owner
- * may write over it or remove it.
+ * A place for objects, made by the operator like a table is. `private` shows a
+ * caller only their own; `public` lets anyone holding a token read, and still
+ * only the owner write or remove.
  */
 export type BucketVisibility = "private" | "public";
 

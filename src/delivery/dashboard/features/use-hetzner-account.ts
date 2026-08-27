@@ -2,13 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { getHetznerAccount, type CloudAccountSnapshot } from "../lib/api/index.ts";
 
 /**
- * What the operator's own Hetzner account holds, read by operator HTTP with the
- * tokens already saved on this machine. It turns three names that have to be
- * typed exactly into three lists to pick from, so a typo shows up here rather
- * than half way through a provision.
- *
- * Nothing is asked for until a token is stored: without one the answer is only
- * ever a refusal.
+ * What the operator's Hetzner account holds, read with the tokens already on
+ * this machine. Three names that must be typed exactly become three lists, so a
+ * typo shows up here rather than half way through a provision.
  */
 export function useHetznerAccount(secrets: { hcloud: boolean; dnsToken: boolean }) {
   const [account, setAccount] = useState<CloudAccountSnapshot | null>(null);

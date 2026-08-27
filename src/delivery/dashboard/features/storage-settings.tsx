@@ -9,12 +9,9 @@ import { SecretField } from "../primitives/secret-field.tsx";
 const BUNDLED_ENDPOINT = "storage-blobs";
 
 /**
- * Where object bytes are kept, and how large one may be.
- *
- * Blank means the store that runs beside the stack, which is never published.
- * Naming an endpoint moves the bytes off this machine without changing a line
- * of your app: the rules that decide who may read them are in Postgres either
- * way.
+ * Where object bytes are kept. Blank is the store beside the stack, never
+ * published; naming an endpoint moves the bytes without changing a line of the
+ * app, because who may read them is decided in Postgres either way.
  */
 export function StorageSettings({
   draft,

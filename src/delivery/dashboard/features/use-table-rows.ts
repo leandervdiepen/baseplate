@@ -8,10 +8,9 @@ export type Row = Record<string, unknown>;
 const PAGE = 100;
 
 /**
- * The rows of one table as a caller can see them, and the four things that can
- * be done to them. Every question here is one the database answers: the filters,
- * the sort, and the page are all part of the request, so nothing is narrowed
- * after the fact and the count means what it says.
+ * The rows of one table as a caller can see them. The filters, the sort and the
+ * page are all part of the request, so nothing is narrowed afterwards and the
+ * count means what it says.
  */
 export function useTableRows({
   token,

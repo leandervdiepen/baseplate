@@ -9,10 +9,9 @@ export type KnownProject = {
 };
 
 /**
- * The projects on this machine. Baseplate has no account and no server to ask,
- * so the list is whatever this operator has opened, kept beside their own
- * config rather than inside any one project: a project cannot be the authority
- * on which other projects exist.
+ * The projects on this machine: whatever this operator has opened, kept beside
+ * their own config, because a project cannot be the authority on which other
+ * projects exist.
  */
 export type ProjectDirectory = {
   list(): Promise<readonly KnownProject[]>;

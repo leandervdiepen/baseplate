@@ -66,17 +66,10 @@ export { closeTunnels, RemoteComposeRuntime, tunnelArgs } from "./ssh/index.ts";
 export type OperatorTarget = "local" | "hetzner";
 
 /**
- * Where the operator's database actually is.
- *
- * This used to be `127.0.0.1` whatever the target, which meant that pointing a
- * project at Hetzner and then applying a schema change, listing tables, or
- * reading history could reach a local stack that happened to be on the same
- * port. The operator would be told they were managing their server while they
- * were editing their laptop.
- *
- * On a remote target the stack publishes Postgres on the server's loopback and
- * the firewall opens 22, 80 and 443, so the only way in is the SSH access
- * provisioning already set up.
+ * Where the operator's database actually is, so a schema change against a
+ * Hetzner project cannot land on a local stack holding the same port. On a
+ * server Postgres is published on its own loopback and the firewall opens 22,
+ * 80 and 443, so the only way in is the SSH access provisioning set up.
  */
 async function databaseEndpoint(
   config: OperatorConfig,
@@ -153,10 +146,8 @@ export type OperatorConfig = {
 };
 
 /**
- * What an operator can do, and nothing else.
- *
- * Use cases rather than the ports behind them: a surface that held `SchemaAdmin`
- * or `UserAdmin` would be free to invent its own rules for what an answer means,
+ * What an operator can do, as use cases rather than the ports behind them: a
+ * surface holding `SchemaAdmin` invents its own rules for what an answer means,
  * and the CLI, the studio and MCP each did.
  */
 export type Operator = {

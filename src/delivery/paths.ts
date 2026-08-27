@@ -1,14 +1,9 @@
 import { resolve } from "node:path";
 
 /**
- * Two roots, deliberately separate.
- *
- * The package root is where Baseplate itself lives: compose files, platform
- * migrations, the dashboard. It is read-only as far as an operator is concerned
- * and it moves when they upgrade the version.
- *
- * The project root is the operator's own directory: their config, their
- * secrets, their state. Nothing Baseplate ships is written there.
+ * Two roots. The package root is Baseplate itself - compose files, platform
+ * migrations, the studio - read-only to an operator and replaced by an upgrade.
+ * The project root is theirs: config, secrets, state, and nothing Baseplate ships.
  */
 export function packageRootFrom(deliveryDirname: string): string {
   return resolve(deliveryDirname, "../../..");

@@ -11,12 +11,10 @@ export type StoredBackup = {
 };
 
 /**
- * Where sealed backups go.
- *
- * An S3 bucket the operator names is the real answer, because a backup on the
- * same disk as the database is not a backup. A local directory is the default
- * so that a first run still produces one, and the studio says plainly that it
- * is not off the machine.
+ * Where sealed backups go. A bucket the operator names is the real answer: a
+ * backup on the same disk as the database is not one. A local directory is the
+ * default so a first run produces something, and the studio says it is not off
+ * the machine.
  */
 export type Destination = {
   readonly label: string;

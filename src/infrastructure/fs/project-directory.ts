@@ -5,10 +5,9 @@ import type { KnownProject, ProjectDirectory } from "#application";
 type Entry = { root: string; lastOpenedAt: string };
 
 /**
- * A list of project directories, kept in the operator's home rather than in any
- * project, because a project cannot be the authority on which other projects
- * exist. It holds paths and nothing else: no secrets, no config, no state that
- * would matter if it were deleted. Losing it costs an operator one re-open.
+ * Project directories, in the operator's home because a project cannot be the
+ * authority on which others exist. Paths and nothing else, so losing it costs
+ * one re-open.
  */
 export class FileProjectDirectory implements ProjectDirectory {
   constructor(

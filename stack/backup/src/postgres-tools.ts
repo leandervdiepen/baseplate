@@ -17,12 +17,9 @@ export function postgresTools(settings: PostgresSettings) {
 
   return {
     /**
-     * Custom format, so a restore can be selective and compressed.
-     *
-     * The request queue's schema is left out on purpose. A restore replaces
-     * everything in the dump, and the row asking for the restore lives in that
-     * queue: put it in and the restore erases the note it is answering, so
-     * whoever asked waits for a reply that can no longer be written.
+     * Custom format, so a restore can be selective and compressed. The request
+     * queue's schema is left out: the row asking for the restore lives there,
+     * and restoring over it erases the note being answered.
      */
     dump(target: string): Promise<void> {
       return run(

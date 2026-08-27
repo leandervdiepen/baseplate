@@ -5,12 +5,9 @@ import { NodeCanvas, type NodeLink } from "../patterns/node-canvas.tsx";
 import { SchemaCard } from "./schema-card.tsx";
 
 /**
- * Tables as cards, with a line drawn from each foreign key to what it points
- * at. A table sits one column right of whatever it references, so every line
- * runs left to right.
- *
- * The lines are decoration: `SchemaRelations` under the canvas is the readable
- * version, and it is not a duplicate so much as the accessible original.
+ * Tables as cards, each one column right of what it references, so every
+ * foreign-key line runs left to right. The lines are decoration:
+ * `SchemaRelations` under the canvas is the readable original.
  */
 export function SchemaGraph({
   tables,

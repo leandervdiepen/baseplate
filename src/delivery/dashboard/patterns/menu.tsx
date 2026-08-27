@@ -3,11 +3,9 @@ import { createPortal } from "react-dom";
 import { cn } from "../lib/cn.ts";
 
 /**
- * A button and the short list of choices it opens. It follows the menu button
- * contract rather than approximating it: the trigger says what it opens, arrow
- * keys walk the items, Escape closes without choosing, and focus comes back to
- * the trigger either way, so the keyboard never ends up somewhere with no way
- * out.
+ * A button and the choices it opens, following the menu button contract: the
+ * trigger says what it opens, arrows walk the items, Escape closes without
+ * choosing, and focus comes back either way.
  */
 export function Menu({
   label,

@@ -5,12 +5,9 @@ import { InfraError } from "#shared";
 import type { PostgresAdminConfig } from "./schema-admin.ts";
 
 /**
- * Buckets and object rows are the operator's, in the operator's database, so
- * the operator tool reads and writes them the same way it reads and writes
- * their tables: straight to Postgres over the loopback port.
- *
- * The bytes are not here. They are behind the storage service, and the sweeper
- * removes any blob whose row has gone.
+ * Buckets and object rows are in the operator's database, read the same way
+ * their tables are. The bytes are not here: they are behind the storage
+ * service, and the sweeper removes any blob whose row has gone.
  */
 export class PostgresStorageAdmin implements StorageAdmin {
   private readonly sql: postgres.Sql;

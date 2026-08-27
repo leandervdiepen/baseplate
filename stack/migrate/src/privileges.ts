@@ -1,15 +1,10 @@
 import type postgres from "postgres";
 
 /**
- * Who may reach which schema, re-applied on every start.
- *
- * These grants were only ever made inside migrations, which run once. A restore
- * brings back a database from before they existed, or one dumped without them,
- * and the services then fail with "permission denied for schema auth" while
- * every migration reports itself as already applied.
- *
- * So they are asserted here instead, the same way row access is: on every start,
- * from code, so a restore cannot leave the stack unable to sign anyone in.
+ * Who may reach which schema, asserted on every start rather than granted in a
+ * migration that runs once. A restore can bring back a database from before the
+ * grants existed, and the services then fail with "permission denied for schema
+ * auth" while every migration reports itself as applied.
  */
 export async function ensurePrivileges(sql: postgres.Sql): Promise<void> {
   const statements = [

@@ -4,13 +4,10 @@ import { Title } from "../primitives/heading.tsx";
 import { Button } from "../primitives/button.tsx";
 
 /**
- * A panel over the page, for work that belongs to what is already on screen:
- * inserting a row, editing a table, reading a policy. The page stays behind it
- * rather than being replaced, because none of those are somewhere else to go.
- *
- * It renders outside the app so the app itself can be made `inert` while it is
- * up. That is stronger than trapping Tab: it takes the page behind away from
- * the pointer and the screen reader too, not only from the keyboard.
+ * A panel over the page, for work that belongs to what is on screen. It renders
+ * outside the app so the app can be `inert` while it is up, which is stronger
+ * than trapping Tab: the page behind goes for the pointer and the screen reader
+ * too.
  */
 export function Drawer({
   title,

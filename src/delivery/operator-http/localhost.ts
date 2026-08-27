@@ -22,21 +22,11 @@ export function isLocalhostHost(host: string | undefined): boolean {
 }
 
 /**
- * Binding to 127.0.0.1 keeps the network out. It does not keep out a page the
- * operator is already looking at: a form post from any site reaches localhost,
- * and a simple one needs no permission first, so `{"destroy":true}` could
- * arrive from a tab nobody meant to open.
- *
- * Two things stop that here, and either would do alone:
- *
- * `Origin` and `Sec-Fetch-Site`, which a browser attaches itself and a page
- * cannot forge. A terminal sends neither, so the CLI and curl are unaffected.
- *
- * A body must be `application/json`, which is not one of the three content
- * types a cross-origin request may use without asking permission first. Asking
- * means a preflight, and this server answers no preflight at all.
- *
- * Returns the reason to refuse, or null to go ahead.
+ * Binding to 127.0.0.1 keeps the network out, not a page the operator has open:
+ * a simple form post reaches localhost with no preflight. Two checks stop it,
+ * either enough alone - headers a page cannot forge and a terminal never sends,
+ * and a JSON content type cross-origin cannot use without a preflight this
+ * server never answers. Returns the reason to refuse, or null.
  */
 export function crossSiteReason(req: IncomingMessage): string | null {
   const method = req.method ?? "GET";

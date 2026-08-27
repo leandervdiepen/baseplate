@@ -4,13 +4,10 @@ import { shortId } from "../lib/format.ts";
 import { StatusDot } from "../primitives/status-dot.tsx";
 
 /**
- * Who the studio is acting as, in the corner of every page. Rows are filtered
- * by the caller, so "why am I seeing this" has to be answerable without leaving
- * the page that raised the question.
- *
- * The subject and role come from the session when it has them and from the
- * token's own claims when it does not, since a minted token is sometimes all
- * there is.
+ * Who the studio is acting as, on every page: rows are filtered by the caller,
+ * so "why am I seeing this" has to be answerable without leaving the page that
+ * raised it. Read from the session, or from the token's claims when a minted
+ * token is all there is.
  */
 export function CallerPill() {
   const caller = useCaller();

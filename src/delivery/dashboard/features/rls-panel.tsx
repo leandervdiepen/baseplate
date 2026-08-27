@@ -3,11 +3,9 @@ import { IconLock } from "../primitives/icon.tsx";
 import { PolicyCard } from "./policy-card.tsx";
 
 /**
- * What is guarding this table, and who you are currently asking as.
- *
- * There is no switch here on purpose. The stack re-applies this policy on every
- * start, and a public table with no declared policy is locked down rather than
- * left open, so an off state does not exist to offer.
+ * What is guarding this table, and who you are asking as. No switch: the stack
+ * re-applies the policy on every start and locks down an undeclared table, so
+ * there is no off state to offer.
  */
 export function RlsPanel({
   table,

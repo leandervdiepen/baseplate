@@ -55,14 +55,9 @@ export function portValue(raw: string | undefined, flag: string): number | undef
 }
 
 /**
- * Creates the operator's project: a config file with freshly generated secrets
- * and a place to keep state. Nothing else, and nothing they have to maintain.
- *
- * Ports are the same well-known numbers in every project, because only one
- * stack runs at a time. Probing for a free one used to look considerate and was
- * not: two projects created before either started still picked the same port,
- * and the operator had no idea which project had which until something failed
- * to bind.
+ * A config file with freshly generated secrets, and a place to keep state.
+ * Ports are the same numbers in every project: only one stack runs at a time,
+ * and probing for a free one only moved the collision somewhere later.
  */
 export function initProject(project: string, ports: PortChoice = {}): string {
   const configPath = resolve(project, CONFIG_FILE);

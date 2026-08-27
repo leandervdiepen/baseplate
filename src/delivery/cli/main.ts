@@ -258,13 +258,9 @@ async function confirmRestore(project: string, assumeYes: boolean): Promise<bool
 }
 
 /**
- * The studio is a long-running server, so it replaces this process's job.
- *
- * It starts through `bin/baseplate-dashboard.js` rather than reaching for tsx
- * directly. That file is where Baseplate works out where tsx actually is, and
- * npm hoists dependencies: on a real install tsx sits in the consumer's
- * top-level node_modules, so a path under this package's own node_modules does
- * not exist and this command died with MODULE_NOT_FOUND. One place knows.
+ * Through `bin/baseplate-dashboard.js`, which is the one place that knows where
+ * tsx is: npm hoists it, so a path under this package's node_modules is wrong
+ * on a real install.
  */
 function runDashboard(project: string, port: number | undefined): Promise<void> {
   return new Promise((resolvePromise, reject) => {

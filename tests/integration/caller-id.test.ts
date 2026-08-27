@@ -4,14 +4,10 @@ import { expect, test } from "vitest";
 import postgres from "postgres";
 
 /**
- * `baseplate.caller_id()` reads a setting that services set per transaction.
- * When that transaction ends the setting does not go back to unset, it goes
- * back to the empty string, and the pooled connection is handed to whoever
- * asks next. So the case worth proving is the second query on a connection
- * that has already served a caller: it must answer "nobody", not raise.
- *
- * It used to raise, which broke the storage sweeper on every run and would
- * break any operator query sharing a pool with a caller's.
+ * A transaction-local setting reverts to the empty string, not to unset, and the
+ * pooled connection goes to whoever asks next. So the case worth proving is the
+ * second query on a connection that has already served a caller: it must answer
+ * "nobody" rather than raise.
  */
 const ROOT = resolve(import.meta.dirname, "../..");
 const CALLER = "11111111-1111-4111-8111-111111111111";

@@ -3,10 +3,8 @@ import { Section } from "../patterns/section.tsx";
 import { Hint } from "../primitives/input.tsx";
 
 /**
- * Who may call the API from a browser, and on which ports it answers.
- *
- * `*` is right while the only caller is a terminal. It stops being right the
- * moment an app has an origin of its own, and nothing else will tell you that.
+ * `*` is right while the only caller is a terminal, and wrong the moment an app
+ * has an origin of its own. Nothing else will tell you that.
  */
 export function ApiSettings({
   draft,

@@ -9,12 +9,9 @@ export type ProjectSummary = KnownProject & {
 };
 
 /**
- * Every project this operator has, and which of them is up.
- *
- * Docker is asked rather than trusted state: a stack that was stopped from a
- * terminal, or that died, must not still be shown as running. A project that
- * Docker knows about but the directory does not is added, since having started
- * it is proof enough that it exists.
+ * Every project this operator has, and which is up. Docker is asked rather than
+ * stored state, so a stack stopped from a terminal is not still shown running,
+ * and a project only Docker knows about is added: it started, so it exists.
  */
 export class ListProjects {
   constructor(

@@ -112,13 +112,10 @@ export class DockerComposeRuntime implements StackRuntime {
 }
 
 /**
- * One line per container, so a four-container stack answers four times. The
- * compose project name is what makes them one stack again.
- *
- * A stack with no project root still counts. It was started by an older version
- * or by hand, and it is holding the ports either way; dropping it here would
- * make the one-at-a-time rule blind to exactly the stacks it cannot explain.
- * Not knowing where it lives costs a worse error message, nothing more.
+ * One line per container; the compose project name is what makes them one
+ * stack again. A stack with no project root still counts: it is holding the
+ * ports either way, and not knowing where it came from costs only a worse
+ * error message.
  */
 export function parseRunningStacks(output: string): readonly RunningStack[] {
   const found = new Map<string, RunningStack>();
@@ -236,10 +233,8 @@ function capture(command: string, args: string[]): Promise<string> {
 }
 
 /**
- * Which stacks are up on this machine, asked of Docker rather than of any one
- * project's config. It takes no configuration because it needs none: the labels
- * a stack carries are the whole answer, which is what lets the studio list
- * projects it is not currently serving.
+ * Asked of Docker rather than of any project's config, so the studio can list
+ * projects it is not currently serving. The labels are the whole answer.
  */
 export async function runningStacks(): Promise<readonly RunningStack[]> {
   return parseRunningStacks(

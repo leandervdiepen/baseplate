@@ -43,16 +43,10 @@ export class HetznerCloudProvider implements CloudProvider {
   }
 
   /**
-   * Terraform writes state, a lock file, and a few hundred megabytes of
-   * providers next to the configuration it is given. That configuration ships
-   * with Baseplate, so running there put one mutable directory behind every
-   * project on the machine and inside a directory that an upgrade replaces:
-   * two projects would fight over one state file, and installing a new version
-   * could lose the record of a running server.
-   *
-   * So the configuration is copied into the project on every run and Terraform
-   * works there. The copy overwrites the `.tf` files, which is how an upgrade
-   * reaches an existing project, and leaves everything Terraform itself wrote.
+   * Terraform writes state and providers beside the configuration it is given,
+   * and that configuration ships with Baseplate: running there would put one
+   * state file behind every project and inside a directory an upgrade replaces.
+   * So it is copied into the project on every run and Terraform works there.
    */
   private prepareWorkDir(): void {
     syncTerraformDir(this.config.sourceDir, this.config.workDir);
@@ -100,10 +94,9 @@ export class HetznerCloudProvider implements CloudProvider {
 }
 
 /**
- * Copy the shipped configuration over whatever is in the project, and touch
- * nothing else. State, the lock file and the providers were written by
- * Terraform and are the project's; the `.tf` files are Baseplate's and are
- * replaced, which is how an upgrade reaches a project that already exists.
+ * The `.tf` files are Baseplate's and are replaced, which is how an upgrade
+ * reaches an existing project. Everything Terraform wrote is the project's and
+ * is left alone.
  */
 export function syncTerraformDir(sourceDir: string, workDir: string): void {
   mkdirSync(workDir, { recursive: true });

@@ -2,12 +2,9 @@ import type { BlobStore } from "./blobs.ts";
 import type { StorageDb } from "./db.ts";
 
 /**
- * A blob with no row is a blob nobody can reach. That happens two ways: an
- * object was deleted, and an upload died before its row was committed. Both are
- * the same repair, so there is one loop rather than a tombstone column and a
- * second one.
- *
- * The grace period is what keeps it from deleting an upload still in flight.
+ * A blob with no row is unreachable, whether the object was deleted or an upload
+ * died before its row committed. One repair for both, and the grace period is
+ * what keeps it off an upload still in flight.
  */
 export async function sweepOrphans(
   db: StorageDb,

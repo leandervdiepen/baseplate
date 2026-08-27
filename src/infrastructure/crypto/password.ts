@@ -23,10 +23,9 @@ export function assertPassword(password: string): void {
 }
 
 /**
- * The same `scrypt:<salt>:<hash>` string the auth service writes and reads
- * (stack/auth/src/password.ts). The operator sets a password directly in the
- * database, so the two have to agree byte for byte; a unit test pins them
- * together rather than trusting that they still do.
+ * The same `scrypt:<salt>:<hash>` string stack/auth/src/password.ts writes. The
+ * operator sets passwords straight in the database, so a unit test pins the two
+ * together rather than trusting they still agree.
  */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(SALT_BYTES);

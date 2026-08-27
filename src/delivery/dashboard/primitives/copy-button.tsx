@@ -6,10 +6,9 @@ import { IconSwap } from "./icon-swap.tsx";
 type State = "idle" | "copied" | "failed";
 
 /**
- * Copying gives no feedback of its own, so the button provides it: the icon
- * changes, the label changes, and the change is announced. A clipboard the
- * browser refuses is reported rather than swallowed, because otherwise the
- * button looks broken and the value is silently not on the clipboard.
+ * Copying gives no feedback of its own, so the button does: the icon and label
+ * change, and the change is announced. A refused clipboard is reported, or the
+ * value is silently not on it.
  */
 export function CopyButton({
   value,

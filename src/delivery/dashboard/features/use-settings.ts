@@ -11,12 +11,9 @@ import type { ConfigDraft } from "./config-field.tsx";
 type Job = "save" | "provision" | "teardown";
 
 /**
- * What is in `baseplate.env`, and the four commands the Settings page can send
- * about it. One job runs at a time and says so, because saving a file, starting
- * a stack, and destroying a volume are not things to have in flight together.
- *
- * A command reports whether it worked, which is all the page needs to close the
- * question that asked for it.
+ * What is in `baseplate.env`, and the four commands Settings can send about it.
+ * One job at a time, and it says which: saving a file, starting a stack and
+ * destroying a volume are not things to have in flight together.
  */
 export function useSettings(onChanged: () => void) {
   /** Everything else in baseplate.env, so none of it needs the file opened. */

@@ -29,22 +29,16 @@ export type TunnelConfig = {
 type Tunnel = { localPort: number; child: ChildProcess };
 
 /**
- * One tunnel per destination, shared.
- *
- * The studio builds an operator per request and throws it away again, so a
- * tunnel per operator would mean an SSH handshake on every click. These outlive
- * the operators that asked for them and are torn down when the process ends.
+ * One tunnel per destination, shared. The studio builds an operator per request,
+ * so a tunnel per operator would mean an SSH handshake on every click.
  */
 const tunnels = new Map<string, Promise<Tunnel>>();
 let exitHooked = false;
 
 /**
- * A local port that reaches `remoteHost:remotePort` on the server.
- *
- * The stack publishes Postgres on the server's loopback only, which is the
- * point: the firewall opens 22, 80 and 443 and nothing else. So the operator
- * tool reaches the database the same way it reaches everything else on that
- * machine, over the SSH access provisioning already set up.
+ * A local port that reaches `remoteHost:remotePort` on the server. The stack
+ * publishes Postgres on the server's loopback only and the firewall opens 22,
+ * 80 and 443, so SSH is the way in.
  */
 export async function openTunnel(config: TunnelConfig): Promise<number> {
   const key = `${config.user}@${config.host}:${config.remoteHost}:${String(config.remotePort)}`;
@@ -106,10 +100,8 @@ async function start(config: TunnelConfig, key: string): Promise<Tunnel> {
 }
 
 /**
- * `-N` because there is no command to run, only the forward, and
- * `ExitOnForwardFailure` because an ssh that stays up with no forward is worse
- * than one that fails: connections to the local port would hang rather than
- * being refused.
+ * `-N` because there is only the forward, and `ExitOnForwardFailure` so a
+ * failed forward refuses connections instead of hanging them.
  */
 export function tunnelArgs(config: TunnelConfig, localPort: number): string[] {
   return [
@@ -122,10 +114,8 @@ export function tunnelArgs(config: TunnelConfig, localPort: number): string[] {
 }
 
 /**
- * Ask the operating system for a port nobody is using, then let go of it.
- *
- * There is a gap between letting go and ssh binding it. Nothing better exists:
- * ssh cannot be asked to pick a port and then say which one it picked.
+ * Ask for a free port and let go of it. There is a gap before ssh binds it, and
+ * nothing better exists: ssh cannot report a port it picked itself.
  */
 function freePort(): Promise<number> {
   return new Promise((resolvePort, reject) => {

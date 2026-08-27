@@ -2,12 +2,9 @@ import { useEffect, useState } from "react";
 import { getProjects, openProject, type ProjectSummary } from "../lib/api/index.ts";
 
 /**
- * Every project this machine knows about, and the way to point the studio at
- * another one.
- *
- * Opening one is a change of view and nothing else: it does not stop one stack
- * and start another, because those take minutes and should only ever happen
- * because somebody asked for them.
+ * Every project this machine knows about. Opening one is a change of view and
+ * nothing else: stopping one stack to start another takes minutes and only
+ * happens because somebody asked.
  */
 export function useProjects(path: string) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);

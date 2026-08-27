@@ -9,11 +9,9 @@ export type HetznerAccountConfig = {
 };
 
 /**
- * Read-only calls against the operator's own account, made from their machine
- * with their own tokens. Nothing here creates or changes anything.
- *
- * The two tokens are independent, so one failing still reports what the other
- * could see. A half-configured account is the normal state while setting up.
+ * Read-only calls against the operator's own account, from their machine with
+ * their own tokens. The two tokens are reported independently, because a
+ * half-configured account is the normal state while setting one up.
  */
 export class HetznerAccount implements CloudAccount {
   constructor(private readonly config: HetznerAccountConfig) {}

@@ -10,12 +10,9 @@ import {
 } from "../lib/api/index.ts";
 
 /**
- * The buckets in this project and the three things that can be done to them.
- * Every call answers with the whole list, so what is on screen is what the
- * operator just did rather than a guess kept in sync by hand.
- *
- * An action reports whether it worked, which is all the page needs to know to
- * clear the form that asked for it.
+ * The buckets in this project. Every call answers with the whole list, so what
+ * is on screen is what the operator just did rather than a guess kept in sync
+ * by hand.
  */
 export function useBuckets() {
   const [buckets, setBuckets] = useState<BucketSummary[] | null>(null);

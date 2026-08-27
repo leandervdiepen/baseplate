@@ -17,12 +17,9 @@ export function currentProject(): string {
 }
 
 /**
- * Point the studio at another project.
- *
- * The keys the previous project planted in `process.env` are pulled first.
- * Loading the next file on top would otherwise leave anything it does not
- * mention behind, and "does not mention" is exactly the case that matters: a
- * project with no Hetzner token would inherit the last one's.
+ * Point the studio at another project. The previous project's keys are pulled
+ * from `process.env` first, or a project with no Hetzner token would inherit
+ * the last one's.
  */
 export function switchProject(root: string): void {
   const config = resolve(root, CONFIG_FILE);

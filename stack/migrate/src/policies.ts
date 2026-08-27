@@ -7,13 +7,10 @@ export type DeclaredPolicy = {
 };
 
 /**
- * Who is asking, or null when nobody is.
- *
- * The empty string has to be turned into null before the cast, not after. A
- * transaction-local `set_config` reverts to `''` rather than to unset when the
- * transaction ends, so every later call on that pooled connection would be
- * casting `''` to json and raising. The pool is shared, so one caller's request
- * would break every query after it on the same connection.
+ * Who is asking, or null when nobody is. The empty string becomes null before
+ * the cast, not after: a transaction-local `set_config` reverts to `''` rather
+ * than unset, and casting that to json would raise for every later caller on
+ * the same pooled connection.
  */
 const CALLER_SQL = `CREATE OR REPLACE FUNCTION baseplate.caller_id() RETURNS uuid
 LANGUAGE sql STABLE AS $caller$

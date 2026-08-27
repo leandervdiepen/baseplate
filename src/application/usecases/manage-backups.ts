@@ -11,10 +11,9 @@ export type ManageBackupsDeps = {
 };
 
 /**
- * A dump, a seal, and an upload take longer than a request usually should.
- *
- * One number for every surface: the CLI waited ten minutes and the studio five,
- * so the same backup could be reported as failed in one and done in the other.
+ * A dump, a seal and an upload take longer than a request usually should. One
+ * number for every surface, or the same backup is failed in one and done in
+ * another.
  */
 const REQUEST_TIMEOUT_MS = 10 * 60_000;
 

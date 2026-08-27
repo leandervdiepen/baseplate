@@ -280,12 +280,9 @@ async function saveConfig(
 }
 
 /**
- * What a save actually changes.
- *
- * A secret left blank means "keep the one you have", because the field it came
- * from shows a placeholder rather than the value. Everything else left blank
- * means "clear it", which is the only way to stop sending backups off-machine
- * once you have started. A key nobody put on the list is ignored either way.
+ * A blank secret means "keep the one you have", because its field shows a
+ * placeholder rather than the value. Anything else blank means "clear it",
+ * which is the only way to stop sending backups off-machine.
  */
 export function configUpdates(body: Record<string, string | undefined>): Record<string, string> {
   const updates: Record<string, string> = {};

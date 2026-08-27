@@ -14,12 +14,8 @@ export function checksum(text: string): string {
 }
 
 /**
- * Plain `.sql` files in filename order.
- *
- * The only directory this is ever pointed at is `stack/platform/`, Baseplate's
- * own schema, which ships with the version. An operator's tables are not here
- * and never will be: they live in their database, and a schema change is a
- * transaction against it.
+ * Plain `.sql` files in filename order, only ever `stack/platform/`: Baseplate's
+ * own schema, shipped with the version. An operator's tables are never here.
  */
 export function readMigrations(dir: string): MigrationFile[] {
   return readdirSync(dir)

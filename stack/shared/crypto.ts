@@ -5,12 +5,9 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
 /**
- * AES-256-GCM, on a file rather than in memory, so a backup is never sized by
- * how much RAM the machine has.
- *
- * Layout: a 12 byte nonce, the ciphertext, then the 16 byte tag. The tag is at
- * the end because that is where GCM produces it, and decryption reads it first
- * by seeking, which a file allows and a stream does not.
+ * AES-256-GCM on a file, so a backup is never sized by how much RAM the machine
+ * has. Layout is a 12 byte nonce, the ciphertext, then the 16 byte tag: GCM
+ * produces the tag last, and decryption seeks to it first.
  */
 const NONCE_BYTES = 12;
 const TAG_BYTES = 16;

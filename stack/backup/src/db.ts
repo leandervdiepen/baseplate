@@ -28,11 +28,9 @@ export function connectBackupDb(config: { password: string; host: string; databa
 
   return {
     /**
-     * Recorded once the outcome is known, never before.
-     *
-     * A row written first would be inside the dump that follows it, saying a
-     * backup is running and never finishing, and every restore would bring that
-     * ghost back. The started_at is passed in so the duration is still true.
+     * Recorded once the outcome is known. A row written first would be inside
+     * the dump that follows it, so every restore would bring back a backup that
+     * is forever running. started_at is passed in so the duration stays true.
      */
     async recordBackup(record: {
       key: string;

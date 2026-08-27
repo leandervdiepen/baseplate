@@ -4,13 +4,10 @@ import { cn } from "../lib/cn.ts";
 type Option<T extends string> = { id: T; label: string; disabled?: boolean };
 
 /**
- * A radio group, so it follows the radio group keyboard contract: one tab stop,
- * arrow keys move the selection between the options.
- *
- * The selected surface is one element that slides, not a background that
- * appears on one option while it disappears from another. Two fading boxes read
- * as two things; one that travels reads as the same thing, moved, which is what
- * actually happened.
+ * A radio group, with the radio group keyboard contract: one tab stop, arrows
+ * move the selection. The selected surface is one element that slides, because
+ * two fading boxes read as two things and one that travels reads as the same
+ * thing moved.
  */
 export function Segmented<T extends string>({
   value,

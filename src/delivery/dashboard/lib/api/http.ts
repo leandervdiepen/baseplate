@@ -1,8 +1,6 @@
 /**
- * One way to talk to operator HTTP. Every call went through the same four
- * lines: fetch, check `ok`, parse the error body, cast the good one. Those
- * lines live here once, so an endpoint below is the URL and the shape it
- * returns, and nothing else.
+ * Fetch, check `ok`, parse the error body, cast the good one - once, so an
+ * endpoint below is a URL and a shape and nothing else.
  */
 
 /**

@@ -13,11 +13,9 @@ export function display(value: unknown): string {
 }
 
 /**
- * One value, readable until it is clicked and editable after.
- *
- * Identifiers and the owner column are shown and never offered for editing: the
- * database sets the owner from the caller's token, so a field pretending
- * otherwise would be a field whose every save is refused.
+ * One value, readable until clicked. Identifiers and the owner column are shown
+ * and never editable: the database sets the owner from the token, so such a
+ * field would have every save refused.
  */
 export function EditableCell({
   column,

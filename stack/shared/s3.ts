@@ -1,11 +1,9 @@
 import { createHash, createHmac } from "node:crypto";
 
 /**
- * Just enough S3 to put, get, delete, and list objects, signed with SigV4.
- *
- * Written here rather than pulled in, because every byte an operator stores
- * passes through it and the whole of it is one hash and four HMACs. The tests
- * check it against the signing examples AWS publishes.
+ * Just enough S3 to put, get, delete and list, signed with SigV4. Written here
+ * rather than pulled in: every byte an operator stores passes through it, and
+ * the whole of it is one hash and four HMACs, checked against AWS's examples.
  */
 export type S3Config = {
   endpoint: string;

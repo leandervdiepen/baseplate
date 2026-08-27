@@ -3,11 +3,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 /**
- * The three auth files added with password reset all need the same three
- * things: a stack that is up, an auth call that survives the rate limiter, and
- * a way to read the dev inbox. They live here once rather than three times.
- *
- * Not a `.test.ts` file, so the integration config does not collect it.
+ * A stack that is up, an auth call that survives the rate limiter, and a way to
+ * read the dev inbox. Not a `.test.ts` file, so the config does not collect it.
  */
 export const ROOT = resolve(import.meta.dirname, "../../..");
 export const BASE_URL = "http://127.0.0.1:8080";

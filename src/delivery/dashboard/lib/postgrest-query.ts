@@ -54,11 +54,9 @@ export type QueryShape = {
 };
 
 /**
- * Turns what the operator asked for into a PostgREST query.
- *
- * Every clause becomes something the database answers. Nothing here filters,
- * sorts, or paginates in the browser, which is the same rule the client SDK
- * follows and the reason row access cannot be sidestepped by the studio.
+ * What the operator asked for, as a PostgREST query. Nothing filters, sorts or
+ * paginates in the browser - the same rule the client follows, and the reason
+ * the studio cannot sidestep row access.
  */
 export function toQuery(shape: QueryShape): string {
   const params = new URLSearchParams();

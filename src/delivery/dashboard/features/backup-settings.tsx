@@ -6,12 +6,9 @@ import { Hint } from "../primitives/input.tsx";
 import { SecretField } from "../primitives/secret-field.tsx";
 
 /**
- * How often a dump is taken, how many are kept, and where they go.
- *
- * The destination is the part that matters. Left blank, backups land on the
- * same disk as the database they are backing up, which survives a bad migration
- * and nothing else. The studio says so rather than letting the word "backup"
- * carry a promise it has not earned.
+ * The destination is the part that matters: left blank, backups land on the same
+ * disk as the database, which survives a bad migration and nothing else. The
+ * studio says so rather than letting "backup" carry a promise it has not earned.
  */
 export function BackupSettings({
   draft,

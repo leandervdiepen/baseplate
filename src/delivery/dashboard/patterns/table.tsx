@@ -5,10 +5,9 @@ import { cn } from "../lib/cn.ts";
 export type Column = { key: string; label: string; width?: string };
 
 /**
- * The surface every table in the studio sits on: one raised box that clips its
- * own corners, and a real `<table>` inside it so a screen reader pairs each
- * value with its column. Wide content scrolls in the box rather than widening
- * the page.
+ * One raised box that clips its own corners, with a real `<table>` inside so a
+ * screen reader pairs each value with its column. Wide content scrolls in the
+ * box rather than widening the page.
  */
 export function TableFrame({
   caption,

@@ -1,12 +1,8 @@
 import { sleep, stackEnv } from "./stack.ts";
 
 /**
- * Mailpit is the local stack's inbox. It is the only way a test can see what a
- * user would have received, which is the whole point of the reset flow: the
- * token never appears in an HTTP response.
- *
- * Its REST API is two calls - search for the messages sent to an address, then
- * fetch one by id to get the body.
+ * The local stack's inbox, and the only way a test can see what a user would
+ * have received. Two calls: search by address, then fetch one by id.
  */
 const MAILPIT_URL = `http://127.0.0.1:${stackEnv("MAILPIT_UI_PORT", "8025")}`;
 

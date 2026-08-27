@@ -3,13 +3,10 @@ import { cn } from "../lib/cn.ts";
 import { Button } from "../primitives/button.tsx";
 
 /**
- * The last thing between a click and something that cannot be undone. It is
- * inline rather than a dialog because it belongs to the row, bucket, or table
- * it is about, and moving it to the middle of the screen would take away the
- * one piece of context that makes the question answerable.
- *
- * Opening it moves focus here, so it is read out rather than merely drawn, and
- * Escape backs out: the safe answer is always one key away.
+ * The last thing between a click and something irreversible. Inline rather than
+ * a dialog, because it belongs to the row it is about and the middle of the
+ * screen would take away the context that makes it answerable. Opening it moves
+ * focus here so it is read out, and Escape backs out.
  */
 export function ConfirmInline({
   children,

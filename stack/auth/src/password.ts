@@ -5,11 +5,9 @@ const scryptAsync = promisify(scrypt);
 const KEY_LENGTH = 64;
 
 /**
- * A well-formed hash with no preimage. Login verifies against this when the
- * email is unknown, so an unknown address costs the same scrypt work as a real
- * one and the response time stops telling an attacker who has an account.
- *
- * Random per process on purpose: no password can ever verify against it.
+ * A well-formed hash with no preimage, verified against when the email is
+ * unknown so an unknown address costs the same scrypt work as a real one.
+ * Random per process, so no password can ever verify against it.
  */
 export const DUMMY_HASH = `scrypt:${randomBytes(16).toString("base64url")}:${randomBytes(
   KEY_LENGTH,

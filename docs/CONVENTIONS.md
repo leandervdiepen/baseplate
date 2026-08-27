@@ -114,6 +114,16 @@ Split by responsibility when a file grows.
 No one-line wrappers.
 A layer folder's `index.ts` re-exports the public surface and does nothing else.
 
+## Comments
+
+A comment earns its place by saying something the code cannot: why this way and
+not the obvious one, or what breaks if it changes. Code that needs a comment to
+be understood is code to rewrite.
+
+Keep them to a couple of lines. Never write the history of a decision - "this
+used to be X and it was wrong because Y" - because git holds that and the reader
+does not need it to change the line in front of them.
+
 ## Studio UI
 
 The studio is `src/delivery/dashboard/`: Vite, React, and Tailwind, with hand-written components.

@@ -6,14 +6,10 @@ import { expect, test } from "vitest";
 const ROOT = resolve(import.meta.dirname, "../../..");
 
 /**
- * The bug this pins: `baseplate dashboard` reached for
- * `<package>/node_modules/tsx/dist/cli.mjs`, which is only true in this
- * checkout. npm hoists, so on a real install that path does not exist and the
- * command died with MODULE_NOT_FOUND before printing anything.
- *
- * The fix is that one file knows where tsx is. This test is here because the
- * mistake is easy to make again and costs nothing to catch: a hard-coded
- * node_modules path passes every test that runs from the repository.
+ * npm hoists, so `<package>/node_modules/tsx/dist/cli.mjs` is only true in this
+ * checkout and a real install died with MODULE_NOT_FOUND. A hard-coded
+ * node_modules path passes every test that runs from the repository, which is
+ * why this one exists.
  */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

@@ -7,11 +7,8 @@ export type Json =
   | Json[];
 
 /**
- * Replaced by whatever `baseplate types` prints for your database:
- *
- *   npx @diepen/baseplate types > src/database.ts
- *
- * Until then `from()` accepts any table name and returns loosely typed rows.
+ * Replaced by `npx baseplate types > src/database.ts`. Until then `from()`
+ * accepts any table name and returns loosely typed rows.
  */
 export type Database = Record<
   string,

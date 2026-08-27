@@ -6,13 +6,9 @@ type Line = { id: string; from: DOMRect; to: DOMRect };
 export type NodeLink = { from: string; to: string };
 
 /**
- * Nodes laid out in columns, left to right, with a line drawn between the
- * anchors a caller names. A node is whatever is rendered for its id; the canvas
- * only knows where things landed.
- *
- * The lines are decoration, so they are measured from what was actually
- * rendered rather than from the layout that asked for it: a wrapped or scrolled
- * canvas still draws them where the nodes really are.
+ * Nodes in columns, left to right, with a line between the anchors a caller
+ * names. Measured from what was rendered rather than from the layout that asked
+ * for it, so a wrapped or scrolled canvas still draws them in the right place.
  */
 export function NodeCanvas({
   columns,

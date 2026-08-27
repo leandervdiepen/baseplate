@@ -4,12 +4,10 @@ import { makeSecretDir, parseEnvMap, writeSecretFile } from "./env-file.ts";
 import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
 
 /**
- * Keys the running stack needs. Everything else in the project's config,
- * including the operator's Hetzner credentials, stays on this machine.
- *
- * BACKUP_KEY and the BACKUP_S3_* credentials do cross, deliberately: the backup
- * and its restore drill run where the database is. They are one bucket's worth
- * of access, not an account that can create and destroy servers.
+ * Keys the running stack needs; everything else, the Hetzner credentials
+ * included, stays on this machine. BACKUP_KEY and BACKUP_S3_* do cross: the
+ * backup and its drill run where the database is, and they are one bucket's
+ * worth of access rather than an account that can create servers.
  */
 export const STACK_ENV_KEYS = [
   "JWT_SECRET",

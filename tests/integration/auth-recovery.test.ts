@@ -18,13 +18,10 @@ import {
 } from "./support/stack.ts";
 
 /**
- * Password reset is the one flow whose secret never appears in an HTTP
- * response, so proving it works means reading the inbox the user would read.
- * Mailpit is that inbox in the local stack.
- *
- * The round trip happens once, in `beforeAll`, because it costs a real email
- * and the sender limit is three an hour per address. The tests below then say
- * one thing each about what it left behind.
+ * The one flow whose secret never appears in an HTTP response, so proving it
+ * means reading the inbox. The round trip happens once in `beforeAll` - the
+ * sender limit is three an hour per address - and the tests below each say one
+ * thing about what it left behind.
  */
 const PASSWORD_BEFORE = "correct horse battery staple";
 const PASSWORD_AFTER = "a-different-long-password";

@@ -1,9 +1,8 @@
 import { createS3, type S3Config } from "../../shared/s3.ts";
 
 /**
- * The blob store holds bytes and nothing else. It is on the compose network
- * only, never published and never routed by Caddy, and it is one flat bucket:
- * a Baseplate bucket is a prefix inside it, so making one is a row and not a
+ * Bytes and nothing else, on the compose network only. One flat bucket: a
+ * Baseplate bucket is a prefix inside it, so making one is a row rather than a
  * call over the wire.
  */
 export type BlobStore = ReturnType<typeof createBlobStore>;

@@ -2,13 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSchema, type SchemaSnapshot } from "../lib/api/index.ts";
 
 /**
- * The shape of the operator's database: every table, its columns, and which
- * column decides who owns a row. It is read again after every change, because
- * the database is the record of what the schema is and this is only a view of
- * it.
- *
- * `onFirstLoad` is told the first table there is, once, so a page can open on
- * something rather than on nothing.
+ * The shape of the operator's database, read again after every change: the
+ * database is the record and this is only a view of it. `onFirstLoad` names the
+ * first table once, so a page opens on something.
  */
 export function useSchema(onFirstLoad: (first: string | null) => void) {
   const [schema, setSchema] = useState<SchemaSnapshot | null>(null);
