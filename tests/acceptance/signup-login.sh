@@ -11,7 +11,7 @@ PASSWORD="a-long-password"
 BODY_A="from-a-$RUN"
 BODY_B="from-b-$RUN"
 
-./scripts/dev schema add-table items --column body:text >/dev/null 2>&1 || true
+baseplate schema add-table items --column body:text >/dev/null 2>&1 || true
 
 signup() {
   auth_post /auth/signup /tmp/baseplate-auth.json \

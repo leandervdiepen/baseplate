@@ -22,10 +22,10 @@ KEPT="kept-$RUN"
 # pass on KEPT alone; this is the half that says the rewind was real.
 LOST="lost-$RUN"
 
-./scripts/dev schema add-table restore_probe --column body:text >/dev/null 2>&1 || true
+baseplate schema add-table restore_probe --column body:text >/dev/null 2>&1 || true
 
-TOKEN_A="$(./scripts/dev mint-token --sub "$SUB_A")"
-TOKEN_B="$(./scripts/dev mint-token --sub "$SUB_B")"
+TOKEN_A="$(baseplate mint-token --sub "$SUB_A")"
+TOKEN_B="$(baseplate mint-token --sub "$SUB_B")"
 
 post_probe() {
   curl -sS -o /dev/null -w "%{http_code}" \
@@ -85,7 +85,7 @@ fi
 # `backup now` returns when the service has written the outcome down, so there
 # is nothing to poll for: either the sealed dump reached the destination and was
 # recorded, or this exits non-zero.
-./scripts/dev backup now > /tmp/baseplate-restore-backup.txt
+baseplate backup now > /tmp/baseplate-restore-backup.txt
 KEY="$(sed -n 's/^Backed up as \(db\/.*\.dump\.enc\)\.$/\1/p' /tmp/baseplate-restore-backup.txt)"
 if [[ -z "$KEY" ]]; then
   echo "backup now did not report a sealed dump: $(cat /tmp/baseplate-restore-backup.txt)"
@@ -94,7 +94,7 @@ fi
 
 # The newest thing in the record is the backup just taken, and it is not a
 # failure. `backup list` prints id, when, size, destination.
-./scripts/dev backup list | head -1 > /tmp/baseplate-restore-list.txt
+baseplate backup list | head -1 > /tmp/baseplate-restore-list.txt
 if grep -q "failed:" /tmp/baseplate-restore-list.txt; then
   echo "the newest backup is a failure: $(cat /tmp/baseplate-restore-list.txt)"
   exit 1
@@ -121,7 +121,7 @@ assert_probe "caller A" "" "$KEPT"
 # Destructive, and it asks for the project's name unless there is nobody to ask,
 # which is what --yes is for. By id rather than by "the newest", so that what
 # comes back is provably the dump this run made and not one that arrived since.
-./scripts/dev restore "$BACKUP_ID" --yes > /tmp/baseplate-restore-out.txt
+baseplate restore "$BACKUP_ID" --yes > /tmp/baseplate-restore-out.txt
 if ! grep -qF "Restored $KEY" /tmp/baseplate-restore-out.txt; then
   echo "restore did not put back $KEY: $(cat /tmp/baseplate-restore-out.txt)"
   exit 1

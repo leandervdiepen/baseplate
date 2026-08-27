@@ -10,8 +10,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -27,22 +27,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # What is in the tarball, before anything is done with it. A nested
+      # node_modules or a platform binary is a bad release, not a slow one.
+      - run: npm run pack:check
       - run: bash scripts/smoke-install.sh
 
-  # The definition of done: a real stack, real HTTP, two callers who cannot see
-  # each other. Slower, and the only thing that actually proves the product.
+  # A real stack, real HTTP, two callers who cannot see each other, driven from
+  # this checkout because the integration suite imports it.
   stack:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -52,7 +55,6 @@ jobs:
           ./scripts/dev init
           ./scripts/dev up
       - run: npm run test:integration
-      - run: npm run test:acceptance
       - name: Show the logs when something failed
         if: failure()
         run: |
@@ -64,3 +66,27 @@ jobs:
       - name: Stop the stack
         if: always()
         run: ./scripts/dev destroy --yes
+
+  # The definition of done, and the only version of it that means anything to
+  # someone who installed this: packed, installed, brought up from the installed
+  # package, then row isolation, object isolation, password recovery and a
+  # destructive restore against it.
+  artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:artifact
+      - name: Show the logs when something failed
+        if: failure()
+        run: |
+          docker ps -a
+          for id in $(docker ps -aq --filter "label=baseplate.project-root"); do
+            echo "===== $(docker inspect --format '{{.Name}}' "$id") ====="
+            docker logs --tail 100 "$id" 2>&1 || true
+          done

@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 source tests/acceptance/lib.sh
 
-PORT_FROM_ENV="$(sed -n 's/^MAILPIT_UI_PORT=//p' .baseplate/stack.env 2>/dev/null | head -1 || true)"
+PORT_FROM_ENV="$(sed -n 's/^MAILPIT_UI_PORT=//p' "$PROJECT_DIR/.baseplate/stack.env" 2>/dev/null | head -1 || true)"
 MAILPIT="${MAILPIT_URL:-http://127.0.0.1:${PORT_FROM_ENV:-8025}}"
 EMAIL="reset-$(unique)@example.com"
 OLD_PASSWORD="correct horse battery staple"

@@ -12,10 +12,10 @@ BODY_B="from-b-$RUN"
 
 # A fresh Baseplate has no app tables. The operator makes them; nothing in the
 # repo declares them. Creating it here is part of what this proves.
-./scripts/dev schema add-table items --column body:text >/dev/null 2>&1 || true
+baseplate schema add-table items --column body:text >/dev/null 2>&1 || true
 
-TOKEN_A="$(./scripts/dev mint-token --sub "$SUB_A")"
-TOKEN_B="$(./scripts/dev mint-token --sub "$SUB_B")"
+TOKEN_A="$(baseplate mint-token --sub "$SUB_A")"
+TOKEN_B="$(baseplate mint-token --sub "$SUB_B")"
 TAMPERED="${TOKEN_A%????}xxxx"
 
 post_item() {

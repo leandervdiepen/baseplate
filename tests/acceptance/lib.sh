@@ -8,6 +8,17 @@
 # Where the stack is. Point the scripts at a server with BASEPLATE_URL.
 BASE="${BASEPLATE_URL:-http://127.0.0.1:8080}"
 
+# Which Baseplate is being proven. This checkout by default; CI also points it
+# at the packed tarball installed into a scratch project.
+BASEPLATE_CLI="${BASEPLATE_CLI:-./scripts/dev}"
+PROJECT_DIR="${BASEPLATE_PROJECT:-$PWD}"
+
+# Word splitting on purpose: BASEPLATE_CLI may be a command with arguments.
+# shellcheck disable=SC2086
+baseplate() {
+  $BASEPLATE_CLI "$@"
+}
+
 # How long one credential call may spend waiting out a 429 before it gives up
 # and says so. The limiter refills one attempt every six seconds, so ninety is
 # room for a queue in front of us and no room for a real problem to hide in.

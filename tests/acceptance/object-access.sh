@@ -15,9 +15,9 @@ BODY_A="from-a-$RUN"
 BODY_B="from-b-$RUN"
 
 # A fresh Baseplate has no buckets. The operator makes them, exactly like tables.
-./scripts/dev storage add-bucket "$BUCKET" >/dev/null
+baseplate storage add-bucket "$BUCKET" >/dev/null
 # A run that dies halfway should not leave its bucket behind for the next one.
-trap './scripts/dev storage rm-bucket "$BUCKET" >/dev/null 2>&1 || true' EXIT
+trap 'baseplate storage rm-bucket "$BUCKET" >/dev/null 2>&1 || true' EXIT
 
 signup() {
   local code

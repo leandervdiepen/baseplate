@@ -3,6 +3,9 @@ Proof of done. Plain HTTP, no test framework.
 Needs a running stack: `./scripts/dev init` then `./scripts/dev up`.
 Then `npm run test:acceptance`, which is the list of what runs and in what order.
 
+`npm run test:artifact` runs the same list against the packed tarball installed into a
+scratch project, which is what CI publishes on.
+
 - `two-token.sh` - two callers, one endpoint, disjoint rows.
   A missing token and a tampered one get nothing.
 - `signup-login.sh` - email and password on the stack, and the session it returns.
@@ -22,5 +25,6 @@ It holds the base URL, a JSON field reader, collision-resistant test identities,
 Every call to an auth endpoint goes through `auth_post`: ten a minute per IP is the
 product working, and a script that fails on it is testing the clock.
 
-Point them somewhere else with `BASEPLATE_URL=https://<hostname>`.
+Point them somewhere else with `BASEPLATE_URL=https://<hostname>`, and at another
+Baseplate with `BASEPLATE_CLI=<command>` and `BASEPLATE_PROJECT=<dir>`.
 `password-reset.sh` also needs the inbox; point it with `MAILPIT_URL=...`.
