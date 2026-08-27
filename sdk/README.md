@@ -5,7 +5,7 @@ Agents building an app load [`skills/baseplate-app/SKILL.md`](../skills/baseplat
 Humans keep reading this file.
 
 ```json
-{ "dependencies": { "@diepen/baseplate": "^0.6.0" } }
+{ "dependencies": { "@diepen/baseplate": "^0.1.0" } }
 ```
 
 ```ts

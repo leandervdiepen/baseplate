@@ -10,7 +10,7 @@ Not for developing the Baseplate package itself.
 
 ## Install
 
-`{ "dependencies": { "@diepen/baseplate": "^0.6.0" } }`
+`{ "dependencies": { "@diepen/baseplate": "^0.1.0" } }`
 
 ```ts
 import { createClient } from "@diepen/baseplate/client";
