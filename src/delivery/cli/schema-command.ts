@@ -2,17 +2,27 @@ import { DomainError, createSchemaChange, type SchemaChange } from "#domain";
 
 export const SCHEMA_USAGE = `Usage: baseplate schema <command>
 
-  add-table <name> [--column name:type[:null]]...
+  add-table <name> [--column name:type[:null]]... [--access mode]
   adopt-table <name> [--owner-column name]   (a table you made yourself)
   drop-table <name>
   rename-table <name> --to <new-name>
   add-column <table> --column name:type   (always optional)
-  drop-column <table> --column name`;
+  drop-column <table> --column name
+  set-access <table> <private|shared|public>
+  history                                    (every change this database took)
+
+Who may read a table's rows. A row is only ever written by whoever owns it, in
+all three:
+
+  private   Each caller sees only their own rows. The default.
+  shared    Anyone signed in reads every row.
+  public    Anyone reads it, no token needed.`;
 
 export type SchemaArgs = {
   columns: string[];
   to?: string | undefined;
   ownerColumn?: string | undefined;
+  access?: string | undefined;
 };
 
 /**
@@ -45,6 +55,7 @@ export function schemaChangeFromArgs(
       kind: "create-table",
       table: target,
       columns: args.columns.map(parseColumn),
+      ...(args.access ? { access: args.access } : {}),
     });
   }
   if (command === "adopt-table") {
@@ -52,6 +63,14 @@ export function schemaChangeFromArgs(
       kind: "adopt-table",
       table: target,
       ...(args.ownerColumn ? { ownerColumn: args.ownerColumn } : {}),
+      ...(args.access ? { access: args.access } : {}),
+    });
+  }
+  if (command === "set-access") {
+    return createSchemaChange({
+      kind: "set-access",
+      table: target,
+      access: args.access ?? "",
     });
   }
   if (command === "drop-table") {

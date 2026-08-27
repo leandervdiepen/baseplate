@@ -27,7 +27,7 @@ export const TOOLS: readonly Tool[] = [
   {
     name: "schema",
     description:
-      "Change tables on the running database. Commands: add-table, adopt-table, drop-table, rename-table, add-column, drop-column, history. drop-table and drop-column need confirm: true.",
+      "Change tables on the running database. Commands: add-table, adopt-table, set-access, drop-table, rename-table, add-column, drop-column, history. drop-table and drop-column need confirm: true.",
     inputSchema: {
       type: "object",
       required: ["command"],
@@ -37,6 +37,7 @@ export const TOOLS: readonly Tool[] = [
           enum: [
             "add-table",
             "adopt-table",
+            "set-access",
             "drop-table",
             "rename-table",
             "add-column",
@@ -47,6 +48,12 @@ export const TOOLS: readonly Tool[] = [
         table: { type: "string" },
         to: { type: "string", description: "New name for rename-table." },
         owner_column: { type: "string", description: "For adopt-table. Defaults to owner_id." },
+        access: {
+          type: "string",
+          enum: ["private", "shared", "public"],
+          description:
+            "Who may read the rows. private: only the caller's own. shared: anyone signed in. public: anyone, no token. Writes are always the owner's. Defaults to private.",
+        },
         columns: {
           type: "array",
           items: {

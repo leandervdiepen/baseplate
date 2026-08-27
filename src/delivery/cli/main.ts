@@ -31,6 +31,7 @@ async function main(): Promise<void> {
       tail: { type: "string" },
       column: { type: "string", multiple: true },
       "owner-column": { type: "string" },
+      access: { type: "string" },
       port: { type: "string" },
       "postgres-port": { type: "string" },
       "dashboard-port": { type: "string" },
@@ -132,7 +133,9 @@ async function main(): Promise<void> {
       }
       for (const table of tables) {
         const columns = table.columns.map((column) => column.name).join(", ");
-        console.log(`${table.name} (owner ${table.ownerColumn}): ${columns}`);
+        console.log(
+          `${table.name} (${table.access}, owner ${table.ownerColumn}): ${columns}`,
+        );
       }
       return;
     }
@@ -140,11 +143,25 @@ async function main(): Promise<void> {
       process.stdout.write(renderTypes(await operator.schema.tables()));
       return;
     }
+    if (command === "schema" && positionals[1] === "history") {
+      const entries = await operator.schema.history();
+      if (entries.length === 0) {
+        console.log("No schema changes yet.");
+        return;
+      }
+      for (const entry of entries) {
+        console.log(`${entry.appliedAt}  ${entry.change}`);
+      }
+      return;
+    }
     if (command === "schema") {
       const change = schemaChangeFromArgs(positionals[1], positionals[2], {
         columns: values.column ?? [],
         to: values.to,
         ownerColumn: values["owner-column"],
+        // `set-access notes shared` reads as the sentence it is, so the mode is
+        // a positional there and a flag everywhere else.
+        access: values.access ?? positionals[3],
       });
       console.log((await operator.changeSchema.execute(change)).statement);
       return;

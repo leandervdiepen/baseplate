@@ -23,6 +23,7 @@ export async function handleSchema(operator: Operator, params: unknown): Promise
   const table = requireString(args, "table", "mcp.schema_table", `schema ${command} needs table.`);
   const to = asString(args, "to");
   const ownerColumn = asString(args, "owner_column");
+  const access = asString(args, "access");
   const column = columnFrom(args);
   const result = await operator.changeSchema.execute(
     createSchemaChange({
@@ -30,6 +31,7 @@ export async function handleSchema(operator: Operator, params: unknown): Promise
       table,
       ...(to ? { to } : {}),
       ...(ownerColumn ? { ownerColumn } : {}),
+      ...(access ? { access } : {}),
       ...(column ? { column } : {}),
       columns: columnsFrom(args),
     }),

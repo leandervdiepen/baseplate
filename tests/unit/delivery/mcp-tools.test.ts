@@ -3,6 +3,7 @@ import { createBucket } from "#domain";
 import type { StorageAdmin } from "#application";
 import { MemorySchemaAdmin, MemoryUserAdmin } from "#infrastructure";
 import { TOOLS } from "../../../src/delivery/mcp/catalog.ts";
+import { SCHEMA_USAGE } from "../../../src/delivery/cli/schema-command.ts";
 import { STACK_COMMANDS } from "../../../src/delivery/cli/usage.ts";
 import { rpc, server, SUB, testSession, toolText } from "./mcp-harness.ts";
 
@@ -33,6 +34,7 @@ test("types is TypeScript from the live tables", async () => {
     {
       name: "notes",
       ownerColumn: "owner_id",
+      access: "private" as const,
       columns: [
         { name: "id", type: "uuid", nullable: false, primaryKey: true, hasDefault: true },
         { name: "title", type: "text", nullable: false, primaryKey: false, hasDefault: false },
@@ -137,4 +139,20 @@ function recordingStorage(): StorageAdmin & { dropped: string[] } {
  */
 test("the MCP catalogue is exactly the commands that act on a running project", () => {
   expect([...TOOLS].map((tool) => tool.name).sort()).toEqual([...STACK_COMMANDS].sort());
+});
+
+/**
+ * `schema` is one tool with a `command` argument, so the catalogue above cannot
+ * see a subcommand arriving on the CLI alone. This reads them out of the usage
+ * text the CLI prints, which is the same list it dispatches on.
+ */
+test("the schema tool accepts every schema subcommand the CLI offers", () => {
+  const fromUsage = [...SCHEMA_USAGE.matchAll(/^ {2}([a-z-]+)(?: <| {2,}\()/gm)].map(
+    (match) => match[1],
+  );
+  const tool = TOOLS.find((entry) => entry.name === "schema");
+  const accepted = (tool?.inputSchema.properties.command as { enum: string[] }).enum;
+
+  expect(fromUsage).toContain("set-access");
+  expect([...accepted].sort()).toEqual([...fromUsage].sort());
 });
