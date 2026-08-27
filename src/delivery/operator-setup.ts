@@ -44,6 +44,12 @@ export function loadEnvFile(path: string, override: boolean): void {
   applyEnvText(text, override);
 }
 
+/**
+ * A blank value means "the default", not the empty string - the same rule
+ * `stackEnvText` follows. Compose reads this process's environment, and a
+ * present-but-empty `SMTP_HOST` beat `${SMTP_HOST:-mailpit}`, which silently
+ * stopped password recovery from delivering mail.
+ */
 export function applyEnvText(text: string, override: boolean): void {
   for (const line of text.split("\n")) {
     const trimmed = line.trim();
@@ -56,6 +62,13 @@ export function applyEnvText(text: string, override: boolean): void {
     }
     const key = trimmed.slice(0, eq).trim();
     const value = trimmed.slice(eq + 1).trim();
+    if (value === "") {
+      // The file is the authority when it is allowed to be.
+      if (override) {
+        delete process.env[key];
+      }
+      continue;
+    }
     if (override || process.env[key] === undefined) {
       process.env[key] = value;
     }

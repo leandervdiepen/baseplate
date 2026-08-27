@@ -1,4 +1,5 @@
 export {
+  composeEnv,
   DockerComposeRuntime,
   parseRunningStacks,
   runningStacks,

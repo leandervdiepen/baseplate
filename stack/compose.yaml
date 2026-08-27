@@ -80,9 +80,10 @@ services:
       # links point at it, so a wrong value emails a dead link.
       SITE_URL: ${SITE_URL:-http://localhost:3000}
       REQUIRE_EMAIL_CONFIRM: ${REQUIRE_EMAIL_CONFIRM:-false}
-      # Defaults point at the mailpit container below. Empty SMTP_HOST turns
-      # mail off entirely: tokens are still issued, nothing is delivered.
-      SMTP_HOST: ${SMTP_HOST-mailpit}
+      # Blank or absent means the mailpit container below, so a reset link is
+      # readable locally without a mail account. The cloud overlay flips the
+      # default the other way: there is no dev inbox on a server.
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
@@ -213,7 +214,9 @@ services:
       storage:
         condition: service_healthy
     ports:
-      - "${HTTP_PORT:-8080}:8080"
+      # Loopback only, like every other published port here. The cloud overlay
+      # is the one place that puts the API on a public interface, and it says so.
+      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:8080}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}

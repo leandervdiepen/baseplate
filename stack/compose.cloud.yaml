@@ -1,10 +1,19 @@
 services:
   caddy:
+    # The only public interface in the whole stack, and the only place a port is
+    # deliberately not on loopback.
     ports:
       - "80:80"
       - "443:443"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+
+  auth:
+    environment:
+      # No dev inbox here, so blank means mail is off: tokens are still issued
+      # and nothing is delivered, which is better than sending a recovery link
+      # to a host that does not exist. Fill in SMTP_* before real users.
+      SMTP_HOST: ${SMTP_HOST:-}
 
   # A dev inbox has no business on a server that can send real mail. The profile
   # is never enabled in the cloud, so this service is defined and never started;

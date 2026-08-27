@@ -28,6 +28,7 @@ import { openTunnel, RemoteComposeRuntime } from "./ssh/index.ts";
 export { SystemClock } from "./clock/index.ts";
 export { assertPassword, hashPassword } from "./crypto/index.ts";
 export {
+  composeEnv,
   DockerComposeRuntime,
   DockerHostCloudProvider,
   parseRunningStacks,

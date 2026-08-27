@@ -15,6 +15,30 @@ export type DockerComposeRuntimeConfig = {
 const ROOT_LABEL = "baseplate.project-root";
 const PORT_LABEL = "baseplate.http-port";
 
+/**
+ * The CLI loads the whole project config into the environment, and Compose
+ * interpolates from the environment before the env file it was handed. No
+ * compose file names these today; removing them means none ever can.
+ */
+const CLOUD_ONLY_KEYS = [
+  "HCLOUD_TOKEN",
+  "HETZNER_DNS_TOKEN",
+  "HETZNER_DNS_ZONE",
+  "SSH_KEY_NAME",
+  "SERVER_LOCATION",
+] as const;
+
+export function composeEnv(
+  inherited: NodeJS.ProcessEnv,
+  projectRoot: string,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...inherited, BASEPLATE_PROJECT_ROOT: projectRoot };
+  for (const key of CLOUD_ONLY_KEYS) {
+    delete env[key];
+  }
+  return env;
+}
+
 export class DockerComposeRuntime implements StackRuntime {
   constructor(private readonly config: DockerComposeRuntimeConfig) {}
 
@@ -119,7 +143,7 @@ function runDocker(
     const child = spawn("docker", args, {
       cwd: config.stackDir,
       stdio: "inherit",
-      env: { ...process.env, BASEPLATE_PROJECT_ROOT: config.projectRoot },
+      env: composeEnv(process.env, config.projectRoot),
     });
     child.on("error", (cause) => {
       reject(new InfraError("docker.spawn", "Failed to run docker compose.", cause));
