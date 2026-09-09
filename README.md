@@ -312,24 +312,13 @@ Run `npx baseplate --help`, or run a command without arguments for its focused h
 
 ## Contributing
 
-```bash
-git clone https://github.com/leandervdiepen/baseplate.git
-cd baseplate
-npm install
-./scripts/dev init
-./scripts/dev up
+You do not need write access to contribute.
+Fork the repository, create a branch, and open a pull request against `main`.
 
-npm run lint
-npm run lint:arch
-npm run typecheck
-npm test
-npm run test:integration
-npm run test:acceptance
-npm run test:artifact
-npm run pack:check
-```
+Every change to `main` requires a pull request and four passing CI jobs: static and unit checks, package installation, stack integration, and packed-artifact acceptance.
 
-Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, architecture rules, and the exact checks to run.
+Report vulnerabilities through the private process in [`SECURITY.md`](SECURITY.md).
 
 ## License
 

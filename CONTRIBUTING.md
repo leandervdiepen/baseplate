@@ -1,77 +1,103 @@
 # Contributing
 
-Thanks for looking. This is a small project with strong opinions, and the
-opinions are written down so you do not have to guess at them.
+Contributions are welcome.
+You do not need repository access to contribute.
+Fork the repository, create a branch in your fork, and open a pull request against `main`.
 
-Read [`AGENTS.md`](AGENTS.md) first. It is short, and it is the same brief a
-human or an agent works from.
+Report security vulnerabilities through the private process in [`SECURITY.md`](SECURITY.md), not in a public issue.
 
-## Get it running
+## Read the project rules
 
-You need Docker and Node 22 or newer.
+Read [`AGENTS.md`](AGENTS.md) before changing code.
+It defines the product boundary, architecture, and rules that apply to every contribution.
+
+Use these references when your change touches their area:
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) explains the layers and where code belongs.
+- [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) covers naming, errors, secrets, tests, commits, and studio UI.
+- [`docs/DOMAINS.md`](docs/DOMAINS.md) defines the product concepts and invariants.
+- [`docs/PRD.md`](docs/PRD.md) defines the current scope and completion criteria.
+
+## Set up the repository
+
+You need Docker and Node.js 22 or newer.
 
 ```bash
-npm install
-./scripts/dev init      # once: writes baseplate.env and .baseplate/ here
-./scripts/dev up        # starts the stack against this checkout
+git clone https://github.com/<your-account>/baseplate.git
+cd baseplate
+npm ci
+
+./scripts/dev init
+./scripts/dev up
 ```
 
-`./scripts/dev` runs the CLI from this checkout with the repo itself as the
-project. An operator never uses it; they install the package and run
-`baseplate`.
+`./scripts/dev` runs the CLI from this checkout and uses the repository as its local Baseplate project.
+The generated `baseplate.env` and `.baseplate/` directory stay ignored by Git.
+People installing a release use the published `baseplate` command instead.
 
-## Before you open a pull request
+## Make a focused change
+
+Small fixes can go directly into a pull request.
+Open an issue first when a change introduces new product behavior, changes a public API, or may sit outside the documented scope.
+
+Keep documentation in the same pull request as the behavior it describes.
+Documentation states what is true now and does not keep a history of replaced behavior.
+
+These rules shape every implementation:
+
+- An operator manages a running system, not this codebase.
+  Their tables and mutable state belong to their project and database.
+- Postgres row-level security enforces row access.
+  Application-side filtering is not a security boundary.
+- Architecture dependencies point inward.
+  Import through the public layer aliases outside a layer.
+- Baseplate remains a self-hosted, single-node backend.
+  A hosted control plane, realtime, Kubernetes, and managed-platform feature parity are outside the current scope.
+
+## Run the required checks
+
+Run the fast checks first:
 
 ```bash
-npm test                 # unit
-npm run lint             # eslint
-npm run lint:arch        # the layering rule, enforced not suggested
-npm run typecheck        # src, the stack services, and the studio
-npm run test:integration # boots the stack and speaks HTTP
-npm run test:acceptance  # the definition of done
+npm run lint
+npm run lint:arch
+npm run typecheck
+npm test
 ```
 
-All of them. The integration and acceptance suites need a running stack.
+Verify the package people will install:
 
-## The rules that will get a change sent back
-
-**An operator manages a running system, never a codebase.** Their tables live in
-their database. If your change would have an operator edit, commit, or merge a
-file in this repo, it is the wrong shape.
-
-**The database is the gate.** Row access is row-level security in Postgres. If
-filtering moves into TypeScript, the change is wrong however well it reads.
-
-**Layers point inward.** `dependency-cruiser` enforces it. Outside a layer,
-import `#domain`, `#application`, `#infrastructure`, or `#shared` and nothing
-deeper.
-
-**Docs are the present tense.** If a doc and the code disagree, that is a bug.
-Fix the doc in the same change and delete what it replaced. Never append a
-history or an ADR; git holds the past.
-
-The rest - naming, errors, secrets, tests, commit messages, studio UI - is in
-[`docs/CONVENTIONS.md`](docs/CONVENTIONS.md).
-
-## Commits
-
-Imperative, present tense, why before what.
-
+```bash
+npm run pack:check
+bash scripts/smoke-install.sh
+npm run test:artifact
 ```
+
+`test:artifact` packs Baseplate, installs it into an empty project, starts that installed copy, runs the full acceptance suite, and removes the temporary stack.
+
+Run the integration suite against the checkout while the development stack is up:
+
+```bash
+./scripts/dev up
+npm run test:integration
+./scripts/dev down
+```
+
+GitHub requires the `check`, `install`, `stack`, and `artifact` jobs to pass before `main` can change.
+
+## Open the pull request
+
+Explain the behavior that changes, why it changes, and how you verified it.
+Keep the pull request focused enough to review as one decision.
+Resolve review conversations and update the branch with `main` when GitHub asks.
+
+Use a short, lowercase, imperative commit message that explains the intent:
+
+```text
 enforce row access in postgres so the api cannot leak rows
 ```
 
-Not `update files`. Do not add an agent as a co-author.
+Do not use messages such as `update files`.
+Do not add an agent as a co-author.
 
-## Where things go
-
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) has a table for exactly this.
-Please use it rather than guessing; it is the answer, not a summary of one.
-
-## What is deliberately out of scope
-
-A hosted Baseplate that holds other people's cloud keys. A Baseplate-owned cloud
-account. Realtime, multi-node, Kubernetes. Feature parity with managed
-platforms.
-
-If a change feels like one of those, open an issue before writing it.
+After the required checks pass, a maintainer can squash or rebase the pull request into `main`.
