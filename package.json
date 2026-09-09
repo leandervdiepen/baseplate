@@ -76,7 +76,7 @@
   },
   "license": "MIT",
   "bin": {
-    "baseplate": "./bin/baseplate.js"
+    "baseplate": "bin/baseplate.js"
   },
   "files": [
     "bin",

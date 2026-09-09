@@ -156,12 +156,13 @@ test("a config written before studio ports existed keeps working", () => {
 test("ports the developer names are the ports they get", () => {
   const dir = project();
 
-  initProject(dir, { http: 9100, postgres: 5599, dashboard: 9788 });
+  initProject(dir, { http: 9100, postgres: 5599, dashboard: 9788, mailpit: 9025 });
 
   const env = parseEnvMap(readFileSync(join(dir, "baseplate.env"), "utf8"));
   expect(env.HTTP_PORT).toBe("9100");
   expect(env.POSTGRES_PORT).toBe("5599");
   expect(env.DASHBOARD_PORT).toBe("9788");
+  expect(env.MAILPIT_UI_PORT).toBe("9025");
   expect(dashboardPortFor(dir)).toBe(9788);
 });
 

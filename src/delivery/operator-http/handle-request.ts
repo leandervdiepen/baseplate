@@ -76,8 +76,11 @@ export async function handleOperatorRequest(
     }
     if (path === "/api/provision" && method === "POST") {
       const body = (await readJsonBody(req)) as { replace?: boolean };
-      const result = await withOperator(roots, (operator) =>
-        operator.provision.execute(stackFromEnv(), { replace: body.replace === true }),
+      const result = await withOperator(
+        roots,
+        (operator) =>
+          operator.provision.execute(stackFromEnv(), { replace: body.replace === true }),
+        true,
       );
       sendJson(res, 200, result);
       return;
@@ -162,8 +165,9 @@ export async function handleOperatorRequest(
 async function withOperator<T>(
   roots: OperatorRoots,
   run: (operator: Operator) => Promise<T>,
+  allowUnprovisioned = false,
 ): Promise<T> {
-  const operator = await createOperatorFor(roots, true);
+  const operator = await createOperatorFor(roots, true, allowUnprovisioned);
   try {
     return await run(operator);
   } finally {
@@ -220,7 +224,6 @@ const CONFIG_KEYS = [
   "TARGET",
   "SITE_ADDRESS",
   "HCLOUD_TOKEN",
-  "HETZNER_DNS_TOKEN",
   "HETZNER_DNS_ZONE",
   "SSH_KEY_NAME",
   "SERVER_LOCATION",
@@ -262,7 +265,6 @@ const CONFIG_KEYS = [
  */
 const SECRET_KEYS = new Set<string>([
   "HCLOUD_TOKEN",
-  "HETZNER_DNS_TOKEN",
   "SMTP_PASS",
   "STORAGE_ACCESS_KEY",
   "STORAGE_SECRET_KEY",

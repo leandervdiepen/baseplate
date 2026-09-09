@@ -10,7 +10,6 @@ export type HetznerCloudConfig = {
   /** This project's own copy, where state and providers live. */
   workDir: string;
   token: string;
-  dnsToken: string;
   dnsZone: string;
   sshKeyName: string;
   location: string;
@@ -62,16 +61,10 @@ export class HetznerCloudProvider implements CloudProvider {
     ];
   }
 
-  /**
-   * The DNS token goes in the environment, not in argv: an argument list is
-   * readable by every account on the machine through `ps`.
-   */
   private terraform(args: string[]): Promise<void> {
     return run("terraform", args, this.config.workDir, {
       ...process.env,
       HCLOUD_TOKEN: this.config.token,
-      HETZNER_DNS_TOKEN: this.config.dnsToken,
-      TF_VAR_dns_token: this.config.dnsToken,
     });
   }
 

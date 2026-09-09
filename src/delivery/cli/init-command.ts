@@ -38,6 +38,7 @@ export type PortChoice = {
   http?: number | undefined;
   postgres?: number | undefined;
   dashboard?: number | undefined;
+  mailpit?: number | undefined;
 };
 
 export function portValue(raw: string | undefined, flag: string): number | undefined {
@@ -72,11 +73,13 @@ export function initProject(project: string, ports: PortChoice = {}): string {
   const httpPort = ports.http ?? 8080;
   const postgresPort = ports.postgres ?? 5432;
   const dashboardPort = ports.dashboard ?? 8788;
+  const mailpitPort = ports.mailpit ?? 8025;
   // SITE_ADDRESS is what Caddy listens on inside the container and stays 8080.
   // HTTP_PORT is only the host mapping.
   const config = TEMPLATE.replace("HTTP_PORT=8080", `HTTP_PORT=${httpPort}`)
     .replace("POSTGRES_PORT=5432", `POSTGRES_PORT=${postgresPort}`)
     .replace("DASHBOARD_PORT=8788", `DASHBOARD_PORT=${dashboardPort}`)
+    .replace("MAILPIT_UI_PORT=8025", `MAILPIT_UI_PORT=${mailpitPort}`)
     .replace(
     "TARGET=local",
     [

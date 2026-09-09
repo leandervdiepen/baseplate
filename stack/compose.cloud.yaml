@@ -6,7 +6,10 @@ services:
       - "80:80"
       - "443:443"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      # The public hostname redirects HTTP to HTTPS. Probing it as 127.0.0.1
+      # follows that redirect with the wrong TLS name, so check Caddy's local
+      # admin endpoint here. Baseplate separately waits for the public API.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
 
   auth:
     environment:

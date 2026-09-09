@@ -84,6 +84,12 @@ async function databaseEndpoint(
   }
   const record = await store.load();
   if (!record) {
+    if (config.allowUnprovisioned) {
+      // Postgres clients connect lazily. Provisioning does not use them, so a
+      // closed local port lets the operator exist long enough to create the
+      // first server without pretending that a database is available.
+      return { ...database, host: "127.0.0.1", port: 1 };
+    }
     throw new InfraError(
       "stack.not_provisioned",
       "This project targets Hetzner and has no server yet. Provision it from Settings.",
@@ -137,12 +143,13 @@ export type OperatorConfig = {
   /** Where this project's Terraform state and providers live. */
   infraWorkDir: string;
   hcloudToken: string;
-  hetznerDnsToken: string;
   hetznerDnsZone: string;
   sshKeyName: string;
   serverLocation: string;
   /** What a minted caller token is good for, from ACCESS_TOKEN_TTL. */
   accessTtlSeconds: number;
+  /** Provisioning must be able to create the first remote server. */
+  allowUnprovisioned?: boolean;
 };
 
 /**
@@ -241,7 +248,6 @@ function machineryFor(config: OperatorConfig): {
       sourceDir: config.infraSourceDir,
       workDir: config.infraWorkDir,
       token: config.hcloudToken,
-      dnsToken: config.hetznerDnsToken,
       dnsZone: config.hetznerDnsZone,
       sshKeyName: config.sshKeyName,
       location: config.serverLocation,

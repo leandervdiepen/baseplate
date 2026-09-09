@@ -27,7 +27,7 @@ If a task would have an operator edit, commit, or merge a file in this repo, sto
 ## Scope
 
 Local is proven end to end: rows, objects, auth, and a restore that has been drilled.
-Hetzner BYOK (`TARGET=hetzner`) is implemented and preflighted in Settings, but has not run live against a real domain.
+Hetzner BYOK (`TARGET=hetzner`) passed the full live acceptance suite against `baseplate.hanaflo.org` on 8 September 2026.
 Do not build a hosted control plane. If a task feels like one, stop and ask.
 
 ## Commands

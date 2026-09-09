@@ -31,8 +31,8 @@ Nothing in this repo is an operator's config, and no committed file carries a wo
 `.baseplate/stack.env` is derived from `baseplate.env` and holds only what the running stack needs.
 It is the only env file that crosses the wire to a server.
 
-`HCLOUD_TOKEN` and `HETZNER_DNS_TOKEN` are never in it.
-They can create and destroy servers, and they stay on the operator's machine.
+`HCLOUD_TOKEN` is never in it.
+It can create and destroy servers and DNS records, and it stays on the operator's machine.
 
 `BACKUP_KEY` and the `BACKUP_S3_*` credentials **are** in it, deliberately.
 The backup and its restore drill run where the database is, so they need the key there.
@@ -40,7 +40,7 @@ Those credentials reach one bucket; an account token reaches an account.
 That difference is the whole rule, and it is why the exception is written down rather than assumed.
 
 Hetzner is BYOK.
-`HCLOUD_TOKEN`, `HETZNER_DNS_TOKEN`, `HETZNER_DNS_ZONE`, and `SSH_KEY_NAME` are the operator's credentials for their own Hetzner account.
+`HCLOUD_TOKEN`, `HETZNER_DNS_ZONE`, and `SSH_KEY_NAME` are the operator's credentials for their own Hetzner project.
 They live only in the project's `baseplate.env` on the operator's machine.
 They are never committed, never sent to a Baseplate service, and never replaced by a Baseplate-owned token.
 For `TARGET=hetzner`, `BASEPLATE_HOSTNAME` must be an FQDN under `HETZNER_DNS_ZONE`.

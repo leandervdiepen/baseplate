@@ -1,17 +1,15 @@
 import type { CloudAccount, CloudAccountSnapshot } from "#application";
 
 const CLOUD_API = "https://api.hetzner.cloud/v1";
-const DNS_API = "https://dns.hetzner.com/api/v1";
 
 export type HetznerAccountConfig = {
   token: string;
-  dnsToken: string;
 };
 
 /**
  * Read-only calls against the operator's own account, from their machine with
- * their own tokens. The two tokens are reported independently, because a
- * half-configured account is the normal state while setting one up.
+ * their own token. DNS zones live in the Cloud API alongside servers, regions,
+ * and SSH keys, so one project-scoped token is the whole account surface.
  */
 export class HetznerAccount implements CloudAccount {
   constructor(private readonly config: HetznerAccountConfig) {}
@@ -20,7 +18,7 @@ export class HetznerAccount implements CloudAccount {
     const [locations, sshKeys, zones] = await Promise.all([
       this.cloud<{ locations: { name: string; description: string }[] }>("/locations"),
       this.cloud<{ ssh_keys: { name: string }[] }>("/ssh_keys"),
-      this.dns<{ zones: { name: string }[] }>("/zones"),
+      this.cloud<{ zones: { name: string }[] }>("/zones"),
     ]);
 
     const cloudFailure = locations.error ?? sshKeys.error;
@@ -46,12 +44,6 @@ export class HetznerAccount implements CloudAccount {
     });
   }
 
-  private dns<T>(path: string): Promise<Answer<T>> {
-    if (!this.config.dnsToken) {
-      return Promise.resolve({ error: "No Hetzner DNS token saved yet." });
-    }
-    return request<T>(`${DNS_API}${path}`, { "Auth-API-Token": this.config.dnsToken });
-  }
 }
 
 type Answer<T> = { data?: T; error?: string };
@@ -68,8 +60,6 @@ async function request<T>(url: string, headers: Record<string, string>): Promise
     if (!response.ok) {
       return { error: `Hetzner answered ${response.status}.` };
     }
-    // Hetzner DNS answers a bad token with an HTML page and a 200, so a parse
-    // failure here means the token, not a broken API.
     try {
       return { data: (await response.json()) as T };
     } catch {

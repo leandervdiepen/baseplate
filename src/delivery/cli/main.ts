@@ -3,6 +3,7 @@ import { basename, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { parseArgs } from "node:util";
 import { DomainError } from "#domain";
+import { closeTunnels } from "#infrastructure";
 import { InfraError } from "#shared";
 import { DEFAULT_ACCESS_TTL, parseTtl } from "../../../stack/shared/ttl.ts";
 import { serveMcp } from "../mcp/serve.ts";
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
       port: { type: "string" },
       "postgres-port": { type: "string" },
       "dashboard-port": { type: "string" },
+      "mailpit-port": { type: "string" },
       replace: { type: "boolean" },
       public: { type: "boolean" },
       yes: { type: "boolean" },
@@ -81,6 +83,7 @@ async function main(): Promise<void> {
       http: portValue(values.port, "--port"),
       postgres: portValue(values["postgres-port"], "--postgres-port"),
       dashboard: portValue(values["dashboard-port"], "--dashboard-port"),
+      mailpit: portValue(values["mailpit-port"], "--mailpit-port"),
     });
     rememberProject(project);
     console.log(`Wrote ${written}. Run \`baseplate up\` next.`);
@@ -100,7 +103,11 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const operator = await createOperatorFor({ packageRoot: PACKAGE_ROOT, projectRoot: project });
+  const operator = await createOperatorFor(
+    { packageRoot: PACKAGE_ROOT, projectRoot: project },
+    false,
+    command === "up",
+  );
   try {
     if (command === "up") {
       const result = await operator.provision.execute(stackFromEnv(), {
@@ -222,6 +229,7 @@ async function main(): Promise<void> {
     }
   } finally {
     await operator.close();
+    closeTunnels();
   }
 }
 

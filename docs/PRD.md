@@ -80,7 +80,6 @@ The database does the filtering.
 
 ### Still open
 
-- A live Hetzner provision against a real domain
 - OAuth, magic links, and MFA are not planned; email and password is the whole auth story
 
 ## Out

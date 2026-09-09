@@ -20,7 +20,6 @@ export type OperatorStatus = {
   secrets: {
     jwt: boolean;
     hcloud: boolean;
-    dnsToken: boolean;
     dnsZone: boolean;
     sshKey: boolean;
   };

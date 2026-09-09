@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { request } from "node:https";
 import type { DownOptions, LogOptions, RunningStack, StackRuntime } from "#application";
 import type { Server } from "#domain";
 import { InfraError } from "#shared";
@@ -100,13 +101,35 @@ export class RemoteComposeRuntime implements StackRuntime {
 
   async stopProject(_projectName: string): Promise<void> {}
 
-  async isHealthy(baseUrl: string): Promise<boolean> {
-    try {
-      const response = await fetch(baseUrl);
-      return response.status === 200 || response.status === 401;
-    } catch {
+  async isHealthy(baseUrl: string, server?: Server): Promise<boolean> {
+    if (!server) {
       return false;
     }
+    const url = new URL(baseUrl);
+    return new Promise((resolveHealthy) => {
+      const probe = request(
+        {
+          host: server.ipv4,
+          port: 443,
+          path: url.pathname,
+          method: "GET",
+          servername: url.hostname,
+          headers: { host: url.hostname },
+          rejectUnauthorized: true,
+          timeout: 10_000,
+        },
+        (response) => {
+          response.resume();
+          resolveHealthy(response.statusCode === 200 || response.statusCode === 401);
+        },
+      );
+      probe.once("error", () => resolveHealthy(false));
+      probe.once("timeout", () => {
+        probe.destroy();
+        resolveHealthy(false);
+      });
+      probe.end();
+    });
   }
 
   private async sync(host: string): Promise<void> {

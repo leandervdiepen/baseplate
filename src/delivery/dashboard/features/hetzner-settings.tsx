@@ -12,7 +12,6 @@ export type HetznerDraft = {
   hostname: string;
   zone: string;
   hcloud: string;
-  dnsToken: string;
   ssh: string;
   location: string;
 };
@@ -81,13 +80,6 @@ export function HetznerSettings({
       </Section>
 
       <Section title="DNS and SSH">
-        <SecretField
-          label="DNS API token"
-          value={draft.dnsToken}
-          onChange={(dnsToken) => onChange({ dnsToken })}
-          stored={secrets.dnsToken}
-          hint="Used for the A record that points at your server. Sets HETZNER_DNS_TOKEN, and stays on this computer."
-        />
         {account ? (
           <StatusMessage message={account.dns.message} tone={account.dns.ok ? "info" : "error"} />
         ) : null}
@@ -157,7 +149,7 @@ export function HetznerSettings({
           </div>
         </div>
         {!account ? (
-          <Hint>Save your tokens, then check the account to pick a zone and a key from it.</Hint>
+          <Hint>Save the token, then check the account to pick a zone and a key from it.</Hint>
         ) : null}
 
         <HostnameField

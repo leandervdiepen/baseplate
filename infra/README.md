@@ -7,40 +7,40 @@ Hetzner bills the operator.
 ## What it creates
 
 - Firewall: TCP 22, 80, 443
-- Server: `cx22`, Ubuntu 24.04, Docker via cloud-init
-- DNS A record for the stack hostname
+- Server: `cx23`, Ubuntu 24.04, Docker via cloud-init
+- DNS A and AAAA records for the stack hostname
 
 ## Prerequisites
 
 - Terraform CLI
 - An SSH key already uploaded to Hetzner Cloud (name matches `SSH_KEY_NAME`)
-- A DNS zone in Hetzner DNS (`HETZNER_DNS_ZONE`)
+- A DNS zone in the same Hetzner project (`HETZNER_DNS_ZONE`)
 - Local SSH private key that matches that Hetzner key
 
 ## Operator env (TARGET=hetzner)
 
 | Key | Purpose |
 | --- | --- |
-| `HCLOUD_TOKEN` | Hetzner Cloud API token |
-| `HETZNER_DNS_TOKEN` | Hetzner DNS API token |
+| `HCLOUD_TOKEN` | Read-write token for the Hetzner project |
 | `HETZNER_DNS_ZONE` | Zone that owns the hostname |
 | `SSH_KEY_NAME` | Existing Hetzner SSH key name |
 | `SERVER_LOCATION` | Default `nbg1` |
 | `BASEPLATE_HOSTNAME` | An FQDN under that zone, not `localhost` |
 | `SITE_ADDRESS` | What Caddy listens on. The hostname, so it can get a certificate |
 
-All of them live in the operator's own `baseplate.env`, and the two tokens never
-leave their machine.
-Settings in the studio writes them, checks them, and provisions from the same
-screen.
+All of them live in the operator's own `baseplate.env`, and the token never leaves their machine.
+Settings in the studio writes them, checks them, and provisions from the same screen.
 
 ## Commands
 
 ```bash
-npx @diepen/baseplate up                                  # with TARGET=hetzner
+npx baseplate up                                          # with TARGET=hetzner
 BASEPLATE_URL=https://<hostname> npm run test:acceptance
-npx @diepen/baseplate destroy                             # removes the server too
+npx baseplate destroy                                     # removes the server too
 ```
+
+The first live drill passed against `baseplate.hanaflo.org` on 8 September 2026.
+It created the server, firewall, DNS, and certificate, then passed the full acceptance suite through the deployed API.
 
 ## Where state lives
 

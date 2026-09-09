@@ -9,7 +9,7 @@ import {
 import { DEFAULT_ACCESS_TTL, parseTtl } from "../../stack/shared/ttl.ts";
 import { ensureOperatorSecrets } from "./operator-http/write-env.ts";
 import { writeStackEnv } from "./operator-http/stack-env.ts";
-import { CONFIG_FILE, STATE_DIR } from "./paths.ts";
+import { CONFIG_FILE, STATE_DIR, stackStateFile } from "./paths.ts";
 import { composeProjectName } from "./project-name.ts";
 
 /** Where the studio listens when a project has not chosen for itself. */
@@ -104,7 +104,6 @@ export function assertHetznerKeys(target: OperatorTarget): void {
   }
   for (const name of [
     "HCLOUD_TOKEN",
-    "HETZNER_DNS_TOKEN",
     "HETZNER_DNS_ZONE",
     "SSH_KEY_NAME",
   ]) {
@@ -156,7 +155,11 @@ export type OperatorRoots = {
   projectRoot: string;
 };
 
-export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Promise<Operator> {
+export function createOperatorFor(
+  roots: OperatorRoots,
+  overrideEnv = false,
+  allowUnprovisioned = false,
+): Promise<Operator> {
   const { packageRoot, projectRoot: project } = roots;
   ensureOperatorSecrets(project);
   loadEnvFile(resolve(project, CONFIG_FILE), overrideEnv);
@@ -174,17 +177,17 @@ export function createOperatorFor(roots: OperatorRoots, overrideEnv = false): Pr
     envFile: writeStackEnv(project),
     postgresPassword: requiredEnv("POSTGRES_PASSWORD"),
     postgresPort: Number(process.env.POSTGRES_PORT ?? "5432"),
-    statePath: resolve(project, STATE_DIR, "state.json"),
+    statePath: resolve(project, STATE_DIR, stackStateFile(target)),
     httpPort: Number(process.env.HTTP_PORT ?? "8080"),
     infraSourceDir: resolve(packageRoot, "infra"),
     infraWorkDir: resolve(project, STATE_DIR, "infra"),
     hcloudToken: process.env.HCLOUD_TOKEN ?? "",
-    hetznerDnsToken: process.env.HETZNER_DNS_TOKEN ?? "",
     hetznerDnsZone: process.env.HETZNER_DNS_ZONE ?? "",
     sshKeyName: process.env.SSH_KEY_NAME ?? "",
     serverLocation: process.env.SERVER_LOCATION ?? "nbg1",
     // The same knob the auth service reads, parsed by the same function, so a
     // minted token lasts exactly as long as a signed-in one.
     accessTtlSeconds: parseTtl(process.env.ACCESS_TOKEN_TTL ?? "", DEFAULT_ACCESS_TTL),
+    allowUnprovisioned,
   });
 }

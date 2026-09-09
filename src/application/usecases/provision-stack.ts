@@ -1,4 +1,4 @@
-import { apiBaseUrl, DomainError, type Stack } from "#domain";
+import { apiBaseUrl, DomainError, type Server, type Stack } from "#domain";
 import type { Clock } from "../ports/clock.ts";
 import type { CloudProvider } from "../ports/cloud-provider.ts";
 import type { RunningStack, StackRuntime } from "../ports/stack-runtime.ts";
@@ -48,7 +48,7 @@ export class ProvisionStack {
     // in the product could remove.
     await this.deps.store.save(record);
     await this.deps.runtime.up(server);
-    await this.waitUntilHealthy(record.baseUrl);
+    await this.waitUntilHealthy(record.baseUrl, server);
     return record;
   }
 
@@ -72,11 +72,11 @@ export class ProvisionStack {
     }
   }
 
-  private async waitUntilHealthy(baseUrl: string): Promise<void> {
+  private async waitUntilHealthy(baseUrl: string, server: Server): Promise<void> {
     const timeoutMs = this.deps.healthTimeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS;
     const deadline = this.deps.clock.now() + timeoutMs;
     while (this.deps.clock.now() < deadline) {
-      if (await this.deps.runtime.isHealthy(baseUrl)) {
+      if (await this.deps.runtime.isHealthy(baseUrl, server)) {
         return;
       }
       await this.deps.clock.sleep(HEALTH_INTERVAL_MS);

@@ -23,8 +23,9 @@ export const STACK_COMMANDS = [
 export const USAGE = `Usage: baseplate <command>
 
   init [--port N]          Start a project here: config, secrets, state
-                           Also --postgres-port N and --dashboard-port N.
-                           Defaults are 8080, 5432, and 8788.
+                           Also --postgres-port N, --dashboard-port N,
+                           and --mailpit-port N.
+                           Defaults are 8080, 5432, 8788, and 8025.
   up [--replace]           Bring the stack up and print the API URL.
                            One stack runs at a time; --replace stops the other.
   down                     Stop the stack. Your data stays.

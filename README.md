@@ -1,33 +1,36 @@
 # Baseplate
 
-A Postgres backend you run yourself: an HTTP API over your tables with per-user row access, email and password auth, file storage, encrypted backups, and a local studio to drive it all.
+A complete Postgres backend you run in your own account.
+
+Baseplate gives a small app its database, HTTP API, email and password auth, file storage, and encrypted backups in two commands.
+It runs locally with Docker or on a small Hetzner VM with automatic DNS and TLS.
+There is no hosted Baseplate control plane between you and your data.
 
 [![CI](https://github.com/leandervdiepen/baseplate/actions/workflows/ci.yml/badge.svg)](https://github.com/leandervdiepen/baseplate/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@diepen/baseplate)](https://www.npmjs.com/package/@diepen/baseplate)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](package.json)
 
-Install a version, point it at Docker on your laptop or at your own Hetzner account, and you own the database, the API, TLS, and the access rules.
-Baseplate has no cloud account, no hosted control plane, and no bill of its own.
+> **Verified:** the packaged `0.1.0` release is installed into an empty project and attacked by the full acceptance suite on every commit.
+> On 8 September 2026, the same suite passed against a real CX23 server at `baseplate.hanaflo.org`, including TLS, row and object isolation, password recovery, an encrypted backup, a destructive restore, and row-level security after recovery.
 
-> **Status:** the local path is supported and release-tested. On every commit, CI packs this package, installs it into an empty project, and runs row isolation, object isolation, password recovery and a destructive restore against the installed copy.
-> Hetzner deployment is **experimental** until the first documented live drill: it is implemented and preflighted, but it has never been run against a real domain. See [Limits](#limits).
+## Start locally
 
-## Quick start
-
-You need Docker running and Node 22 or newer.
+You need Node 22 or newer and Docker.
 
 ```bash
 mkdir my-backend && cd my-backend && mkdir src
 npm init -y
-npm install @diepen/baseplate@0.1.0   # the version you own
+npm install @diepen/baseplate@0.1.0
 
-npx baseplate init                    # writes baseplate.env with secrets for this project
-npx baseplate up                      # starts the stack, prints your API URL
+npx baseplate init
+npx baseplate up
 ```
 
-Installed rather than `npx @diepen/baseplate`, for two reasons: a bare `npx` follows `latest` and would change under you, and the client below is imported from your app, so the package has to be a dependency.
+`init` writes one private `baseplate.env` with secrets generated for this project.
+`up` starts the stack and prints the API URL.
 
-Make a table and reach it from an app:
+Create a table and generate types from the database that is actually running:
 
 ```bash
 npx baseplate schema add-table notes --column title:text
@@ -43,45 +46,198 @@ const client = createClient<Database>("http://127.0.0.1:8080");
 const { error } = await client.auth.signUp({ email, password });
 await client.from("notes").insert({ title: "hello" });
 
-const { data } = await client.from("notes").select("id,title").order("title").limit(20);
+const { data } = await client
+  .from("notes")
+  .select("id,title")
+  .order("title")
+  .limit(20);
 ```
 
-That is the whole loop. `data` contains this user's notes and nobody else's, because the database decided that, not the client.
-Every call answers `{ data, error }` and nothing throws, so a failure is a value you render rather than an exception you catch.
+`data` contains this user's notes and nobody else's.
+The client did not add an ownership filter because Postgres enforced it.
+
+Every client call returns `{ data, error }`.
+A failed request is a value to render, not an exception your UI has to catch.
 
 ```bash
-npx baseplate dashboard   # the studio, on 127.0.0.1
-npx baseplate down        # stop. your data stays
+npx baseplate dashboard
+npx baseplate down
 ```
 
-Run `init` in more than one directory and the studio lists them: the project name in the sidebar
-opens a switcher, marks which stack is up, and points the studio at another without restarting it.
-One stack runs at a time, so switching shows you the other project; starting it is still a button
-you press.
+The dashboard stays on `127.0.0.1`.
+Stopping the stack keeps its data.
 
-## What you get
+## What is included
 
-| | |
+| Capability | What Baseplate provides |
 | --- | --- |
-| **Postgres** | Your database. Reachable on localhost for tools like `psql` and drizzle-kit. |
-| **REST API** | PostgREST over your tables, behind Caddy. Filters, ordering, pagination. |
-| **Row access** | Every table is protected before it takes its first row. A row is written only by whoever owns it; reads are per-table - the owner's rows, anyone signed in, or anyone at all. |
-| **Auth** | Signup, login, refresh, logout, password reset, and email verification under `/auth/*`. Sessions persist and refresh themselves; credential endpoints are rate limited. |
-| **Email** | A local inbox on `127.0.0.1:8025` catches recovery and confirmation mail in development; `SMTP_*` points production at a real server. |
-| **Storage** | Buckets and objects, guarded by the same rule as rows. Signed URLs for `<img src>`. |
-| **Backups** | Scheduled `pg_dump`, encrypted with a key generated for your project, plus a drill that restores one and counts what came back. |
-| **Studio** | Tables with their rows, schema and row security, storage, backups, auth, logs, settings. Every setting lives here, including mail and an external object store, so you never open `baseplate.env` by hand. The one exception is the studio's own port, which would move this page out from under you: that is `baseplate dashboard --port`. |
-| **TLS** | Caddy gets a Let's Encrypt certificate for your hostname when you target Hetzner. |
+| **Database** | Postgres 16, reachable on loopback for `psql`, Drizzle, and other database tools. |
+| **HTTP API** | PostgREST over your tables with filters, ordering, ranges, and pagination. |
+| **Row security** | RLS enabled before a table takes its first row, with private, shared, and public read modes. |
+| **Auth** | Signup, email confirmation, login, refresh-token rotation, logout, and password recovery under `/auth/*`. Credential endpoints are rate limited. |
+| **Files** | Private or readable buckets, streamed uploads, per-user object access, and expiring signed URLs. |
+| **Backups** | Scheduled `pg_dump`, streaming AES-256-GCM encryption, retention, restores, and scheduled restore drills. |
+| **Studio** | Local management for tables, rows, access rules, users, files, backups, logs, and settings. |
+| **Deployment** | Terraform creates a Hetzner VM, firewall, A and AAAA records, then Caddy obtains and renews TLS. |
+| **Automation** | A CLI for people and an MCP server exposing the same operator actions to agents. |
 
-## Agents
+## Security lives in Postgres
 
-`npx baseplate mcp` is the operator path for agents.
-Run it from the project directory (where `baseplate.env` lives), or set `BASEPLATE_PROJECT`.
-It speaks stdio JSON-RPC and never binds a port, and covers every CLI command that acts on a running project - `init` is not one of them, because the host is started inside a project that already exists.
-Destructive tools need `confirm: true`.
-It does not query app rows; apps use the [client](sdk/README.md).
+Baseplate has no anonymous project key or public service key.
+`JWT_SECRET` stays on the server.
 
-A typical Cursor config, started with that project as cwd:
+Every managed table gets:
+
+- an `owner_id uuid not null` column;
+- a Postgres RLS policy matching `owner_id` to the JWT `sub` claim;
+- a `BEFORE INSERT` trigger that stamps the authenticated caller, so a client cannot choose another owner;
+- grants for the narrow application roles only.
+
+Tables in `public` that Baseplate has not adopted are locked down automatically.
+Policies and grants are reapplied on every start, including after a restore.
+
+Two users can call the same endpoint with no user filter and receive different answers:
+
+```ts
+await post("/notes", alice.token, { title: "alice only" });
+
+expect(await get("/notes", alice.token)).toHaveLength(1);
+expect(await get("/notes", bob.token)).toHaveLength(0);
+```
+
+That is the central design decision: authorization is a database invariant rather than a convention every application query must remember.
+
+### Read modes
+
+Writes always belong to one authenticated user.
+Each table chooses how broadly rows may be read:
+
+| Mode | Who can read | Good for |
+| --- | --- | --- |
+| `private` | The owner | Notes, drafts, personal records |
+| `shared` | Any signed-in user | Comments, team boards, feeds |
+| `public` | Anyone | Published posts, prices, tags |
+
+```bash
+npx baseplate schema add-table posts --column title:text --access shared
+npx baseplate schema set-access posts public
+```
+
+Changing access is one database transaction and applies immediately.
+
+## Bring an existing schema
+
+Baseplate can own schema changes:
+
+```bash
+npx baseplate schema add-table boards --column name:text
+npx baseplate schema history
+```
+
+It can also protect tables created by Drizzle or another migration tool:
+
+```bash
+npx baseplate schema adopt-table boards
+```
+
+Give the table an `owner_id uuid not null` column first.
+Adoption records the table, creates its policies and owner trigger, and grants the application role in one transaction.
+
+The [`examples/kanban`](examples/kanban) app shows auth, protected tables, and card attachments together.
+
+## File storage
+
+```bash
+npx baseplate storage add-bucket avatars
+```
+
+```ts
+await client.storage.from("avatars").upload("me.png", file);
+await client.storage.from("avatars").list();
+
+const { data: url } = await client.storage
+  .from("avatars")
+  .createSignedUrl("me.png", 3600);
+```
+
+Object metadata is protected by Postgres RLS.
+The bytes sit behind a private storage service and stream through the API without being buffered in memory.
+Knowing another user's object key still returns 404.
+
+The bundled object store is suitable for local work and one-node deployments.
+Set `STORAGE_*` to use Hetzner Object Storage, Backblaze B2, AWS S3, or another S3-compatible service.
+
+## Backups that prove they restore
+
+```bash
+npx baseplate backup now
+npx baseplate backup drill
+npx baseplate backup drills
+npx baseplate restore <id>
+```
+
+`pg_dump` writes a compressed custom-format dump.
+Baseplate streams it through AES-256-GCM, records its SHA-256 digest, and sends the sealed file to the configured destination.
+The backup is never sized by the server's memory.
+
+A restore drill opens the newest backup into a scratch database and counts the tables, rows, and users that came back.
+Restoring the live database is CLI-only and asks for the project name before replacing data.
+
+If `BACKUP_S3_*` is blank, encrypted dumps stay on the database server.
+The studio labels that honestly as a local copy, not an off-server backup.
+
+## Deploy to Hetzner
+
+You need a Hetzner project with:
+
+1. A read-write project API token.
+2. A DNS zone delegated to Hetzner.
+3. An SSH public key uploaded to the project, with its private key available locally.
+
+Open Settings in the local dashboard, select Hetzner, and save the token.
+Baseplate reads the available regions, DNS zones, and SSH keys from that project so you can select them instead of copying identifiers.
+
+Set a hostname under the selected zone, then start the stack.
+Terraform creates:
+
+- one `cx23` server running Ubuntu 24.04;
+- a firewall exposing only SSH, HTTP, and HTTPS;
+- A and AAAA records for the hostname.
+
+Baseplate waits for cloud-init, syncs the stack over SSH, starts the containers, and validates the public hostname certificate against the server it created.
+
+The Hetzner token never leaves your computer.
+The remote server receives only the secrets it needs to run Postgres, auth, storage, backups, and any SMTP or external S3 services you configured.
+`.baseplate/stack.env` is the exact boundary.
+
+Cloud deployments do not expose Postgres, the dashboard, or the development inbox.
+Configure `SMTP_*` before real users need confirmation or recovery emails.
+Configure `BACKUP_S3_*` before treating the server as production data storage.
+
+See [`infra/README.md`](infra/README.md) for the infrastructure boundary and teardown behavior.
+
+## Local studio
+
+```bash
+npx baseplate dashboard
+```
+
+The studio manages tables, rows, RLS modes, users, files, backups, logs, and configuration.
+It binds to loopback and rejects cross-site requests.
+Cloud credentials remain in the project's local `baseplate.env` and are never returned to the browser after saving.
+
+Run `init` in multiple directories and the project switcher can move between them without restarting the studio.
+Only one local stack runs at a time.
+
+## Agents and MCP
+
+```bash
+npx baseplate mcp
+```
+
+The MCP server speaks stdio JSON-RPC and exposes the operator actions that make sense for an agent.
+Destructive tools require `confirm: true`.
+It operates the backend but does not query application rows; application code uses the typed client.
 
 ```json
 {
@@ -94,184 +250,86 @@ A typical Cursor config, started with that project as cwd:
 }
 ```
 
-Agents writing an app against `@diepen/baseplate/client` load [`skills/baseplate-app/SKILL.md`](skills/baseplate-app/SKILL.md) from the package.
-After install it also lives at `node_modules/@diepen/baseplate/skills/baseplate-app`.
+Agents building an app can load [`skills/baseplate-app/SKILL.md`](skills/baseplate-app/SKILL.md).
+The same skill ships inside the npm package.
 
-## How row access works
+## What the release tests prove
 
-There is no anon key and no public key to hand out. `JWT_SECRET` stays on the server.
+`npm run test:artifact` packs the npm tarball, installs it into an empty project, starts that installed copy, and runs the acceptance suite against it.
 
-A user signs up over plain HTTP and gets a JWT whose `sub` is their user id. Every table Baseplate creates gets:
+The suite proves:
 
-- an `owner_id uuid not null` column,
-- a row-level security policy matching `owner_id` against the caller's `sub`,
-- a `BEFORE INSERT` trigger that stamps `owner_id` from the token, so a client cannot claim to be someone else.
+- two JWT subjects cannot read or mutate each other's rows;
+- private, shared, and public read modes do not widen writes;
+- missing and forged tokens are rejected;
+- signup, login, refresh rotation, logout, and password reset work end to end;
+- two users cannot read, replace, or delete each other's objects;
+- an encrypted backup can replace the live database;
+- pre-backup rows and users return, post-backup rows disappear, and RLS still isolates callers after the restore.
 
-A table in `public` that is not in Baseplate's registry is locked down rather than left open: row security on, grants revoked, reachable by nobody. The stack re-applies all of this on every start, so a restart can never leave a table exposed.
+The live Hetzner drill ran these same checks through the deployed API and a loopback-only test inbox.
 
-### Who may read a table
+## Deliberate scope
 
-Writes are the owner's in every mode. Reads are your choice:
+Baseplate is for one developer running small applications on one node.
+It is intentionally smaller than a managed application platform.
 
-| | Reads | Use it for |
-| --- | --- | --- |
-| `private` (default) | The caller's own rows | Notes, drafts, anything one person's |
-| `shared` | Every row, to anyone signed in | Comments, a team's boards, a feed |
-| `public` | Every row, no token at all | A published post, a price list, tags |
+Choose Supabase when you need realtime subscriptions, edge functions, vectors, social login, point-in-time recovery, replicas, or a hosted team dashboard.
+Choose Baseplate when you want the ordinary backend pieces together, a short operational path, and ownership of the server and data.
 
-```bash
-npx baseplate schema add-table posts --column title:text --access shared
-npx baseplate schema set-access posts public
-```
+Current limits:
 
-Set it when you make the table or change it later; either way it is one transaction and it applies at once.
-
-```bash
-npx baseplate tables            # what you have, and who may read each one
-npx baseplate schema history    # every change your database has taken
-```
-
-## If you already keep a schema file
-
-`schema add-table` above is the product: a schema change is a transaction against your running database, recorded there, with no file to commit and no migration to merge.
-
-If you already run drizzle-kit, you do not have to give it up. This is an ordinary Postgres, so `drizzle-kit pull` reads what is there and `drizzle-kit push` applies your schema file. Baseplate did not create those tables, so hand each one over once:
-
-```bash
-npx baseplate schema adopt-table boards
-```
-
-That records the table, writes its policy, adds the owner trigger, and grants the app role, in one transaction. `--access` works here too. Give every table an `owner_id uuid not null` column and adopt it after each push.
-
-[`examples/kanban`](examples/kanban) is a working board: `schema add-table` for the tables, Baseplate for login, row access, and card attachments. It used to keep a drizzle schema file and adopt it, which is why `adopt-table` exists and is tested; it does not need one.
-
-## Files
-
-```bash
-npx baseplate storage add-bucket avatars
-```
-
-```ts
-await client.storage.from("avatars").upload("me.png", file);
-await client.storage.from("avatars").list();
-const { data: url } = await client.storage.from("avatars").createSignedUrl("me.png", 3600);
-```
-
-A private bucket shows a caller only their own objects; knowing someone else's key returns 404. `add-bucket --public` makes a bucket anyone signed in can read, where only the caller who uploaded an object can replace or remove it.
-
-Bytes live in a store on the compose network, never published. Point `STORAGE_ENDPOINT` at Hetzner Object Storage, Backblaze B2, or S3 and nothing else changes.
-
-## Backups
-
-A dump runs on a schedule, sealed with a key generated for your project, and goes wherever `BACKUP_S3_*` points. Name nothing and it stays on the same machine as the database, which the studio flags as not a backup.
-
-```bash
-npx baseplate backup now
-npx baseplate backup drills   # restores that were actually verified
-npx baseplate restore <id>
-```
-
-On its own schedule the stack restores the newest backup into a scratch database and counts the tables and rows that came back. Restoring over the live database is a command, not a button, and it asks you to type the project name first.
-
-## Testing with Playwright
-
-Your app's end-to-end tests can run against a real stack instead of a mocked backend, so they exercise the real access rules rather than a mock's idea of them. Users are cheap: one HTTP call each, so every test can make its own and share state with nobody.
-
-The test worth writing first is two callers against one endpoint:
-
-```ts
-test("each caller sees only their own rows", async () => {
-  const alice = await signUp();
-  const bob = await signUp();
-
-  await post("/notes", alice.token, { title: "alice only" });
-
-  expect(await get("/notes", alice.token)).toHaveLength(1);
-  expect(await get("/notes", bob.token)).toHaveLength(0);
-});
-```
-
-Nothing there filters by user, and nothing in your app does either. Bob gets an empty array because Postgres decided that.
-
-[`sdk/README.md`](sdk/README.md#testing) has the working version: the `signUp`, `post`, and `get` helpers, the Playwright config that brings the stack up in `globalSetup` after a one-time `init`, signing a browser in without driving the login form, and a fixture that does it for every test.
-
-## Going to production
-
-> Hetzner deployment is experimental for all of `0.1.x`. Every step below is implemented, unit tested and preflighted before it runs, and none of it has yet been run against a real domain end to end. Treat the first one as a drill, not a migration.
-
-Set the target to Hetzner in the studio's Settings. Baseplate creates a VM, a firewall, a DNS record, and a TLS certificate in **your** account, from your own API tokens.
-
-Those tokens never leave your machine. What the server is given is what it has to use: the database and JWT secrets, the backup key and its destination credentials, and whichever mail and object store credentials you filled in. `.baseplate/stack.env` is the list, and it is the only env file that crosses.
-
-Paste your Cloud and DNS tokens, press **Check my account**, and the region, SSH key, and DNS zone become lists read from your account rather than three names to type from memory.
-
-Local needs no domain, no cloud account, and no certificate.
-
-## How it compares
-
-Baseplate is not trying to match a managed platform feature for feature. It exists so one developer running a handful of small apps can own the whole thing.
-
-| | Baseplate | Supabase (hosted) | Rolling your own |
-| --- | --- | --- | --- |
-| Who holds your data | You | Supabase | You |
-| Bill from this project | None | Per project | None |
-| Setup | Two commands | Sign up | Days |
-| Row-level security | On by default, cannot be turned off, three read modes per table | Opt in per table, any policy you write | Whatever you write |
-| Realtime, edge functions, vector | No | Yes | Whatever you write |
-| Dashboard | Local, on 127.0.0.1 | Hosted | None |
-
-If you need realtime subscriptions, edge functions, or a team dashboard, use Supabase. If you want a database and an API you can point at a €5 VM and forget about, this is smaller and yours.
-
-## Limits
-
-Worth knowing before you trust it with something:
-
-- **A row is written by exactly one caller.** `--access shared` and `--access public` widen who may read a table, but never who may write: there is no way to say "my team may edit this" or "whoever can see the parent may edit this". Ownership is one user, always.
-- Hetzner provisioning has not been run live against a real domain yet.
-- One node. No replica and no failover, so a restore is minutes of downtime.
-- Auth is email and password only: no OAuth or social login, no magic links, no MFA.
-- No metrics, and no alert when a backup or drill fails: it is a log line and a row.
-- No point-in-time recovery. The worst case is losing up to one backup interval of writes.
-- A backup is uploaded in a single request, so S3's 5 GB limit for one is the practical ceiling. Multipart upload is not implemented.
+- Rows have one owner.
+  Shared and public modes widen reads, never writes.
+- One node, with no replica or automatic failover.
+- Email and password auth only.
+  There is no OAuth, magic-link login, or MFA.
+- No metrics or external failure alerts yet.
+- No point-in-time recovery.
+- S3 uploads use one signed request, so the practical object limit is 5 GB until multipart upload is implemented.
 
 ## Commands
 
-```
+```text
 init      up        down      destroy   dashboard
 logs      mcp       tables    types     schema
 storage   backup    restore   users     mint-token
 ```
 
-Run `npx baseplate --help`, or any command with no arguments, for its own list.
+Run `npx baseplate --help`, or run a command without arguments for its focused help.
 
-## Docs
+## Documentation
 
-| File | What it is |
+| Document | Use it for |
 | --- | --- |
-| [`sdk/README.md`](sdk/README.md) | App client: install, auth, typed queries, storage |
-| [`skills/baseplate-app/SKILL.md`](skills/baseplate-app/SKILL.md) | App agents: client, RLS, types, tests |
-| [`docs/PRD.md`](docs/PRD.md) | Product, phases, done criteria |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, dependency rule, where code goes |
-| [`docs/DOMAINS.md`](docs/DOMAINS.md) | Ubiquitous language and per-concept rules |
-| [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Naming, errors, secrets, tests, commits, studio UI |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to run it, and the rules a change is held to |
-| [`SECURITY.md`](SECURITY.md) | What counts as a vulnerability, and where to send one |
+| [`sdk/README.md`](sdk/README.md) | Auth, typed queries, filters, storage, and Playwright setup |
+| [`skills/baseplate-app/SKILL.md`](skills/baseplate-app/SKILL.md) | Building against Baseplate with an agent |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, boundaries, state, and dependency direction |
+| [`docs/DOMAINS.md`](docs/DOMAINS.md) | Product concepts and invariants |
+| [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Code, secrets, tests, and studio conventions |
+| [`SECURITY.md`](SECURITY.md) | Threat model and vulnerability reporting |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow and quality checks |
 
 ## Contributing
 
 ```bash
 git clone https://github.com/leandervdiepen/baseplate.git
-cd baseplate && npm install
-./scripts/dev init && ./scripts/dev up
+cd baseplate
+npm install
+./scripts/dev init
+./scripts/dev up
 
-npm run lint && npm run lint:arch && npm run typecheck && npm test
-npm run test:integration    # boots the real stack
-npm run test:acceptance     # the definition of done, against this checkout
-npm run test:artifact       # the same, against the packed tarball
-npm run pack:check          # what is in the tarball, and how big
+npm run lint
+npm run lint:arch
+npm run typecheck
+npm test
+npm run test:integration
+npm run test:acceptance
+npm run test:artifact
+npm run pack:check
 ```
 
-All of them pass before a pull request. Read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 

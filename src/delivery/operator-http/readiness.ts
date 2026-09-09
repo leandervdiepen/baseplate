@@ -12,7 +12,7 @@ export type ReadinessInput = {
   hostname: string;
   siteAddress: string | null;
   dnsZone: string | null;
-  secrets: { hcloud: boolean; dnsToken: boolean; sshKey: boolean };
+  secrets: { hcloud: boolean; sshKey: boolean };
 };
 
 /**
@@ -48,9 +48,9 @@ export function readReadiness(input: ReadinessInput): ReadinessCheck[] {
     },
     {
       id: "dns",
-      label: "DNS token and zone saved",
-      ok: input.secrets.dnsToken && zone.length > 0,
-      detail: "Add your domain as a zone in Hetzner DNS, then paste a DNS token.",
+      label: "DNS zone saved",
+      ok: input.secrets.hcloud && zone.length > 0,
+      detail: "Add your domain as a zone in this Hetzner project, then pick it here.",
     },
     {
       id: "ssh",

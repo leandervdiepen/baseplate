@@ -73,7 +73,6 @@ BACKUP_S3_SECRET_KEY=
 # Hetzner is bring-your-own-key. These are YOUR account credentials.
 # Baseplate has no cloud account. Fill them in from Settings when you are ready.
 HCLOUD_TOKEN=
-HETZNER_DNS_TOKEN=
 HETZNER_DNS_ZONE=
 SSH_KEY_NAME=
 SERVER_LOCATION=nbg1

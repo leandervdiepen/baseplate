@@ -27,7 +27,7 @@ export type StackRuntime = {
   down(server: Server | undefined, options: DownOptions): Promise<void>;
   /** Applies pending migrations and re-applies row access against a running stack. */
   migrate(server: Server | undefined): Promise<void>;
-  isHealthy(baseUrl: string): Promise<boolean>;
+  isHealthy(baseUrl: string, server?: Server): Promise<boolean>;
   runningStacks(): Promise<readonly RunningStack[]>;
   /** Stops one, keeping its data, so another project can have the ports. */
   stopProject(projectName: string): Promise<void>;

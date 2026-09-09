@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { FileStackStateStore } from "#infrastructure";
 import { parseEnvMap } from "./env-file.ts";
 import { basename } from "node:path";
-import { CONFIG_FILE, STATE_DIR } from "../paths.ts";
+import { CONFIG_FILE, STATE_DIR, stackStateFile } from "../paths.ts";
 import { readReadiness, type ReadinessCheck } from "./readiness.ts";
 
 export type OperatorStatus = {
@@ -24,7 +24,6 @@ export type OperatorStatus = {
   secrets: {
     jwt: boolean;
     hcloud: boolean;
-    dnsToken: boolean;
     dnsZone: boolean;
     sshKey: boolean;
   };
@@ -50,7 +49,6 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
       secrets: {
         jwt: false,
         hcloud: false,
-        dnsToken: false,
         dnsZone: false,
         sshKey: false,
       },
@@ -58,7 +56,8 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
   }
   const env = parseEnvMap(readFileSync(envPath, "utf8"));
   const hostname = env.BASEPLATE_HOSTNAME || "localhost";
-  const store = new FileStackStateStore(resolve(root, STATE_DIR, "state.json"));
+  const target = env.TARGET === "hetzner" ? "hetzner" : "local";
+  const store = new FileStackStateStore(resolve(root, STATE_DIR, stackStateFile(target)));
   const record = await store.load();
   const baseUrl = record?.baseUrl ?? null;
   let apiUp = false;
@@ -70,11 +69,9 @@ export async function readStatus(root: string): Promise<OperatorStatus> {
       apiUp = false;
     }
   }
-  const target = env.TARGET ?? "local";
   const secrets = {
     jwt: Boolean(env.JWT_SECRET),
     hcloud: Boolean(env.HCLOUD_TOKEN),
-    dnsToken: Boolean(env.HETZNER_DNS_TOKEN),
     dnsZone: Boolean(env.HETZNER_DNS_ZONE),
     sshKey: Boolean(env.SSH_KEY_NAME),
   };

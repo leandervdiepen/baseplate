@@ -15,3 +15,7 @@ export function projectRoot(): string {
 
 export const CONFIG_FILE = "baseplate.env";
 export const STATE_DIR = ".baseplate";
+
+export function stackStateFile(target: "local" | "hetzner"): string {
+  return `state.${target}.json`;
+}

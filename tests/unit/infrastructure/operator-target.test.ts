@@ -5,7 +5,12 @@ import { expect, test } from "vitest";
 import { createStack } from "#domain";
 import { createOperator, tunnelArgs, type OperatorTarget } from "#infrastructure";
 
-function config(target: OperatorTarget, statePath: string, jwtSecret = "a-secret-long-enough-to-sign-with") {
+function config(
+  target: OperatorTarget,
+  statePath: string,
+  jwtSecret = "a-secret-long-enough-to-sign-with",
+  allowUnprovisioned = false,
+) {
   return {
     target,
     jwtSecret,
@@ -26,11 +31,11 @@ function config(target: OperatorTarget, statePath: string, jwtSecret = "a-secret
     infraSourceDir: "/nowhere/infra",
     infraWorkDir: "/nowhere/project/.baseplate/infra",
     hcloudToken: "t",
-    hetznerDnsToken: "t",
     hetznerDnsZone: "example.com",
     sshKeyName: "key",
     serverLocation: "nbg1",
     accessTtlSeconds: 900,
+    allowUnprovisioned,
   };
 }
 
@@ -52,6 +57,13 @@ test("a hetzner project with no server refuses rather than reading the local one
   await expect(createOperator(config("hetzner", emptyStatePath()))).rejects.toThrow(
     /no server yet/i,
   );
+});
+
+test("provisioning can build an operator before the first hetzner server exists", async () => {
+  const operator = await createOperator(
+    config("hetzner", emptyStatePath(), "a-secret-long-enough-to-sign-with", true),
+  );
+  await operator.close();
 });
 
 test("a hetzner project reaches the database through the ssh access it already has", () => {

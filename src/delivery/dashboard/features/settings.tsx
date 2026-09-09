@@ -33,7 +33,6 @@ export function SettingsPage({
     hostname: status.hostname === "localhost" ? "" : status.hostname,
     zone: status.dnsZone ?? "",
     hcloud: "",
-    dnsToken: "",
     ssh: status.sshKeyName ?? "",
     location: status.serverLocation ?? "nbg1",
   });
@@ -46,7 +45,6 @@ export function SettingsPage({
       TARGET: target,
       HETZNER_DNS_ZONE: hetzner.zone,
       HCLOUD_TOKEN: hetzner.hcloud,
-      HETZNER_DNS_TOKEN: hetzner.dnsToken,
       SSH_KEY_NAME: hetzner.ssh,
       SERVER_LOCATION: hetzner.location,
       ACCESS_TOKEN_TTL: access.trim(),
@@ -61,7 +59,7 @@ export function SettingsPage({
     <>
       <PageHeader title="Settings" description="Where the stack runs, and the keys it needs." />
       <Callout icon={<IconLock />} className="mb-[var(--space-lg)] max-w-[var(--container-form)]">
-        Your Hetzner tokens never leave this machine. What a server is given is what it has to use:
+        Your Hetzner token never leaves this machine. What a server is given is what it has to use:
         the database and JWT secrets, and whichever mail, object store and backup credentials you
         have filled in below.
       </Callout>
